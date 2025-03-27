@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -14,7 +13,9 @@ import {
   GraduationCap,
   UserCog,
   Users,
-  LineChart
+  LineChart,
+  FileText,
+  Video
 } from "lucide-react";
 
 const Navbar: React.FC = () => {
@@ -25,7 +26,6 @@ const Navbar: React.FC = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // Check for a user role in local storage
     const storedRole = localStorage.getItem("userRole");
     if (storedRole) {
       setIsAuthenticated(true);
@@ -45,12 +45,10 @@ const Navbar: React.FC = () => {
   }, []);
 
   const handleLogout = () => {
-    // Remove user data from local storage
     localStorage.removeItem("userRole");
     localStorage.removeItem("currentUser");
     setIsAuthenticated(false);
     setUserRole(null);
-    // Redirect to login page
     window.location.href = "/login";
   };
 
@@ -100,7 +98,6 @@ const Navbar: React.FC = () => {
       );
     }
 
-    // Common links for all authenticated users
     const commonLinks = (
       <>
         <Link
@@ -125,7 +122,6 @@ const Navbar: React.FC = () => {
       </>
     );
 
-    // Role-specific links
     let roleSpecificLinks;
     
     switch(userRole) {
@@ -179,19 +175,6 @@ const Navbar: React.FC = () => {
               </span>
             </Link>
             <Link
-              to="/assessments"
-              className={cn(
-                "nav-item",
-                isActive("/assessments") && "nav-item-active"
-              )}
-              onClick={closeMenu}
-            >
-              <span className="flex items-center">
-                <GraduationCap className="h-4 w-4 mr-1.5" />
-                Assessments
-              </span>
-            </Link>
-            <Link
               to="/analytics"
               className={cn(
                 "nav-item",
@@ -237,6 +220,32 @@ const Navbar: React.FC = () => {
                 User Management
               </span>
             </Link>
+            <Link
+              to="/assessments"
+              className={cn(
+                "nav-item",
+                isActive("/assessments") && "nav-item-active"
+              )}
+              onClick={closeMenu}
+            >
+              <span className="flex items-center">
+                <FileText className="h-4 w-4 mr-1.5" />
+                Assessments
+              </span>
+            </Link>
+            <Link
+              to="/training-management"
+              className={cn(
+                "nav-item",
+                isActive("/training-management") && "nav-item-active"
+              )}
+              onClick={closeMenu}
+            >
+              <span className="flex items-center">
+                <Video className="h-4 w-4 mr-1.5" />
+                Training Management
+              </span>
+            </Link>
           </>
         );
         break;
@@ -245,7 +254,6 @@ const Navbar: React.FC = () => {
         roleSpecificLinks = null;
     }
 
-    // Account dropdown menu
     const accountMenu = (
       <div className="relative group">
         <button className="nav-item flex items-center space-x-1">
@@ -331,7 +339,6 @@ const Navbar: React.FC = () => {
       );
     }
 
-    // Common links for all authenticated users
     const commonLinks = (
       <>
         <Link
@@ -357,7 +364,6 @@ const Navbar: React.FC = () => {
       </>
     );
 
-    // Role-specific links
     let roleSpecificLinks;
     
     switch(userRole) {
@@ -411,19 +417,6 @@ const Navbar: React.FC = () => {
               </span>
             </Link>
             <Link
-              to="/assessments"
-              className={cn(
-                "block px-3 py-2 rounded-md text-base font-medium",
-                isActive("/assessments") ? "bg-primary text-white" : "text-gray-700 hover:bg-gray-100"
-              )}
-              onClick={closeMenu}
-            >
-              <span className="flex items-center">
-                <GraduationCap className="h-4 w-4 mr-1.5" />
-                Assessments
-              </span>
-            </Link>
-            <Link
               to="/analytics"
               className={cn(
                 "block px-3 py-2 rounded-md text-base font-medium",
@@ -469,6 +462,32 @@ const Navbar: React.FC = () => {
                 User Management
               </span>
             </Link>
+            <Link
+              to="/assessments"
+              className={cn(
+                "block px-3 py-2 rounded-md text-base font-medium",
+                isActive("/assessments") ? "bg-primary text-white" : "text-gray-700 hover:bg-gray-100"
+              )}
+              onClick={closeMenu}
+            >
+              <span className="flex items-center">
+                <FileText className="h-4 w-4 mr-1.5" />
+                Assessments
+              </span>
+            </Link>
+            <Link
+              to="/training-management"
+              className={cn(
+                "block px-3 py-2 rounded-md text-base font-medium",
+                isActive("/training-management") ? "bg-primary text-white" : "text-gray-700 hover:bg-gray-100"
+              )}
+              onClick={closeMenu}
+            >
+              <span className="flex items-center">
+                <Video className="h-4 w-4 mr-1.5" />
+                Training Management
+              </span>
+            </Link>
           </>
         );
         break;
@@ -477,7 +496,6 @@ const Navbar: React.FC = () => {
         roleSpecificLinks = null;
     }
 
-    // Account links
     const accountLinks = (
       <>
         <Link
@@ -537,14 +555,12 @@ const Navbar: React.FC = () => {
             </Link>
           </div>
 
-          {/* Desktop Navigation */}
           <div className="hidden md:block">
             <div className="flex items-center space-x-1">
               {renderNavLinks()}
             </div>
           </div>
 
-          {/* Mobile Navigation Button */}
           <div className="md:hidden">
             <button
               onClick={() => setIsOpen(!isOpen)}
@@ -562,7 +578,6 @@ const Navbar: React.FC = () => {
         </div>
       </nav>
 
-      {/* Mobile Navigation Menu */}
       <div
         className={`md:hidden transition-all duration-300 ease-in-out ${
           isOpen

@@ -22,6 +22,7 @@ import Analytics from "./pages/manager/Analytics";
 import Profile from "./pages/common/Profile";
 import UserManagement from "./pages/admin/UserManagement";
 import ActivityLog from "./pages/admin/ActivityLog";
+import TrainingManagement from "./pages/admin/TrainingManagement";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +53,7 @@ const App = () => (
           {/* Admin Routes */}
           <Route path="/users" element={<UserManagement />} />
           <Route path="/activity-log" element={<ActivityLog />} />
+          <Route path="/training-management" element={<TrainingManagement />} />
 
           {/* Common Routes */}
           <Route path="/profile" element={<Profile />} />
