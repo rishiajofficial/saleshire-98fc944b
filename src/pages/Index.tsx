@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, CheckCircle, Award, Briefcase, BookOpen } from "lucide-react";
 
 const Index = () => {
-  const sectionsRef = useRef<(HTMLDivElement | null)[]>([]);
+  // Change the type here to accept null or HTMLElement
+  const sectionsRef = useRef<(HTMLElement | null)[]>([]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -30,7 +31,8 @@ const Index = () => {
     };
   }, []);
 
-  const addToRefs = (el: HTMLDivElement | null, index: number) => {
+  // Update the addToRefs function to accept HTMLElement instead of HTMLDivElement
+  const addToRefs = (el: HTMLElement | null, index: number) => {
     if (el && !sectionsRef.current.includes(el)) {
       sectionsRef.current[index] = el;
     }

@@ -12,12 +12,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  BarChart,
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@/components/ui/";
+} from "@/components/ui/tabs";
+import { BarChart } from "@/components/ui/chart";
 import {
   Table,
   TableBody,

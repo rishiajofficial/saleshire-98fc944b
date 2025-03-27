@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -21,7 +20,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Check, FileUpload, RefreshCw, Video } from "lucide-react";
+import { Check, Upload, RefreshCw, Video } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
 
 const Application = () => {
@@ -38,7 +37,6 @@ const Application = () => {
     pitchVideo: null as File | null,
   });
 
-  // Mock assessment questions
   const [assessmentData, setAssessmentData] = useState({
     q1: "",
     q2: "",
@@ -114,7 +112,6 @@ const Application = () => {
 
     setIsSubmitting(true);
     
-    // Simulate API call
     setTimeout(() => {
       toast.success("Application submitted successfully!");
       setIsSubmitting(false);
@@ -224,7 +221,7 @@ const Application = () => {
                   <div className="space-y-2">
                     <Label>Resume/CV</Label>
                     <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-                      <FileUpload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                      <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                       <div className="space-y-2">
                         <p className="text-sm text-muted-foreground">
                           {formData.resume 
