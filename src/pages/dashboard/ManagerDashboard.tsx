@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -17,7 +16,6 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { BarChart } from "@/components/ui/chart";
 import {
   Table,
   TableBody,
@@ -41,6 +39,7 @@ import {
   ArrowRight,
   ArrowUpRight,
   Filter,
+  BarChart as BarChartIcon,
 } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
 
@@ -55,7 +54,6 @@ const ManagerDashboard = () => {
     }
   };
 
-  // Mock data for demonstration
   const dashboardStats = {
     totalCandidates: 24,
     pendingReviews: 5,
@@ -175,7 +173,6 @@ const ManagerDashboard = () => {
     },
   ];
 
-  // Helper function to render status badges
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "applied":
@@ -185,9 +182,11 @@ const ManagerDashboard = () => {
           </Badge>
         );
       case "screening":
-        <Badge className="bg-yellow-100 text-yellow-800">
-          <Clock className="mr-1 h-3 w-3" /> Screening
-        </Badge>;
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800">
+            <Clock className="mr-1 h-3 w-3" /> Screening
+          </Badge>
+        );
       case "training":
         return (
           <Badge className="bg-purple-100 text-purple-800">
@@ -242,7 +241,6 @@ const ManagerDashboard = () => {
     }
   };
 
-  // Performance chart data
   const chartData = [
     {
       name: "Application Pass Rate",
@@ -272,7 +270,6 @@ const ManagerDashboard = () => {
           </p>
         </div>
 
-        {/* Dashboard Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-6">
@@ -358,7 +355,7 @@ const ManagerDashboard = () => {
                   </h3>
                 </div>
                 <div className="h-12 w-12 bg-green-100 rounded-full flex items-center justify-center">
-                  <BarChart className="h-6 w-6 text-green-600" />
+                  <BarChartIcon className="h-6 w-6 text-green-600" />
                 </div>
               </div>
               <div className="mt-4">
@@ -372,7 +369,6 @@ const ManagerDashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Performance Chart */}
           <Card className="lg:col-span-1">
             <CardHeader>
               <CardTitle>Funnel Performance</CardTitle>
@@ -400,7 +396,6 @@ const ManagerDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Recent Assessments */}
           <Card className="lg:col-span-1">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
@@ -460,7 +455,6 @@ const ManagerDashboard = () => {
             </CardFooter>
           </Card>
 
-          {/* Upcoming Interviews */}
           <Card className="lg:col-span-1">
             <CardHeader>
               <CardTitle>Upcoming Interviews</CardTitle>
@@ -504,7 +498,6 @@ const ManagerDashboard = () => {
           </Card>
         </div>
 
-        {/* Candidates Section */}
         <Card>
           <CardHeader className="pb-3">
             <div className="flex justify-between items-center">
