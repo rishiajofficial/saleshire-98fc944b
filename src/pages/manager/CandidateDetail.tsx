@@ -40,6 +40,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
   ArrowLeft,
+  BookOpen,
   CalendarClock,
   CheckCircle,
   ChevronRight,
