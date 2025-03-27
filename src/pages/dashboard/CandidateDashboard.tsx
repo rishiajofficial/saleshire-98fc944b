@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -26,8 +26,7 @@ import {
 import MainLayout from "@/components/layout/MainLayout";
 
 const CandidateDashboard = () => {
-  // Mock data for demonstration
-  const [candidateData] = useState({
+  const [candidateData, setCandidateData] = useState({
     name: "Jane Smith",
     email: "candidate@example.com",
     currentStep: 2,
@@ -61,6 +60,25 @@ const CandidateDashboard = () => {
     ],
   });
 
+  // Load user from local storage if available
+  useEffect(() => {
+    const userStr = localStorage.getItem('currentUser');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        // Update name and email if available
+        setCandidateData(prev => ({
+          ...prev,
+          name: user.name || prev.name,
+          email: user.email || prev.email,
+          currentStep: user.currentStep || prev.currentStep,
+        }));
+      } catch (e) {
+        console.error("Error parsing user data from localStorage", e);
+      }
+    }
+  }, []);
+
   const trainingModules = [
     {
       id: 1,
@@ -69,6 +87,7 @@ const CandidateDashboard = () => {
       progress: 100,
       status: "completed",
       quizScore: "85%",
+      path: "/training?module=product"
     },
     {
       id: 2,
@@ -77,6 +96,7 @@ const CandidateDashboard = () => {
       progress: 70,
       status: "in_progress",
       quizScore: null,
+      path: "/training?module=sales"
     },
     {
       id: 3,
@@ -85,6 +105,7 @@ const CandidateDashboard = () => {
       progress: 0,
       status: "locked",
       quizScore: null,
+      path: "/training"
     },
   ];
 
@@ -288,14 +309,27 @@ const CandidateDashboard = () => {
                         <div className="flex space-x-2">
                           {module.status !== "locked" && (
                             <>
-                              <Button variant="outline" size="sm" className="h-9">
-                                <PlayCircle className="mr-1 h-4 w-4" />
-                                {module.status === "completed" ? "Review" : "Continue"}
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="h-9"
+                                asChild
+                              >
+                                <Link to={module.path}>
+                                  <PlayCircle className="mr-1 h-4 w-4" />
+                                  {module.status === "completed" ? "Review" : "Continue"}
+                                </Link>
                               </Button>
                               {module.status === "in_progress" && (
-                                <Button size="sm" className="h-9">
-                                  <FileText className="mr-1 h-4 w-4" />
-                                  Take Quiz
+                                <Button 
+                                  size="sm" 
+                                  className="h-9"
+                                  asChild
+                                >
+                                  <Link to={`/training/quiz/${module.id === 1 ? 'product' : module.id === 2 ? 'sales' : 'retailer'}`}>
+                                    <FileText className="mr-1 h-4 w-4" />
+                                    Take Quiz
+                                  </Link>
                                 </Button>
                               )}
                             </>
