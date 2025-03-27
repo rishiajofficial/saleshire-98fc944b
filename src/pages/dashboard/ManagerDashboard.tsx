@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,7 @@ import {
   ArrowRight,
   ArrowUpRight,
   Filter,
-  BarChart as BarChartIcon,
+  BarChart3 as BarChart,
 } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
 
@@ -355,7 +356,7 @@ const ManagerDashboard = () => {
                   </h3>
                 </div>
                 <div className="h-12 w-12 bg-green-100 rounded-full flex items-center justify-center">
-                  <BarChartIcon className="h-6 w-6 text-green-600" />
+                  <BarChart className="h-6 w-6 text-green-600" />
                 </div>
               </div>
               <div className="mt-4">
@@ -371,10 +372,20 @@ const ManagerDashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="lg:col-span-1">
             <CardHeader>
-              <CardTitle>Funnel Performance</CardTitle>
-              <CardDescription>
-                Conversion rates at each stage
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Funnel Performance</CardTitle>
+                  <CardDescription>
+                    Conversion rates at each stage
+                  </CardDescription>
+                </div>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/analytics">
+                    <BarChart className="h-4 w-4 mr-1" />
+                    Full Analytics
+                  </Link>
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -405,7 +416,7 @@ const ManagerDashboard = () => {
                 </CardDescription>
               </div>
               <Button size="sm" className="h-8" asChild>
-                <Link to="/assessments/create">
+                <Link to="/assessments">
                   <Plus className="h-4 w-4 mr-1" /> Create
                 </Link>
               </Button>
@@ -429,8 +440,10 @@ const ManagerDashboard = () => {
                           </span>
                         </div>
                       </div>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0" asChild>
+                        <Link to={`/assessments/${assessment.id}`}>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Link>
                       </Button>
                     </div>
                     <div className="flex items-center justify-between mt-3 text-sm">
@@ -490,7 +503,7 @@ const ManagerDashboard = () => {
             </CardContent>
             <CardFooter>
               <Button variant="ghost" size="sm" className="w-full" asChild>
-                <Link to="/interviews">
+                <Link to="/candidates">
                   Manage Interviews
                 </Link>
               </Button>
@@ -607,13 +620,17 @@ const ManagerDashboard = () => {
                               <div>
                                 <h4 className="text-sm font-medium mb-2">Actions</h4>
                                 <div className="space-y-2">
-                                  <Button size="sm" variant="default" className="w-full justify-start">
-                                    <CheckCircle className="h-4 w-4 mr-2" />
-                                    Approve
+                                  <Button size="sm" variant="default" className="w-full justify-start" asChild>
+                                    <Link to={`/candidates/${candidate.id}`}>
+                                      <CheckCircle className="h-4 w-4 mr-2" />
+                                      Approve
+                                    </Link>
                                   </Button>
-                                  <Button size="sm" variant="outline" className="w-full justify-start">
-                                    <XCircle className="h-4 w-4 mr-2" />
-                                    Reject
+                                  <Button size="sm" variant="outline" className="w-full justify-start" asChild>
+                                    <Link to={`/candidates/${candidate.id}`}>
+                                      <XCircle className="h-4 w-4 mr-2" />
+                                      Reject
+                                    </Link>
                                   </Button>
                                 </div>
                               </div>

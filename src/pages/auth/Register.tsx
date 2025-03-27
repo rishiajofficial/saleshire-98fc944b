@@ -69,6 +69,7 @@ const Register = () => {
       
       // In a real application, you would use proper authentication
       localStorage.setItem('currentUser', JSON.stringify(newUser));
+      localStorage.setItem('userRole', 'candidate');
       
       toast.success("Registration successful! Please complete your application.");
       setIsSubmitting(false);
@@ -85,7 +86,7 @@ const Register = () => {
       <div className="flex items-center justify-center min-h-[80vh]">
         <Card className="w-full max-w-md">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
+            <CardTitle className="text-2xl font-bold">Sign Up as Candidate</CardTitle>
             <CardDescription>
               Register as a candidate to apply for the sales position
             </CardDescription>
@@ -176,7 +177,7 @@ const Register = () => {
                 className="w-full" 
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "Creating your account..." : "Register & Apply"}
+                {isSubmitting ? "Creating your account..." : "Sign Up & Apply"}
               </Button>
               <div className="text-center text-sm text-muted-foreground">
                 Already have an account?{" "}

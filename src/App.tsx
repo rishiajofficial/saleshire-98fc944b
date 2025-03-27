@@ -15,6 +15,11 @@ import AdminDashboard from "./pages/dashboard/AdminDashboard";
 import Training from "./pages/training/Training";
 import Quiz from "./pages/training/Quiz";
 import VideoPlayer from "./pages/training/VideoPlayer";
+import Candidates from "./pages/manager/Candidates";
+import CandidateDetail from "./pages/manager/CandidateDetail";
+import Assessments from "./pages/manager/Assessments";
+import Analytics from "./pages/manager/Analytics";
+import Profile from "./pages/common/Profile";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +40,16 @@ const App = () => (
           <Route path="/training" element={<Training />} />
           <Route path="/training/quiz/:moduleId" element={<Quiz />} />
           <Route path="/training/video/:moduleId/:videoId" element={<VideoPlayer />} />
+          
+          {/* Manager Routes */}
+          <Route path="/candidates" element={<Candidates />} />
+          <Route path="/candidates/:id" element={<CandidateDetail />} />
+          <Route path="/assessments" element={<Assessments />} />
+          <Route path="/analytics" element={<Analytics />} />
+
+          {/* Common Routes */}
+          <Route path="/profile" element={<Profile />} />
+          
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
