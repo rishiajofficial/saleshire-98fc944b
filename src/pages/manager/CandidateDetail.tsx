@@ -2,22 +2,6 @@
 import React, { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
-import { 
-  User, 
-  Phone, 
-  Mail, 
-  MapPin, 
-  Calendar, 
-  FileText, 
-  Video, 
-  BarChart, 
-  CheckCircle, 
-  XCircle, 
-  ChevronRight, 
-  ArrowLeft,
-  Edit,
-  Calendar as CalendarIcon
-} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -35,13 +19,6 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
-import { toast } from "sonner";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -51,609 +28,731 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Textarea } from "@/components/ui/textarea";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import {
+  ArrowLeft,
+  CalendarClock,
+  CheckCircle,
+  ChevronRight,
+  Clock,
+  Download,
+  FileText,
+  MailIcon,
+  MapPin,
+  MessageSquare,
+  Phone,
+  PlayIcon,
+  PlusCircle,
+  Rocket,
+  ThumbsUp,
+  User,
+  XCircle,
+} from "lucide-react";
 
 const CandidateDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const [feedbackText, setFeedbackText] = useState("");
-  const [interviewDate, setInterviewDate] = useState("");
-  const [interviewTime, setInterviewTime] = useState("");
-  
-  // Mocked candidate data - in a real app, this would be fetched from an API
+  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
+  const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState("profile");
+  const [candidateStatus, setCandidateStatus] = useState("training");
+
+  // Mock candidate data
   const candidate = {
-    id: Number(id),
-    name: "Sarah Brown",
-    email: "sarah.brown@example.com",
-    phone: "+1 (555) 567-8901",
-    location: "Boston, MA",
-    status: "interview",
-    statusText: "Interview",
-    applicationDate: "2023-09-10",
-    step: 4,
-    testScore: 88,
-    assessmentScores: [
-      { name: "Initial Assessment", score: 78 },
-      { name: "Product Knowledge", score: 92 },
-      { name: "Sales Techniques", score: 85 },
+    id: id,
+    name: "Robert Johnson",
+    email: "robert.johnson@example.com",
+    phone: "+1 (555) 123-4567",
+    location: "New York, NY",
+    region: "north",
+    status: candidateStatus,
+    currentStep: 2,
+    applyDate: "2023-05-15",
+    resume: "robert_johnson_resume.pdf",
+    aboutMeVideo: "https://example.com/videos/about-me-video",
+    salesPitchVideo: "https://example.com/videos/sales-pitch",
+    skills: ["Communication", "Negotiation", "Product Knowledge", "Retail Sales"],
+    assessments: [
+      {
+        id: "a1",
+        title: "Initial Screening Assessment",
+        score: 85,
+        date: "2023-05-16",
+        status: "passed",
+      },
+      {
+        id: "a2",
+        title: "Product Knowledge Quiz",
+        score: 78,
+        date: "2023-05-20",
+        status: "passed",
+      },
+      {
+        id: "a3",
+        title: "Sales Techniques Quiz",
+        score: 82,
+        date: "2023-05-25",
+        status: "passed",
+      },
     ],
-    videos: [
-      { id: 1, title: "About Me", url: "https://example.com/video1" },
-      { id: 2, title: "Sales Pitch", url: "https://example.com/video2" },
+    trainingProgress: [
+      {
+        module: "Product Knowledge",
+        progress: 100,
+        completed: true,
+      },
+      {
+        module: "Sales Techniques",
+        progress: 75,
+        completed: false,
+      },
+      {
+        module: "Relationship Building",
+        progress: 30,
+        completed: false,
+      },
     ],
-    resume: "sarah_brown_resume.pdf",
-    notes: "Strong candidate with previous sales experience. Good communication skills observed in video interviews.",
-    interviewScheduled: "2023-10-12T14:00:00",
+    notes: [
+      {
+        id: "n1",
+        text: "Strong communication skills observed during initial screening.",
+        author: "Emma Johnson",
+        date: "2023-05-17",
+      },
+      {
+        id: "n2",
+        text: "Demonstrated excellent product knowledge during training sessions.",
+        author: "John Smith",
+        date: "2023-05-22",
+      },
+    ],
+    upcomingInterview: {
+      id: "i1",
+      date: "2023-06-05T10:00:00",
+      interviewer: "John Smith",
+      type: "Final Interview",
+      location: "Online (Zoom)",
+    },
   };
 
+  const handleScheduleInterview = (e: React.FormEvent) => {
+    e.preventDefault();
+    setShowScheduleDialog(false);
+    toast.success("Interview scheduled successfully");
+  };
+
+  const handleSubmitFeedback = (e: React.FormEvent) => {
+    e.preventDefault();
+    setShowFeedbackDialog(false);
+    toast.success("Feedback submitted successfully");
+  };
+
+  const handleStatusChange = (newStatus: string) => {
+    setCandidateStatus(newStatus);
+    toast.success(`Candidate status updated to ${newStatus}`);
+  };
+
+  const handleHireCandidate = () => {
+    setCandidateStatus("hired");
+    toast.success("Candidate has been hired! Congratulations!");
+  };
+
+  const handleRejectCandidate = () => {
+    setCandidateStatus("rejected");
+    toast.success("Candidate has been rejected");
+  };
+
+  const handleEmailCandidate = () => {
+    window.location.href = `mailto:${candidate.email}`;
+  };
+
+  const handleCallCandidate = () => {
+    window.location.href = `tel:${candidate.phone}`;
+  };
+
+  // Helper function to get status badge style
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "applied":
-        return <Badge className="bg-blue-100 text-blue-800">Applied</Badge>;
+        return <Badge variant="secondary">Applied</Badge>;
       case "screening":
-        return <Badge className="bg-yellow-100 text-yellow-800">Screening</Badge>;
+        return <Badge variant="secondary">Screening</Badge>;
       case "training":
-        return <Badge className="bg-purple-100 text-purple-800">Training</Badge>;
+        return <Badge variant="outline" className="border-blue-500 text-blue-600">Training</Badge>;
       case "sales_task":
-        return <Badge className="bg-orange-100 text-orange-800">Sales Task</Badge>;
+        return <Badge variant="outline" className="border-amber-500 text-amber-600">Sales Task</Badge>;
       case "interview":
-        return <Badge className="bg-green-100 text-green-800">Interview</Badge>;
+        return <Badge variant="outline" className="border-purple-500 text-purple-600">Interview</Badge>;
       case "hired":
         return <Badge variant="success">Hired</Badge>;
       case "rejected":
         return <Badge variant="destructive">Rejected</Badge>;
       default:
-        return null;
+        return <Badge variant="outline">Unknown</Badge>;
     }
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("");
-  };
-
-  const handleApprove = () => {
-    toast.success("Candidate approved successfully");
-  };
-
-  const handleReject = () => {
-    toast.success("Candidate rejected successfully");
-  };
-
-  const handleSendFeedback = () => {
-    if (!feedbackText.trim()) {
-      toast.error("Please enter feedback");
-      return;
-    }
-    toast.success("Feedback sent successfully");
-    setFeedbackText("");
-  };
-
-  const handleScheduleInterview = () => {
-    if (!interviewDate || !interviewTime) {
-      toast.error("Please select a date and time");
-      return;
-    }
-    toast.success("Interview scheduled successfully");
   };
 
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="icon" asChild>
+        {/* Back button and header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mb-2"
+              asChild
+            >
               <Link to="/candidates">
-                <ArrowLeft className="h-5 w-5" />
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Candidates
               </Link>
             </Button>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">Candidate Profile</h1>
-              <div className="flex items-center text-muted-foreground">
-                <Link to="/candidates" className="hover:underline">Candidates</Link>
-                <ChevronRight className="h-4 w-4 mx-1" />
-                <span>{candidate.name}</span>
+            <h1 className="text-3xl font-bold flex items-center">
+              {candidate.name}
+              <div className="ml-3">{getStatusBadge(candidateStatus)}</div>
+            </h1>
+            <div className="flex flex-wrap items-center mt-1 text-muted-foreground">
+              <div className="flex items-center mr-4">
+                <MailIcon className="h-4 w-4 mr-1.5" />
+                {candidate.email}
+              </div>
+              <div className="flex items-center mr-4">
+                <Phone className="h-4 w-4 mr-1.5" />
+                {candidate.phone}
+              </div>
+              <div className="flex items-center">
+                <MapPin className="h-4 w-4 mr-1.5" />
+                {candidate.location} ({candidate.region} region)
               </div>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive">
-                  <XCircle className="h-4 w-4 mr-2" />
-                  Reject
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Reject this candidate?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. The candidate will be notified of your decision.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleReject}>Confirm Rejection</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-            
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="default">
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Approve
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Approve this candidate?</DialogTitle>
-                  <DialogDescription>
-                    The candidate will be notified and moved to the next stage.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="py-4">
-                  <Label htmlFor="approval-note">Add a note (optional)</Label>
-                  <Textarea
-                    id="approval-note"
-                    placeholder="Any additional notes for the candidate..."
-                    className="mt-2"
-                  />
-                </div>
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => {}}>
-                    Cancel
-                  </Button>
-                  <Button type="button" onClick={handleApprove}>
-                    Confirm Approval
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+          <div className="flex space-x-2">
+            <Button size="sm" onClick={handleEmailCandidate}>
+              <MailIcon className="h-4 w-4 mr-2" />
+              Email
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleCallCandidate}>
+              <Phone className="h-4 w-4 mr-2" />
+              Call
+            </Button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="md:col-span-1">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Candidate Details</CardTitle>
-                <Button variant="outline" size="icon" asChild>
-                  <Link to={`/candidates/${id}/edit`}>
-                    <Edit className="h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center space-x-4">
-                <Avatar className="h-16 w-16">
-                  <AvatarImage src="" alt={candidate.name} />
-                  <AvatarFallback className="text-lg">
-                    {getInitials(candidate.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="font-semibold text-lg">{candidate.name}</h3>
-                  <div className="flex items-center mt-1">
-                    {getStatusBadge(candidate.status)}
-                    <span className="text-sm text-muted-foreground ml-2">
-                      Applied on {new Date(candidate.applicationDate).toLocaleDateString()}
+        {/* Tabs navigation */}
+        <Tabs defaultValue="profile" value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid grid-cols-4 w-full">
+            <TabsTrigger value="profile">Profile</TabsTrigger>
+            <TabsTrigger value="assessments">Assessments</TabsTrigger>
+            <TabsTrigger value="training">Training</TabsTrigger>
+            <TabsTrigger value="notes">Notes</TabsTrigger>
+          </TabsList>
+
+          {/* Profile Tab */}
+          <TabsContent value="profile" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Candidate Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Candidate Information</CardTitle>
+                  <CardDescription>
+                    Basic information and application details
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex flex-col space-y-1">
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Region
+                    </span>
+                    <span className="flex items-center">
+                      <MapPin className="h-4 w-4 mr-2 text-primary" />
+                      {candidate.region} region
                     </span>
                   </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-4">
-                <div className="flex items-start">
-                  <Mail className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Email</p>
-                    <p>{candidate.email}</p>
+                  <div className="flex flex-col space-y-1">
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Application Date
+                    </span>
+                    <span className="flex items-center">
+                      <CalendarClock className="h-4 w-4 mr-2 text-primary" />
+                      {new Date(candidate.applyDate).toLocaleDateString()}
+                    </span>
                   </div>
-                </div>
-                <div className="flex items-start">
-                  <Phone className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Phone</p>
-                    <p>{candidate.phone}</p>
+                  <div className="flex flex-col space-y-1">
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Current Step
+                    </span>
+                    <span className="flex items-center">
+                      <Rocket className="h-4 w-4 mr-2 text-primary" />
+                      Step {candidate.currentStep} of 4
+                    </span>
                   </div>
-                </div>
-                <div className="flex items-start">
-                  <MapPin className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Location</p>
-                    <p>{candidate.location}</p>
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <FileText className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Resume</p>
-                    <Button variant="link" className="h-auto p-0" asChild>
-                      <a href="#">Download Resume</a>
+                  <div className="flex flex-col space-y-1">
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Resume
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-fit"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download Resume
                     </Button>
                   </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div>
-                <h4 className="font-medium mb-2">Progress</h4>
-                <div className="space-y-2">
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Application Progress</span>
-                      <span className="font-medium">
-                        Step {candidate.step} of 4
-                      </span>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-2.5">
-                      <div
-                        className="bg-primary h-2.5 rounded-full"
-                        style={{ width: `${(candidate.step / 4) * 100}%` }}
-                      ></div>
+                  <div className="border-t pt-4 mt-2">
+                    <h4 className="font-medium mb-2">Key Skills</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {candidate.skills.map((skill, index) => (
+                        <Badge key={index} variant="outline">
+                          {skill}
+                        </Badge>
+                      ))}
                     </div>
                   </div>
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Overall Score</span>
-                      <span className="font-medium">{candidate.testScore}%</span>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-2.5">
-                      <div
-                        className="bg-green-500 h-2.5 rounded-full"
-                        style={{ width: `${candidate.testScore}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
 
-              {candidate.interviewScheduled && (
-                <>
-                  <Separator />
-                  <div>
-                    <h4 className="font-medium mb-2">Upcoming Interview</h4>
-                    <div className="bg-muted rounded-md p-3 flex items-start">
-                      <CalendarIcon className="h-5 w-5 text-primary mr-3 mt-0.5" />
-                      <div>
-                        <p className="font-medium">
-                          {new Date(candidate.interviewScheduled).toLocaleDateString()} at{" "}
-                          {new Date(candidate.interviewScheduled).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Final interview with the hiring manager
-                        </p>
+              {/* Videos & Status Actions */}
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Candidate Videos</CardTitle>
+                    <CardDescription>
+                      Introductory and sales pitch videos
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>About Me Video</Label>
+                      <div className="bg-secondary rounded-lg p-4 flex items-center justify-between">
+                        <div className="flex items-center">
+                          <User className="h-5 w-5 text-muted-foreground mr-2" />
+                          <span>Candidate Introduction</span>
+                        </div>
+                        <Button size="sm" variant="outline" className="h-8">
+                          <PlayIcon className="h-4 w-4 mr-2" /> Watch
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Sales Pitch Video</Label>
+                      <div className="bg-secondary rounded-lg p-4 flex items-center justify-between">
+                        <div className="flex items-center">
+                          <MessageSquare className="h-5 w-5 text-muted-foreground mr-2" />
+                          <span>Product Sales Pitch</span>
+                        </div>
+                        <Button size="sm" variant="outline" className="h-8">
+                          <PlayIcon className="h-4 w-4 mr-2" /> Watch
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Status Actions</CardTitle>
+                    <CardDescription>
+                      Manage candidate journey status
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Update Status</Label>
+                      <Select
+                        value={candidateStatus}
+                        onValueChange={handleStatusChange}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="applied">Applied</SelectItem>
+                          <SelectItem value="screening">Screening</SelectItem>
+                          <SelectItem value="training">Training</SelectItem>
+                          <SelectItem value="sales_task">Sales Task</SelectItem>
+                          <SelectItem value="interview">Interview</SelectItem>
+                          <SelectItem value="hired">Hired</SelectItem>
+                          <SelectItem value="rejected">Rejected</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <Button 
+                        onClick={handleHireCandidate}
+                        className="flex-1 bg-green-500 hover:bg-green-600"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" /> Hire
+                      </Button>
+                      <Button 
+                        variant="destructive" 
+                        onClick={handleRejectCandidate}
+                        className="flex-1"
+                      >
+                        <XCircle className="h-4 w-4 mr-2" /> Reject
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Upcoming Interview */}
+            {candidate.upcomingInterview && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle>Upcoming Interview</CardTitle>
+                  <CardDescription>
+                    Details of the scheduled interview
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-4">
+                    <div className="flex items-start space-x-4">
+                      <div className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center flex-shrink-0">
+                        <CalendarClock className="h-5 w-5 text-yellow-700" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium text-yellow-900">
+                          {candidate.upcomingInterview.type}
+                        </h4>
+                        <div className="mt-1 text-sm text-yellow-800">
+                          <p><strong>Date:</strong> {new Date(candidate.upcomingInterview.date).toLocaleString()}</p>
+                          <p><strong>Interviewer:</strong> {candidate.upcomingInterview.interviewer}</p>
+                          <p><strong>Location:</strong> {candidate.upcomingInterview.location}</p>
+                        </div>
+                        <div className="mt-3 flex items-center gap-2">
+                          <Button size="sm" variant="outline">
+                            Reschedule
+                          </Button>
+                          <Button size="sm" variant="destructive">
+                            Cancel
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </>
-              )}
-            </CardContent>
-            <CardFooter className="flex flex-col space-y-2">
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="w-full">
-                    <CalendarIcon className="h-4 w-4 mr-2" />
-                    Schedule Interview
+                </CardContent>
+                <CardFooter className="pt-0">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowScheduleDialog(true)}
+                    className="w-full"
+                  >
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    Schedule Another Interview
                   </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Schedule an Interview</DialogTitle>
-                    <DialogDescription>
-                      Select a date and time for the interview with {candidate.name}.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="interview-date">Date</Label>
-                      <Input
-                        id="interview-date"
-                        type="date"
-                        value={interviewDate}
-                        onChange={(e) => setInterviewDate(e.target.value)}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="interview-time">Time</Label>
-                      <Input
-                        id="interview-time"
-                        type="time"
-                        value={interviewTime}
-                        onChange={(e) => setInterviewTime(e.target.value)}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="interview-notes">Notes (Optional)</Label>
-                      <Textarea
-                        id="interview-notes"
-                        placeholder="Any additional information for the interview..."
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button type="button" onClick={handleScheduleInterview}>
-                      Schedule Interview
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-              
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="w-full">
-                    <Mail className="h-4 w-4 mr-2" />
-                    Send Feedback
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Send Feedback to Candidate</DialogTitle>
-                    <DialogDescription>
-                      Your feedback will be sent to {candidate.name} via email.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="feedback">Feedback Message</Label>
-                      <Textarea
-                        id="feedback"
-                        placeholder="Your feedback for the candidate..."
-                        value={feedbackText}
-                        onChange={(e) => setFeedbackText(e.target.value)}
-                        rows={5}
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button type="button" onClick={handleSendFeedback}>
-                      Send Feedback
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </CardFooter>
-          </Card>
+                </CardFooter>
+              </Card>
+            )}
+          </TabsContent>
 
-          <div className="md:col-span-2">
-            <Tabs defaultValue="assessment" className="w-full">
-              <TabsList className="grid grid-cols-3 mb-6">
-                <TabsTrigger value="assessment">Assessment</TabsTrigger>
-                <TabsTrigger value="videos">Video Submissions</TabsTrigger>
-                <TabsTrigger value="notes">Notes & History</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="assessment" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Assessment Scores</CardTitle>
-                    <CardDescription>
-                      Performance across all assessments
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-6">
-                      {candidate.assessmentScores.map((assessment, index) => (
-                        <div key={index}>
-                          <div className="flex justify-between mb-2">
-                            <span className="font-medium">{assessment.name}</span>
-                            <span className="font-medium">{assessment.score}%</span>
-                          </div>
-                          <div className="w-full bg-muted rounded-full h-2.5">
-                            <div
-                              className="bg-primary h-2.5 rounded-full"
-                              style={{ width: `${assessment.score}%` }}
-                            ></div>
-                          </div>
-                          <div className="flex justify-between mt-1">
-                            <span className="text-xs text-muted-foreground">
-                              {assessment.score < 60 ? "Needs Improvement" : 
-                              assessment.score < 80 ? "Satisfactory" : "Excellent"}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {assessment.score >= 70 ? "Passing Score" : "Failing Score"}
-                            </span>
-                          </div>
+          {/* Assessments Tab */}
+          <TabsContent value="assessments" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Assessment Results</CardTitle>
+                <CardDescription>
+                  Performance in various assessment tests
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {candidate.assessments.map((assessment) => (
+                    <div
+                      key={assessment.id}
+                      className="border rounded-lg overflow-hidden"
+                    >
+                      <div className="flex items-center justify-between p-4 border-b bg-muted/50">
+                        <div className="flex items-center">
+                          <FileText className="h-5 w-5 text-primary mr-2" />
+                          <h4 className="font-medium">{assessment.title}</h4>
                         </div>
-                      ))}
+                        <Badge
+                          variant={assessment.status === "passed" ? "outline" : "secondary"}
+                          className={
+                            assessment.status === "passed"
+                              ? "border-green-500 text-green-600"
+                              : ""
+                          }
+                        >
+                          {assessment.status === "passed" ? (
+                            <span className="flex items-center">
+                              <CheckCircle className="mr-1 h-3 w-3" />
+                              Passed
+                            </span>
+                          ) : (
+                            "Failed"
+                          )}
+                        </Badge>
+                      </div>
+                      <div className="p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-muted-foreground">
+                            Date: {new Date(assessment.date).toLocaleDateString()}
+                          </span>
+                          <span className="font-medium">
+                            Score: {assessment.score}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-2.5">
+                          <div
+                            className={`h-2.5 rounded-full ${
+                              assessment.score >= 70
+                                ? "bg-green-500"
+                                : "bg-amber-500"
+                            }`}
+                            style={{ width: `${assessment.score}%` }}
+                          ></div>
+                        </div>
+                        <div className="mt-4 flex justify-end">
+                          <Button variant="ghost" size="sm">
+                            View Details
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Detailed Test Results</CardTitle>
-                    <CardDescription>
-                      Question-by-question breakdown
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-center py-8">
-                      <BarChart className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-lg font-medium">Detailed results available</h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        View the complete assessment report for {candidate.name}
-                      </p>
-                      <Button className="mt-4">View Full Report</Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="videos" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Video Submissions</CardTitle>
-                    <CardDescription>
-                      Review candidate's video presentations
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {candidate.videos.map((video) => (
-                        <div key={video.id} className="border rounded-lg p-4">
-                          <div className="flex justify-between items-start mb-3">
-                            <div>
-                              <h4 className="font-medium">{video.title}</h4>
-                              <p className="text-sm text-muted-foreground">
-                                Submitted on {new Date(candidate.applicationDate).toLocaleDateString()}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="bg-muted rounded-md aspect-video flex items-center justify-center">
-                            <Video className="h-12 w-12 text-muted-foreground" />
-                          </div>
-                          <div className="mt-3 flex justify-end">
-                            <Button>
-                              <Video className="h-4 w-4 mr-2" />
-                              Play Video
+                  ))}
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button variant="outline" size="sm" className="w-full">
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Assign New Assessment
+                </Button>
+              </CardFooter>
+            </Card>
+          </TabsContent>
+
+          {/* Training Tab */}
+          <TabsContent value="training" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Training Progress</CardTitle>
+                <CardDescription>
+                  Progress through required training modules
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {candidate.trainingProgress.map((module, index) => (
+                    <div key={index} className="border rounded-lg overflow-hidden">
+                      <div className="flex items-center justify-between p-4 border-b bg-muted/50">
+                        <div className="flex items-center">
+                          <BookOpen className="h-5 w-5 text-primary mr-2" />
+                          <h4 className="font-medium">{module.module}</h4>
+                        </div>
+                        {module.completed ? (
+                          <Badge
+                            variant="outline"
+                            className="border-green-500 text-green-600"
+                          >
+                            <span className="flex items-center">
+                              <CheckCircle className="mr-1 h-3 w-3" />
+                              Completed
+                            </span>
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="border-amber-500 text-amber-600">
+                            <span className="flex items-center">
+                              <Clock className="mr-1 h-3 w-3" />
+                              In Progress
+                            </span>
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-muted-foreground">
+                            Progress: {module.progress}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-2.5">
+                          <div
+                            className={`h-2.5 rounded-full ${
+                              module.completed
+                                ? "bg-green-500"
+                                : "bg-blue-500"
+                            }`}
+                            style={{ width: `${module.progress}%` }}
+                          ></div>
+                        </div>
+                        <div className="mt-4 flex justify-end space-x-2">
+                          <Button variant="ghost" size="sm">
+                            View Module
+                          </Button>
+                          {!module.completed && (
+                            <Button variant="outline" size="sm">
+                              Send Reminder
                             </Button>
-                          </div>
+                          )}
                         </div>
-                      ))}
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="notes" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Notes</CardTitle>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Notes Tab */}
+          <TabsContent value="notes" className="space-y-6">
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Candidate Notes</CardTitle>
                     <CardDescription>
-                      Internal notes about this candidate
+                      Feedback and observations about the candidate
                     </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="border rounded-lg p-4 mb-4">
-                      <p className="whitespace-pre-line">{candidate.notes}</p>
-                      <div className="text-sm text-muted-foreground mt-2">
-                        Added by John Smith on {new Date().toLocaleDateString()}
+                  </div>
+                  <Button size="sm" onClick={() => setShowFeedbackDialog(true)}>
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    Add Note
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {candidate.notes.length > 0 ? (
+                    candidate.notes.map((note) => (
+                      <div
+                        key={note.id}
+                        className="border rounded-lg p-4 space-y-2"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="font-medium">{note.author}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {new Date(note.date).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <p className="text-sm">{note.text}</p>
                       </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-6 text-muted-foreground">
+                      No notes available for this candidate.
                     </div>
-                    
-                    <div className="space-y-4">
-                      <Label htmlFor="new-note">Add a Note</Label>
-                      <Textarea
-                        id="new-note"
-                        placeholder="Add your notes about this candidate..."
-                        rows={3}
-                      />
-                      <div className="flex justify-end">
-                        <Button>Save Note</Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Application History</CardTitle>
-                    <CardDescription>
-                      Timeline of candidate's application process
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex gap-3">
-                        <div className="min-w-[32px] flex flex-col items-center">
-                          <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-                            <CheckCircle className="h-4 w-4 text-green-600" />
-                          </div>
-                          <div className="w-0.5 h-full bg-muted mx-auto mt-2"></div>
-                        </div>
-                        <div>
-                          <h4 className="font-medium">Interview Scheduled</h4>
-                          <p className="text-sm text-muted-foreground">
-                            Scheduled for {new Date(candidate.interviewScheduled).toLocaleDateString()}
-                          </p>
-                          <p className="mt-1 text-sm">
-                            Final interview scheduled with the hiring manager.
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex gap-3">
-                        <div className="min-w-[32px] flex flex-col items-center">
-                          <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-                            <CheckCircle className="h-4 w-4 text-green-600" />
-                          </div>
-                          <div className="w-0.5 h-full bg-muted mx-auto mt-2"></div>
-                        </div>
-                        <div>
-                          <h4 className="font-medium">Sales Task Completed</h4>
-                          <p className="text-sm text-muted-foreground">
-                            Sep 25, 2023
-                          </p>
-                          <p className="mt-1 text-sm">
-                            Candidate successfully completed the sales task with a score of 85%.
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex gap-3">
-                        <div className="min-w-[32px] flex flex-col items-center">
-                          <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-                            <CheckCircle className="h-4 w-4 text-green-600" />
-                          </div>
-                          <div className="w-0.5 h-full bg-muted mx-auto mt-2"></div>
-                        </div>
-                        <div>
-                          <h4 className="font-medium">Training Completed</h4>
-                          <p className="text-sm text-muted-foreground">
-                            Sep 18, 2023
-                          </p>
-                          <p className="mt-1 text-sm">
-                            Completed all required training modules with an average score of 88%.
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex gap-3">
-                        <div className="min-w-[32px] flex flex-col items-center">
-                          <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-                            <CheckCircle className="h-4 w-4 text-green-600" />
-                          </div>
-                        </div>
-                        <div>
-                          <h4 className="font-medium">Application Submitted</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(candidate.applicationDate).toLocaleDateString()}
-                          </p>
-                          <p className="mt-1 text-sm">
-                            Initial application submitted with resume and video introductions.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </div>
-        </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
+
+      {/* Schedule Interview Dialog */}
+      <Dialog
+        open={showScheduleDialog}
+        onOpenChange={setShowScheduleDialog}
+      >
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Schedule Interview</DialogTitle>
+            <DialogDescription>
+              Set up an interview with the candidate
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleScheduleInterview}>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="interviewType">Interview Type</Label>
+                <Select defaultValue="technical">
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="initial">Initial Screening</SelectItem>
+                    <SelectItem value="technical">Technical Interview</SelectItem>
+                    <SelectItem value="final">Final Interview</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="interviewDate">Date & Time</Label>
+                <Input
+                  id="interviewDate"
+                  type="datetime-local"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="interviewLocation">Location</Label>
+                <Select defaultValue="online">
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="online">Online (Zoom)</SelectItem>
+                    <SelectItem value="office">Office</SelectItem>
+                    <SelectItem value="phone">Phone Call</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="interviewNotes">Additional Notes</Label>
+                <Textarea
+                  id="interviewNotes"
+                  placeholder="Add any additional information..."
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowScheduleDialog(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">Schedule Interview</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Feedback Dialog */}
+      <Dialog
+        open={showFeedbackDialog}
+        onOpenChange={setShowFeedbackDialog}
+      >
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Add Feedback Note</DialogTitle>
+            <DialogDescription>
+              Record observations and feedback about the candidate
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmitFeedback}>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="feedbackText">Feedback</Label>
+                <Textarea
+                  id="feedbackText"
+                  placeholder="Enter your feedback..."
+                  rows={5}
+                  required
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowFeedbackDialog(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">Save Note</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 };

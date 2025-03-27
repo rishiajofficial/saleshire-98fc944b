@@ -1,5 +1,6 @@
 
 export type UserRole = 'candidate' | 'manager' | 'admin';
+export type Region = 'north' | 'south' | 'east' | 'west' | 'central';
 
 export interface User {
   id: string;
@@ -12,6 +13,7 @@ export interface User {
 export interface Candidate extends User {
   phone: string;
   location: string;
+  region: Region;
   status: 'applied' | 'screening' | 'training' | 'sales_task' | 'interview' | 'hired' | 'rejected';
   resume?: string;
   aboutMeVideo?: string;
@@ -22,6 +24,7 @@ export interface Candidate extends User {
 
 export interface Manager extends User {
   candidates: string[];
+  regions: Region[];
 }
 
 export interface Admin extends User {}
@@ -34,6 +37,7 @@ export interface Assessment {
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
+  difficulty?: 'Basic' | 'Intermediate' | 'Advanced';
 }
 
 export interface Question {
@@ -53,6 +57,7 @@ export interface TrainingModule {
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
+  module: 'product' | 'sales' | 'relationship';
 }
 
 export interface SalesTask {
@@ -82,4 +87,27 @@ export interface Interview {
   status: 'scheduled' | 'completed' | 'cancelled';
   decision?: 'hired' | 'rejected';
   feedback?: string;
+}
+
+export interface Video {
+  id: string;
+  title: string;
+  description: string;
+  url: string;
+  duration: string;
+  module: 'product' | 'sales' | 'relationship';
+  createdAt: Date;
+  createdBy: string;
+}
+
+export interface Quiz {
+  id: string;
+  title: string;
+  description: string;
+  module: 'product' | 'sales' | 'relationship';
+  questionCount: number;
+  passingScore: number;
+  questions: Question[];
+  createdAt: Date;
+  createdBy: string;
 }

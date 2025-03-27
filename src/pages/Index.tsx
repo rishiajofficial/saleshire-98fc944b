@@ -2,10 +2,9 @@
 import React, { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, CheckCircle, Award, Briefcase, BookOpen } from "lucide-react";
+import { ArrowRight, CheckCircle, Award, Briefcase, BookOpen, Play } from "lucide-react";
 
 const Index = () => {
-  // Change the type here to accept null or HTMLElement
   const sectionsRef = useRef<(HTMLElement | null)[]>([]);
 
   useEffect(() => {
@@ -31,7 +30,6 @@ const Index = () => {
     };
   }, []);
 
-  // Update the addToRefs function to accept HTMLElement instead of HTMLDivElement
   const addToRefs = (el: HTMLElement | null, index: number) => {
     if (el && !sectionsRef.current.includes(el)) {
       sectionsRef.current[index] = el;
@@ -95,7 +93,7 @@ const Index = () => {
       {/* Hero Section */}
       <section className="relative py-20 md:py-28 overflow-hidden">
         <div
-          className="absolute inset-0 bg-gradient-to-b from-secondary/50 to-background"
+          className="absolute inset-0 bg-gradient-to-b from-primary/5 to-background"
           aria-hidden="true"
         />
         <div className="container px-4 sm:px-6 lg:px-8 mx-auto relative">
@@ -110,7 +108,7 @@ const Index = () => {
             </p>
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4 animate-slide-down" style={{ animationDelay: "0.2s" }}>
               <Button asChild size="lg" className="rounded-md px-8 py-6 text-lg">
-                <Link to="/register">Get Started <ArrowRight className="ml-2 h-5 w-5" /></Link>
+                <Link to="/register">Apply Now <ArrowRight className="ml-2 h-5 w-5" /></Link>
               </Button>
               <Button asChild variant="outline" size="lg" className="rounded-md px-8 py-6 text-lg">
                 <Link to="/login">Login</Link>
@@ -125,19 +123,9 @@ const Index = () => {
               <div className="relative aspect-video">
                 <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-primary/10 flex items-center justify-center">
                   <div className="text-center p-6">
-                    <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto shadow-lg hover-scale">
+                    <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto shadow-lg hover:scale-110 transition-transform cursor-pointer">
                       <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center">
-                        <svg
-                          className="w-8 h-8 text-white"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            d="M8 5.14v14l11-7-11-7z"
-                            fill="currentColor"
-                          />
-                        </svg>
+                        <Play className="w-8 h-8 text-white ml-1" />
                       </div>
                     </div>
                     <h3 className="mt-6 text-xl font-semibold text-white">
@@ -145,8 +133,14 @@ const Index = () => {
                     </h3>
                   </div>
                 </div>
-                {/* Placeholder for video thumbnail */}
-                <div className="absolute inset-0 bg-black/20 backdrop-blur-sm"></div>
+                {/* Video thumbnail with overlay */}
+                <div className="absolute inset-0 bg-black/40">
+                  <img 
+                    src="/sales-team.jpg" 
+                    alt="Sales team in action" 
+                    className="w-full h-full object-cover opacity-80"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -183,10 +177,10 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Process Section */}
+      {/* Process Section with Images */}
       <section 
         ref={(el) => addToRefs(el, 1)} 
-        className="py-20 bg-secondary/50 section-fade-in"
+        className="py-20 bg-secondary/20 section-fade-in"
       >
         <div className="container px-4 sm:px-6 lg:px-8 mx-auto">
           <div className="max-w-3xl mx-auto text-center mb-16">
@@ -208,6 +202,13 @@ const Index = () => {
                     : "bg-white"
                 }`}
               >
+                <div className="relative h-40 mb-6 overflow-hidden rounded-lg">
+                  <img 
+                    src={`/step-${index + 1}.jpg`} 
+                    alt={`Step ${index + 1}`} 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
                 <div
                   className={`text-3xl font-bold mb-4 ${
                     step.isPrimary ? "text-primary-foreground/80" : "text-primary/60"
@@ -300,7 +301,7 @@ const Index = () => {
               Start finding better sales talent with our comprehensive platform.
             </p>
             <Button asChild size="lg" variant="secondary" className="rounded-md px-8 py-6 text-lg">
-              <Link to="/register">Get Started Today</Link>
+              <Link to="/register">Apply Now</Link>
             </Button>
           </div>
         </div>

@@ -20,6 +20,8 @@ import CandidateDetail from "./pages/manager/CandidateDetail";
 import Assessments from "./pages/manager/Assessments";
 import Analytics from "./pages/manager/Analytics";
 import Profile from "./pages/common/Profile";
+import UserManagement from "./pages/admin/UserManagement";
+import ActivityLog from "./pages/admin/ActivityLog";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +48,10 @@ const App = () => (
           <Route path="/candidates/:id" element={<CandidateDetail />} />
           <Route path="/assessments" element={<Assessments />} />
           <Route path="/analytics" element={<Analytics />} />
+
+          {/* Admin Routes */}
+          <Route path="/users" element={<UserManagement />} />
+          <Route path="/activity-log" element={<ActivityLog />} />
 
           {/* Common Routes */}
           <Route path="/profile" element={<Profile />} />
