@@ -14,6 +14,7 @@ import ManagerDashboard from "./pages/dashboard/ManagerDashboard";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
 import Training from "./pages/training/Training";
 import Quiz from "./pages/training/Quiz";
+import AssessmentQuiz from "./pages/training/AssessmentQuiz";
 import VideoPlayer from "./pages/training/VideoPlayer";
 import Candidates from "./pages/manager/Candidates";
 import CandidateDetail from "./pages/manager/CandidateDetail";
@@ -42,6 +43,7 @@ const App = () => (
           <Route path="/dashboard/admin" element={<AdminDashboard />} />
           <Route path="/training" element={<Training />} />
           <Route path="/training/quiz/:moduleId" element={<Quiz />} />
+          <Route path="/training/assessment/:assessmentId" element={<AssessmentQuiz />} />
           <Route path="/training/video/:moduleId/:videoId" element={<VideoPlayer />} />
           
           {/* Manager Routes */}

@@ -38,6 +38,17 @@ export interface Assessment {
   createdAt: Date;
   updatedAt: Date;
   difficulty?: 'Basic' | 'Intermediate' | 'Advanced';
+  timeLimit?: number; // Time limit per question in seconds
+  randomizeQuestions?: boolean;
+  preventBacktracking?: boolean;
+  sections?: AssessmentSection[];
+}
+
+export interface AssessmentSection {
+  id: string;
+  title: string;
+  description?: string;
+  questions: Question[];
 }
 
 export interface Question {
@@ -45,6 +56,23 @@ export interface Question {
   text: string;
   options: string[];
   correctAnswer: number;
+  section?: string;
+  timeLimit?: number; // Override assessment time limit for specific question
+}
+
+export interface AssessmentResult {
+  id: string;
+  candidateId: string;
+  assessmentId: string;
+  score: number;
+  answers: Record<string, string>;
+  answerTimings: Record<string, number>; // Time taken for each question
+  completed: boolean;
+  startedAt: Date;
+  completedAt?: Date;
+  reviewedBy?: string;
+  reviewedAt?: Date;
+  feedback?: string;
 }
 
 export interface TrainingModule {
@@ -110,4 +138,6 @@ export interface Quiz {
   questions: Question[];
   createdAt: Date;
   createdBy: string;
+  timeLimit?: number; // Time limit per question in seconds
+  randomizeQuestions?: boolean;
 }
