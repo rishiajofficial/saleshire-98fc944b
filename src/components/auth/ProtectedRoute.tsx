@@ -1,6 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/types';
 
@@ -14,6 +14,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   allowedRoles 
 }) => {
   const { user, profile, isLoading } = useAuth();
+  const location = useLocation();
+  
+  // Save current path for redirect after login
+  useEffect(() => {
+    if (!user && !isLoading) {
+      // Store the attempted URL for redirecting after login
+      sessionStorage.setItem('intendedPath', location.pathname);
+    }
+  }, [user, isLoading, location.pathname]);
   
   // Show loading state
   if (isLoading) {

@@ -45,7 +45,15 @@ const Login = () => {
   useEffect(() => {
     // If user is already logged in and we're on the login page, redirect
     if (user && location.pathname === '/login') {
-      navigate(-1);
+      // Check for intended path in session storage
+      const intendedPath = sessionStorage.getItem('intendedPath');
+      if (intendedPath) {
+        sessionStorage.removeItem('intendedPath');
+        navigate(intendedPath);
+      } else {
+        // Redirect based on user role
+        navigate(-1);
+      }
     }
   }, [user, navigate, location]);
 

@@ -3,7 +3,7 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface AuthContextProps {
   session: Session | null;
@@ -24,8 +24,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
+    console.log("Auth Provider initialized");
+    
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
@@ -44,6 +47,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else if (event === 'SIGNED_OUT') {
           setProfile(null);
           console.log('User signed out');
+          // Only redirect to login if not already there
+          if (location.pathname !== '/login' && location.pathname !== '/register' && 
+              location.pathname !== '/forgot-password' && location.pathname !== '/reset-password') {
+            navigate('/login');
+          }
         }
       }
     );
@@ -53,21 +61,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Current session:', currentSession?.user?.id);
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
+      
       if (currentSession?.user) {
         fetchProfile(currentSession.user.id);
       } else {
         setIsLoading(false);
+        // Only redirect to login if not already on auth pages
+        if (location.pathname !== '/login' && location.pathname !== '/register' && 
+            location.pathname !== '/forgot-password' && location.pathname !== '/reset-password' && 
+            location.pathname !== '/') {
+          navigate('/login');
+        }
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate, location.pathname]);
 
   // Fetch user profile data from Supabase
   const fetchProfile = async (userId: string) => {
     try {
+      console.log('Fetching profile for user:', userId);
       // Fix the query to not use embedded relationships
       const { data, error } = await supabase
         .from('profiles')
@@ -169,6 +185,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Sign up function
   const signUp = async (email: string, password: string, userData: any) => {
     try {
+      setIsLoading(true);
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -182,16 +199,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       toast.success('Registration successful! Please check your email for verification.');
+      navigate('/login');
       
     } catch (error: any) {
       toast.error(error.message || 'Failed to sign up');
       console.error('Error signing up:', error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   // Sign out function
   const signOut = async () => {
     try {
+      setIsLoading(true);
       const { error } = await supabase.auth.signOut();
       
       if (error) {
@@ -203,6 +224,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error: any) {
       toast.error(error.message || 'Failed to sign out');
       console.error('Error signing out:', error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 

@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 import { 
   Menu, 
   X, 
@@ -21,17 +23,11 @@ import {
 const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userRole, setUserRole] = useState<string | null>(null);
+  const { user, profile, signOut } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const storedRole = localStorage.getItem("userRole");
-    if (storedRole) {
-      setIsAuthenticated(true);
-      setUserRole(storedRole);
-    }
-
     const handleScroll = () => {
       if (window.scrollY > 10) {
         setIsScrolled(true);
@@ -44,12 +40,13 @@ const Navbar: React.FC = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("currentUser");
-    setIsAuthenticated(false);
-    setUserRole(null);
-    window.location.href = "/login";
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      navigate('/login');
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
   };
 
   const closeMenu = () => {
@@ -61,7 +58,7 @@ const Navbar: React.FC = () => {
   };
 
   const renderNavLinks = () => {
-    if (!isAuthenticated) {
+    if (!user) {
       return (
         <>
           <Link
@@ -110,10 +107,10 @@ const Navbar: React.FC = () => {
           Home
         </Link>
         <Link
-          to={`/dashboard/${userRole}`}
+          to={`/dashboard/${profile?.role}`}
           className={cn(
             "nav-item",
-            isActive(`/dashboard/${userRole}`) && "nav-item-active"
+            isActive(`/dashboard/${profile?.role}`) && "nav-item-active"
           )}
           onClick={closeMenu}
         >
@@ -124,7 +121,7 @@ const Navbar: React.FC = () => {
 
     let roleSpecificLinks;
     
-    switch(userRole) {
+    switch(profile?.role) {
       case 'candidate':
         roleSpecificLinks = (
           <>
@@ -293,7 +290,7 @@ const Navbar: React.FC = () => {
   };
 
   const renderMobileNavLinks = () => {
-    if (!isAuthenticated) {
+    if (!user) {
       return (
         <>
           <Link
@@ -352,10 +349,10 @@ const Navbar: React.FC = () => {
           Home
         </Link>
         <Link
-          to={`/dashboard/${userRole}`}
+          to={`/dashboard/${profile?.role}`}
           className={cn(
             "block px-3 py-2 rounded-md text-base font-medium",
-            isActive(`/dashboard/${userRole}`) ? "bg-primary text-white" : "text-gray-700 hover:bg-gray-100"
+            isActive(`/dashboard/${profile?.role}`) ? "bg-primary text-white" : "text-gray-700 hover:bg-gray-100"
           )}
           onClick={closeMenu}
         >
@@ -366,7 +363,7 @@ const Navbar: React.FC = () => {
 
     let roleSpecificLinks;
     
-    switch(userRole) {
+    switch(profile?.role) {
       case 'candidate':
         roleSpecificLinks = (
           <>
