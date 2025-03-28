@@ -40,39 +40,39 @@ export function useDatabaseQuery<T = any>(
           return;
         }
         
-        // Use the tableName directly since we've defined it as a valid literal type
-        let query = supabase.from(tableName).select(options.columns || '*');
+        // Type assertion to fix the deep type instantiation error
+        const query = supabase.from(tableName as any).select(options.columns || '*');
         
         // Apply filter if provided
         if (options.filter) {
           Object.entries(options.filter).forEach(([key, value]) => {
-            query = query.eq(key, value);
+            query.eq(key, value);
           });
         }
         
         // Apply eq filter if provided
         if (options.eq) {
-          query = query.eq(options.eq[0], options.eq[1]);
+          query.eq(options.eq[0], options.eq[1]);
         }
         
         // Apply in filter if provided
         if (options.in) {
-          query = query.in(options.in[0], options.in[1]);
+          query.in(options.in[0], options.in[1]);
         }
         
         // Apply order if provided
         if (options.order) {
-          query = query.order(options.order[0], { ascending: options.order[1].ascending });
+          query.order(options.order[0], { ascending: options.order[1].ascending });
         }
         
         // Apply limit if provided
         if (options.limit) {
-          query = query.limit(options.limit);
+          query.limit(options.limit);
         }
         
         // Apply range if provided
         if (options.range) {
-          query = query.range(options.range[0], options.range[1]);
+          query.range(options.range[0], options.range[1]);
         }
         
         // Get single result if specified
@@ -121,8 +121,9 @@ export function useRealTimeSubscription<T = any>(
     // Create a channel to listen for changes
     const channel = supabase
       .channel('schema-db-changes')
+      // Use type assertion to fix the type error with postgres_changes
       .on(
-        'postgres_changes',
+        'postgres_changes' as any,
         {
           event,
           schema: 'public',
