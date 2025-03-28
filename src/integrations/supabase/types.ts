@@ -609,6 +609,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_manage_user: {
+        Args: {
+          admin_id: string
+          action: string
+          user_data: Json
+        }
+        Returns: Json
+      }
       is_admin: {
         Args: {
           user_id: string
@@ -636,6 +644,16 @@ export type Database = {
           details?: Json
         }
         Returns: string
+      }
+      log_admin_action: {
+        Args: {
+          admin_id: string
+          action: string
+          entity_type: string
+          entity_id: string
+          details?: Json
+        }
+        Returns: undefined
       }
     }
     Enums: {

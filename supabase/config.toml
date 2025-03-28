@@ -1,1 +1,7 @@
+
 project_id = "vjddnsmkymfvriwstiiw"
+[api]
+enabled = true
+[functions]
+[functions.admin-operations]
+verify_jwt = true

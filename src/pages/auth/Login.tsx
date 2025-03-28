@@ -63,12 +63,19 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!email || !password) {
+      toast.error("Please enter both email and password");
+      return;
+    }
+    
     setIsLoading(true);
     
     try {
       await signIn(email, password);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
+      toast.error(error.message || "Login failed. Please check your credentials.");
     } finally {
       setIsLoading(false);
     }
@@ -78,7 +85,7 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      // Fixed demo credentials
+      // Fixed demo credentials - these should exist in the database
       const demoCredentials = {
         candidate: {
           email: 'candidate@example.com',
@@ -103,11 +110,16 @@ const Login = () => {
       
       // Wait a moment for the UI to update before submitting
       setTimeout(async () => {
-        await signIn(credentials.email, credentials.password);
+        try {
+          await signIn(credentials.email, credentials.password);
+        } catch (error: any) {
+          console.error(`Demo login error (${type}):`, error);
+          throw error;
+        }
       }, 100);
     } catch (error: any) {
       console.error(`Demo login error (${type}):`, error);
-      toast.error(`Failed to sign in with demo ${type} account. Please try again.`);
+      toast.error(`Failed to sign in with demo ${type} account: ${error.message}`);
     } finally {
       setIsLoading(false);
     }

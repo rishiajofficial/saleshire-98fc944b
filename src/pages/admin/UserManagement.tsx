@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -123,32 +122,34 @@ const UserManagement = () => {
       // First, create a random password
       const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(2, 7).toUpperCase() + '!';
       
-      // Create the user in Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email,
-        password: tempPassword,
-        email_confirm: true,
-        user_metadata: {
-          name,
-          role,
-          region
+      // Call the edge function to create a user
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      
+      const { data, error } = await supabase.functions.invoke("admin-operations", {
+        body: {
+          operation: "createUser",
+          data: {
+            name,
+            email,
+            password: tempPassword,
+            role,
+            region,
+            adminId: user?.id
+          }
         }
       });
       
-      if (authError) throw authError;
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error || "Failed to create user");
       
       toast.success(`User ${name} created successfully with role: ${role}`);
       
-      // Log the activity
-      await supabase.from('activity_logs').insert({
-        user_id: user?.id,
-        action: `Created new user account: ${name} (${role})`,
-        entity_type: 'user',
-        entity_id: authData.user.id,
-      });
-      
       // Reset the form
       e.currentTarget.reset();
+      
+      // Refresh user list
+      window.location.reload();
       
     } catch (error: any) {
       console.error('Error creating user:', error.message);
@@ -163,20 +164,24 @@ const UserManagement = () => {
     
     setIsLoading(true);
     try {
-      // Delete user from Supabase Auth
-      const { error } = await supabase.auth.admin.deleteUser(userToDelete);
+      // Call the edge function to delete a user
+      const { data, error } = await supabase.functions.invoke("admin-operations", {
+        body: {
+          operation: "deleteUser",
+          data: {
+            userId: userToDelete,
+            adminId: user?.id
+          }
+        }
+      });
       
       if (error) throw error;
+      if (!data.success) throw new Error(data.error || "Failed to delete user");
       
       toast.success(`User account deleted successfully`);
       
-      // Log activity
-      await supabase.from('activity_logs').insert({
-        user_id: user?.id,
-        action: 'Deleted user account',
-        entity_type: 'user',
-        entity_id: userToDelete,
-      });
+      // Refresh user list
+      window.location.reload();
       
     } catch (error: any) {
       console.error('Error deleting user:', error.message);
