@@ -28,6 +28,7 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
+import { toast } from 'sonner';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -50,6 +51,8 @@ const Login = () => {
     
     try {
       await signIn(email, password);
+    } catch (error) {
+      console.error("Login error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -73,7 +76,11 @@ const Login = () => {
     }
 
     try {
+      console.log(`Attempting demo login as ${type} with email: ${demoEmail}`);
       await signIn(demoEmail, demoPassword);
+    } catch (error) {
+      console.error(`Demo login error (${type}):`, error);
+      toast.error(`Failed to sign in with demo ${type} account. Please try again.`);
     } finally {
       setIsLoading(false);
     }
