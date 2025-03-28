@@ -5,8 +5,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Database } from '@/integrations/supabase/types';
 
-// Define table names as literal types derived from the Database type
-export type TableName = keyof Database['public']['Tables'];
+// Define valid table names as a literal union type
+export type TableName = 'activity_logs' | 'assessment_results' | 'assessment_sections' | 
+                        'assessments' | 'candidates' | 'interviews' | 'manager_regions' | 
+                        'managers' | 'profiles' | 'questions' | 'sales_tasks' | 'shops' | 
+                        'training_modules' | 'videos';
 
 export function useDatabaseQuery<T = any>(
   tableName: TableName,
@@ -37,8 +40,8 @@ export function useDatabaseQuery<T = any>(
           return;
         }
         
-        // Use type assertion to handle the table name
-        let query = supabase.from(tableName as string).select(options.columns || '*');
+        // Use the tableName directly since we've defined it as a valid literal type
+        let query = supabase.from(tableName).select(options.columns || '*');
         
         // Apply filter if provided
         if (options.filter) {
@@ -116,19 +119,21 @@ export function useRealTimeSubscription<T = any>(
     if (!user) return;
     
     // Create a channel to listen for changes
-    // Using a type assertion for channel.on since the TypeScript types 
-    // for Supabase realtime are not fully compatible with our usage
     const channel = supabase
       .channel('schema-db-changes')
-      .on('postgres_changes' as any, // Type assertion to bypass strict type checking
+      .on(
+        'postgres_changes',
         {
           event,
           schema: 'public',
-          table: tableName as string
+          table: tableName
         },
         (payload) => {
-          setData(payload.new as T);
-          if (callback) callback(payload);
+          // Access the data in the payload safely, checking first if 'new' exists
+          if (payload && 'new' in payload) {
+            setData(payload.new as T);
+            if (callback) callback(payload);
+          }
         }
       )
       .subscribe();
