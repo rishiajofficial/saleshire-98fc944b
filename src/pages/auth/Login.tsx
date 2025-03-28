@@ -1,11 +1,6 @@
 
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
-import { EyeIcon, EyeOffIcon } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -14,187 +9,105 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import MainLayout from "@/components/layout/MainLayout";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from '@/contexts/AuthContext';
 
 const Login = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  const { signIn, user } = useAuth();
   const navigate = useNavigate();
 
-  // Mock login function (for demonstration)
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!email || !password) {
-      toast.error("Please fill in all fields");
-      return;
+  useEffect(() => {
+    // If user is already logged in, redirect accordingly
+    if (user) {
+      navigate(-1);
     }
+  }, [user, navigate]);
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      // Demo login logic
-      if (email === "candidate@example.com" && password === "password") {
-        localStorage.setItem("userRole", "candidate");
-        localStorage.setItem("currentUser", JSON.stringify({
-          id: "1",
-          name: "Demo Candidate",
-          email: "candidate@example.com",
-          role: "candidate",
-          createdAt: new Date(),
-          currentStep: 2,
-          status: 'training'
-        }));
-        toast.success("Login successful!");
-        navigate("/dashboard/candidate");
-      } else if (email === "manager@example.com" && password === "password") {
-        localStorage.setItem("userRole", "manager");
-        localStorage.setItem("currentUser", JSON.stringify({
-          id: "2",
-          name: "Demo Manager",
-          email: "manager@example.com",
-          role: "manager",
-          createdAt: new Date()
-        }));
-        toast.success("Login successful!");
-        navigate("/dashboard/manager");
-      } else if (email === "admin@example.com" && password === "password") {
-        localStorage.setItem("userRole", "admin");
-        localStorage.setItem("currentUser", JSON.stringify({
-          id: "3",
-          name: "Demo Admin",
-          email: "admin@example.com",
-          role: "admin",
-          createdAt: new Date()
-        }));
-        toast.success("Login successful!");
-        navigate("/dashboard/admin");
-      } else {
-        toast.error("Invalid credentials");
-      }
-      
+    try {
+      await signIn(email, password);
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
-    <MainLayout>
-      <div className="flex items-center justify-center min-h-[80vh]">
-        <Card className="w-full max-w-md">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold">Sign in to your account</CardTitle>
-            <CardDescription>
-              Enter your credentials below to continue
-            </CardDescription>
-          </CardHeader>
-          
-          <form onSubmit={handleLogin} className="space-y-6">
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email address</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="email"
-                  placeholder="you@example.com"
-                  required
-                  className="h-12"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
-                  <div className="text-sm">
-                    <Link
-                      to="/forgot-password"
-                      className="font-medium text-primary hover:text-primary/80 transition-colors"
-                    >
-                      Forgot your password?
-                    </Link>
-                  </div>
-                </div>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    autoComplete="current-password"
-                    placeholder="••••••••"
-                    required
-                    className="h-12"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  >
-                    {showPassword ? (
-                      <EyeOffIcon className="h-5 w-5 text-muted-foreground" />
-                    ) : (
-                      <EyeIcon className="h-5 w-5 text-muted-foreground" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full h-12 text-base"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <span>Signing in...</span>
-                ) : (
-                  "Sign in"
-                )}
-              </Button>
-            </CardContent>
-          </form>
-
-          <CardFooter className="flex flex-col space-y-4">
-            <div className="text-sm text-center">
-              <p>Don't have an account?{" "}
-                <Link to="/register" className="text-primary hover:underline">
-                  Sign up as candidate
-                </Link>
-              </p>
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold">Sign in to HireSmart</CardTitle>
+          <CardDescription>
+            Enter your email below to sign in to your account
+          </CardDescription>
+        </CardHeader>
+        <form onSubmit={handleSubmit}>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input 
+                id="email" 
+                type="email" 
+                placeholder="name@example.com" 
+                required 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
             </div>
-            
-            <div className="border-t pt-4">
-              <h3 className="text-sm font-semibold mb-2 text-center">Demo credentials:</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                <div className="border rounded-md p-2">
-                  <p className="font-medium">Candidate</p>
-                  <p>candidate@example.com</p>
-                  <p>password</p>
-                </div>
-                <div className="border rounded-md p-2">
-                  <p className="font-medium">Manager</p>
-                  <p>manager@example.com</p>
-                  <p>password</p>
-                </div>
-                <div className="border rounded-md p-2">
-                  <p className="font-medium">Admin</p>
-                  <p>admin@example.com</p>
-                  <p>password</p>
-                </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <Link 
+                  to="/forgot-password" 
+                  className="text-sm text-primary hover:underline"
+                >
+                  Forgot password?
+                </Link>
               </div>
+              <Input 
+                id="password" 
+                type="password" 
+                required 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-4">
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <span className="flex items-center">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Signing in...
+                </span>
+              ) : (
+                "Sign in"
+              )}
+            </Button>
+            <div className="text-center text-sm">
+              Don't have an account?{" "}
+              <Link to="/register" className="text-primary hover:underline">
+                Sign up
+              </Link>
             </div>
           </CardFooter>
-        </Card>
-      </div>
-    </MainLayout>
+        </form>
+      </Card>
+    </div>
   );
 };
 

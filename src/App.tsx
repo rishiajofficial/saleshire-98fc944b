@@ -24,6 +24,8 @@ import Profile from "./pages/common/Profile";
 import UserManagement from "./pages/admin/UserManagement";
 import ActivityLog from "./pages/admin/ActivityLog";
 import TrainingManagement from "./pages/admin/TrainingManagement";
+import { AuthProvider } from "./contexts/AuthContext";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -33,36 +35,100 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/application" element={<Application />} />
-          <Route path="/dashboard/candidate" element={<CandidateDashboard />} />
-          <Route path="/dashboard/manager" element={<ManagerDashboard />} />
-          <Route path="/dashboard/admin" element={<AdminDashboard />} />
-          <Route path="/training" element={<Training />} />
-          <Route path="/training/quiz/:moduleId" element={<Quiz />} />
-          <Route path="/training/assessment/:assessmentId" element={<AssessmentQuiz />} />
-          <Route path="/training/video/:moduleId/:videoId" element={<VideoPlayer />} />
-          
-          {/* Manager Routes */}
-          <Route path="/candidates" element={<Candidates />} />
-          <Route path="/candidates/:id" element={<CandidateDetail />} />
-          <Route path="/assessments" element={<Assessments />} />
-          <Route path="/analytics" element={<Analytics />} />
+        <AuthProvider>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/application" element={<Application />} />
+            
+            {/* Protected Routes */}
+            <Route path="/dashboard/candidate" element={
+              <ProtectedRoute allowedRoles={['candidate']}>
+                <CandidateDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/manager" element={
+              <ProtectedRoute allowedRoles={['manager']}>
+                <ManagerDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/admin" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/training" element={
+              <ProtectedRoute allowedRoles={['candidate']}>
+                <Training />
+              </ProtectedRoute>
+            } />
+            <Route path="/training/quiz/:moduleId" element={
+              <ProtectedRoute allowedRoles={['candidate']}>
+                <Quiz />
+              </ProtectedRoute>
+            } />
+            <Route path="/training/assessment/:assessmentId" element={
+              <ProtectedRoute allowedRoles={['candidate']}>
+                <AssessmentQuiz />
+              </ProtectedRoute>
+            } />
+            <Route path="/training/video/:moduleId/:videoId" element={
+              <ProtectedRoute allowedRoles={['candidate']}>
+                <VideoPlayer />
+              </ProtectedRoute>
+            } />
+            
+            {/* Manager Routes */}
+            <Route path="/candidates" element={
+              <ProtectedRoute allowedRoles={['manager', 'admin']}>
+                <Candidates />
+              </ProtectedRoute>
+            } />
+            <Route path="/candidates/:id" element={
+              <ProtectedRoute allowedRoles={['manager', 'admin']}>
+                <CandidateDetail />
+              </ProtectedRoute>
+            } />
+            <Route path="/assessments" element={
+              <ProtectedRoute allowedRoles={['manager', 'admin']}>
+                <Assessments />
+              </ProtectedRoute>
+            } />
+            <Route path="/analytics" element={
+              <ProtectedRoute allowedRoles={['manager', 'admin']}>
+                <Analytics />
+              </ProtectedRoute>
+            } />
 
-          {/* Admin Routes */}
-          <Route path="/users" element={<UserManagement />} />
-          <Route path="/activity-log" element={<ActivityLog />} />
-          <Route path="/training-management" element={<TrainingManagement />} />
+            {/* Admin Routes */}
+            <Route path="/users" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <UserManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="/activity-log" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <ActivityLog />
+              </ProtectedRoute>
+            } />
+            <Route path="/training-management" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <TrainingManagement />
+              </ProtectedRoute>
+            } />
 
-          {/* Common Routes */}
-          <Route path="/profile" element={<Profile />} />
-          
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+            {/* Common Routes */}
+            <Route path="/profile" element={
+              <ProtectedRoute allowedRoles={['candidate', 'manager', 'admin']}>
+                <Profile />
+              </ProtectedRoute>
+            } />
+            
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -19,137 +19,175 @@ import {
 } from "@/components/ui/tabs";
 import {
   PlayCircle,
-  BookOpen,
-  ArrowRight,
   CheckCircle2,
-  FileText,
   Lock,
 } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+// Types for training data
+interface Video {
+  id: string;
+  title: string;
+  description: string;
+  url: string;
+  duration: string;
+  module: string;
+  watched?: boolean;
+}
+
+interface TrainingModule {
+  id: string;
+  title: string;
+  description: string;
+  module: string;
+  progress: number;
+  status: 'completed' | 'in_progress' | 'locked';
+  locked: boolean;
+  videos: Video[];
+}
 
 const Training = () => {
   const navigate = useNavigate();
+  const { user, profile } = useAuth();
   const [activeModule, setActiveModule] = useState("product");
+  const [trainingModules, setTrainingModules] = useState<TrainingModule[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [progress, setProgress] = useState({
+    product: 0,
+    sales: 0,
+    relationship: 0,
+    overall: 0
+  });
 
-  // Mock data for training modules
-  const trainingModules = [
-    {
-      id: "product",
-      title: "Product Knowledge",
-      description: "Learn about our security products, features, and target customers",
-      progress: 80,
-      status: "in_progress",
-      locked: false,
-      videos: [
+  useEffect(() => {
+    if (user) {
+      fetchTrainingData();
+    }
+  }, [user]);
+
+  const fetchTrainingData = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Get training modules
+      const { data: moduleData, error: moduleError } = await supabase
+        .from('training_modules')
+        .select('*')
+        .order('created_at', { ascending: true });
+        
+      if (moduleError) throw moduleError;
+      
+      // Get videos
+      const { data: videoData, error: videoError } = await supabase
+        .from('videos')
+        .select('*')
+        .order('created_at', { ascending: true });
+        
+      if (videoError) throw videoError;
+      
+      // Get watched videos (this would be from another table in a real app)
+      // For now, we'll simulate some watched videos
+      
+      // Group videos by module
+      const moduleMap: Record<string, Video[]> = {};
+      videoData.forEach((video: Video) => {
+        if (!moduleMap[video.module]) {
+          moduleMap[video.module] = [];
+        }
+        
+        // Simulate some videos as watched
+        if (video.module === 'product' && Math.random() > 0.3) {
+          video.watched = true;
+        } else if (video.module === 'sales' && Math.random() > 0.7) {
+          video.watched = true;
+        } else {
+          video.watched = false;
+        }
+        
+        moduleMap[video.module].push(video);
+      });
+      
+      // Calculate progress for each module
+      const productProgress = calculateModuleProgress(moduleMap['product'] || []);
+      const salesProgress = calculateModuleProgress(moduleMap['sales'] || []);
+      const relationshipProgress = calculateModuleProgress(moduleMap['relationship'] || []);
+      
+      // Overall progress
+      const overallProgress = Math.round(
+        (productProgress + salesProgress + relationshipProgress) / 3
+      );
+      
+      setProgress({
+        product: productProgress,
+        sales: salesProgress,
+        relationship: relationshipProgress,
+        overall: overallProgress
+      });
+      
+      // Format modules with videos
+      const formattedModules: TrainingModule[] = [
         {
-          id: 1,
-          title: "Introduction to Security Products",
-          duration: "12:30",
-          watched: true,
-          thumbnail: "/placeholder.svg",
+          id: "product",
+          title: "Product Knowledge",
+          description: "Learn about our security products, features, and target customers",
+          module: "product",
+          progress: productProgress,
+          status: productProgress === 100 ? 'completed' : 'in_progress',
+          locked: false,
+          videos: moduleMap['product'] || []
         },
         {
-          id: 2,
-          title: "Smart Lock Features & Benefits",
-          duration: "15:45",
-          watched: true,
-          thumbnail: "/placeholder.svg",
+          id: "sales",
+          title: "Sales Techniques",
+          description: "Master effective pitching, objection handling, and closing techniques",
+          module: "sales",
+          progress: salesProgress,
+          status: salesProgress === 100 ? 'completed' : (productProgress >= 80 ? 'in_progress' : 'locked'),
+          locked: productProgress < 80,
+          videos: moduleMap['sales'] || []
         },
         {
-          id: 3,
-          title: "Understanding Target Customers",
-          duration: "10:20",
-          watched: false,
-          thumbnail: "/placeholder.svg",
-        },
-        {
-          id: 4,
-          title: "Product Comparison & Positioning",
-          duration: "14:15",
-          watched: false,
-          thumbnail: "/placeholder.svg",
-        },
-      ],
-    },
-    {
-      id: "sales",
-      title: "Sales Techniques",
-      description: "Master effective pitching, objection handling, and closing techniques",
-      progress: 30,
-      status: "in_progress",
-      locked: false,
-      videos: [
-        {
-          id: 1,
-          title: "Effective Sales Pitching",
-          duration: "18:45",
-          watched: true,
-          thumbnail: "/placeholder.svg",
-        },
-        {
-          id: 2,
-          title: "Handling Customer Objections",
-          duration: "20:10",
-          watched: false,
-          thumbnail: "/placeholder.svg",
-        },
-        {
-          id: 3,
-          title: "Closing Techniques",
-          duration: "16:30",
-          watched: false,
-          thumbnail: "/placeholder.svg",
-        },
-        {
-          id: 4,
-          title: "Follow-up Strategies",
-          duration: "12:15",
-          watched: false,
-          thumbnail: "/placeholder.svg",
-        },
-      ],
-    },
-    {
-      id: "retailer",
-      title: "Retailer Relationships",
-      description: "Strategies for building and maintaining relationships with retailers",
-      progress: 0,
-      status: "locked",
-      locked: true,
-      videos: [
-        {
-          id: 1,
-          title: "Understanding Retailer Needs",
-          duration: "14:20",
-          watched: false,
-          thumbnail: "/placeholder.svg",
-        },
-        {
-          id: 2,
-          title: "Building Long-term Partnerships",
-          duration: "16:35",
-          watched: false,
-          thumbnail: "/placeholder.svg",
-        },
-        {
-          id: 3,
-          title: "Retailer Support Strategies",
-          duration: "13:45",
-          watched: false,
-          thumbnail: "/placeholder.svg",
-        },
-        {
-          id: 4,
-          title: "Conflict Resolution",
-          duration: "15:30",
-          watched: false,
-          thumbnail: "/placeholder.svg",
-        },
-      ],
-    },
-  ];
+          id: "retailer",
+          title: "Retailer Relationships",
+          description: "Strategies for building and maintaining relationships with retailers",
+          module: "relationship",
+          progress: relationshipProgress,
+          status: relationshipProgress === 100 ? 'completed' : (salesProgress >= 80 ? 'in_progress' : 'locked'),
+          locked: salesProgress < 80,
+          videos: moduleMap['relationship'] || []
+        }
+      ];
+      
+      setTrainingModules(formattedModules);
+      
+      // Set active module to the one in progress
+      if (productProgress < 100) {
+        setActiveModule("product");
+      } else if (salesProgress < 100 && productProgress >= 80) {
+        setActiveModule("sales");
+      } else if (relationshipProgress < 100 && salesProgress >= 80) {
+        setActiveModule("retailer");
+      }
+      
+    } catch (error: any) {
+      toast.error("Failed to load training data");
+      console.error("Error fetching training data:", error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const calculateModuleProgress = (videos: Video[]) => {
+    if (videos.length === 0) return 0;
+    
+    const watchedVideos = videos.filter(video => video.watched).length;
+    return Math.round((watchedVideos / videos.length) * 100);
+  };
 
   const getModuleStatus = (status: string) => {
     switch (status) {
@@ -176,7 +214,7 @@ const Training = () => {
     }
   };
 
-  const handleWatchVideo = (moduleId: string, videoId: number) => {
+  const handleWatchVideo = (moduleId: string, videoId: string) => {
     // In a real application, this would track video progress
     // For now, we'll just navigate to a video player page
     navigate(`/training/video/${moduleId}/${videoId}`);
@@ -185,6 +223,16 @@ const Training = () => {
   const handleTakeQuiz = (moduleId: string) => {
     navigate(`/training/quiz/${moduleId}`);
   };
+
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -208,30 +256,30 @@ const Training = () => {
               <div>
                 <div className="flex justify-between mb-1">
                   <span className="text-sm font-medium">Product Knowledge</span>
-                  <span className="text-sm font-medium">80%</span>
+                  <span className="text-sm font-medium">{progress.product}%</span>
                 </div>
-                <Progress value={80} className="h-2" />
+                <Progress value={progress.product} className="h-2" />
               </div>
               <div>
                 <div className="flex justify-between mb-1">
                   <span className="text-sm font-medium">Sales Techniques</span>
-                  <span className="text-sm font-medium">30%</span>
+                  <span className="text-sm font-medium">{progress.sales}%</span>
                 </div>
-                <Progress value={30} className="h-2" />
+                <Progress value={progress.sales} className="h-2" />
               </div>
               <div>
                 <div className="flex justify-between mb-1">
                   <span className="text-sm font-medium">Retailer Relationships</span>
-                  <span className="text-sm font-medium">0%</span>
+                  <span className="text-sm font-medium">{progress.relationship}%</span>
                 </div>
-                <Progress value={0} className="h-2" />
+                <Progress value={progress.relationship} className="h-2" />
               </div>
               <div className="pt-4 border-t">
                 <div className="flex justify-between mb-1">
                   <span className="text-sm font-medium">Overall Progress</span>
-                  <span className="text-sm font-medium">37%</span>
+                  <span className="text-sm font-medium">{progress.overall}%</span>
                 </div>
-                <Progress value={37} className="h-2" />
+                <Progress value={progress.overall} className="h-2" />
               </div>
             </div>
           </CardContent>
@@ -240,8 +288,10 @@ const Training = () => {
         <Tabs value={activeModule} onValueChange={setActiveModule}>
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="product">Product Knowledge</TabsTrigger>
-            <TabsTrigger value="sales">Sales Techniques</TabsTrigger>
-            <TabsTrigger value="retailer" disabled={trainingModules[2].locked}>
+            <TabsTrigger value="sales" disabled={trainingModules[1]?.locked}>
+              Sales Techniques
+            </TabsTrigger>
+            <TabsTrigger value="retailer" disabled={trainingModules[2]?.locked}>
               Retailer Relationships
             </TabsTrigger>
           </TabsList>
@@ -276,7 +326,7 @@ const Training = () => {
                         <div className="flex gap-4">
                           <div className="w-32 h-20 rounded-md bg-muted overflow-hidden flex-shrink-0">
                             <img 
-                              src={video.thumbnail} 
+                              src="/placeholder.svg" 
                               alt={video.title} 
                               className="w-full h-full object-cover"
                             />
@@ -319,8 +369,7 @@ const Training = () => {
                     onClick={() => handleTakeQuiz(module.id)}
                     disabled={module.progress < 80 || module.locked}
                   >
-                    <FileText className="mr-2 h-4 w-4" />
-                    Take Quiz
+                    {module.progress >= 80 ? "Take Quiz" : `Complete ${80 - module.progress}% more to unlock quiz`}
                   </Button>
                 </CardFooter>
               </Card>
