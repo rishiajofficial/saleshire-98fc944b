@@ -76,13 +76,13 @@ serve(async (req) => {
     // Handle different operations
     switch (operation) {
       case "createUser":
-        result = await createUser(supabaseClient, data);
+        result = await createUser(supabaseClient, currentUser.id, data);
         break;
       case "updateUser":
-        result = await updateUser(supabaseClient, data);
+        result = await updateUser(supabaseClient, currentUser.id, data);
         break;
       case "deleteUser":
-        result = await deleteUser(supabaseClient, data.userId);
+        result = await deleteUser(supabaseClient, currentUser.id, data.userId);
         break;
       case "updateContent":
         result = await updateContent(supabaseClient, currentUser.id, data);
@@ -113,8 +113,10 @@ serve(async (req) => {
 });
 
 // Function to create a new user
-async function createUser(supabaseClient, userData) {
+async function createUser(supabaseClient, adminId, userData) {
   try {
+    console.log("Creating user with data:", userData);
+    
     // Create the user in Auth
     const { data: authData, error: authError } = await supabaseClient.auth.admin.createUser({
       email: userData.email,
@@ -122,14 +124,15 @@ async function createUser(supabaseClient, userData) {
       email_confirm: true,
       user_metadata: {
         name: userData.name,
-        role: userData.role
+        role: userData.role,
+        region: userData.region
       }
     });
 
     if (authError) throw authError;
 
     // Log the action
-    await logAdminAction(supabaseClient, userData.adminId, 'Created user', 'user', authData.user.id);
+    await logAdminAction(supabaseClient, adminId, 'Created user', 'user', authData.user.id);
 
     return { success: true, user: authData.user };
   } catch (error) {
@@ -139,12 +142,27 @@ async function createUser(supabaseClient, userData) {
 }
 
 // Function to update a user
-async function updateUser(supabaseClient, userData) {
+async function updateUser(supabaseClient, adminId, userData) {
   try {
-    // Update user metadata
+    console.log("Updating user with data:", userData);
+    
+    const updateData: any = { 
+      user_metadata: { 
+        name: userData.name, 
+        role: userData.role,
+        region: userData.region
+      } 
+    };
+    
+    // Only include password if it's provided
+    if (userData.password) {
+      updateData.password = userData.password;
+    }
+    
+    // Update user metadata and optionally password
     const { data: authData, error: authError } = await supabaseClient.auth.admin.updateUserById(
-      userData.userId,
-      { user_metadata: { name: userData.name, role: userData.role } }
+      userData.id,
+      updateData
     );
 
     if (authError) throw authError;
@@ -156,12 +174,96 @@ async function updateUser(supabaseClient, userData) {
         name: userData.name,
         role: userData.role
       })
-      .eq("id", userData.userId);
+      .eq("id", userData.id);
 
     if (profileError) throw profileError;
+    
+    // If user is a candidate, update region
+    if (userData.role === 'candidate') {
+      // Check if candidate record exists
+      const { data: candidateData, error: checkError } = await supabaseClient
+        .from('candidates')
+        .select('id')
+        .eq('id', userData.id)
+        .single();
+        
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw checkError;
+      }
+      
+      if (candidateData) {
+        // Update existing candidate record
+        const { error: updateCandidateError } = await supabaseClient
+          .from('candidates')
+          .update({ region: userData.region })
+          .eq('id', userData.id);
+          
+        if (updateCandidateError) throw updateCandidateError;
+      } else {
+        // Create new candidate record
+        const { error: insertCandidateError } = await supabaseClient
+          .from('candidates')
+          .insert({ 
+            id: userData.id,
+            region: userData.region
+          });
+          
+        if (insertCandidateError) throw insertCandidateError;
+      }
+    }
+    
+    // If user is a manager, update region
+    if (userData.role === 'manager') {
+      // Check if manager record exists
+      const { data: managerData, error: checkError } = await supabaseClient
+        .from('managers')
+        .select('id')
+        .eq('id', userData.id)
+        .single();
+        
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw checkError;
+      }
+      
+      if (!managerData) {
+        // Create manager record if it doesn't exist
+        const { error: insertManagerError } = await supabaseClient
+          .from('managers')
+          .insert({ id: userData.id });
+          
+        if (insertManagerError) throw insertManagerError;
+      }
+      
+      // Update or create manager region
+      if (userData.region) {
+        // First check if the manager has this region already
+        const { data: regionData, error: checkRegionError } = await supabaseClient
+          .from('manager_regions')
+          .select('id')
+          .eq('manager_id', userData.id)
+          .eq('region', userData.region)
+          .single();
+          
+        if (checkRegionError && checkRegionError.code !== 'PGRST116') {
+          throw checkRegionError;
+        }
+        
+        if (!regionData) {
+          // Add the region if it doesn't exist
+          const { error: insertRegionError } = await supabaseClient
+            .from('manager_regions')
+            .insert({ 
+              manager_id: userData.id,
+              region: userData.region
+            });
+            
+          if (insertRegionError) throw insertRegionError;
+        }
+      }
+    }
 
     // Log the action
-    await logAdminAction(supabaseClient, userData.adminId, 'Updated user', 'user', userData.userId);
+    await logAdminAction(supabaseClient, adminId, 'Updated user', 'user', userData.id);
 
     return { success: true };
   } catch (error) {
@@ -171,10 +273,16 @@ async function updateUser(supabaseClient, userData) {
 }
 
 // Function to delete a user
-async function deleteUser(supabaseClient, userId) {
+async function deleteUser(supabaseClient, adminId, userId) {
   try {
+    console.log("Deleting user:", userId);
+    
+    // Delete the user using the admin API
     const { error } = await supabaseClient.auth.admin.deleteUser(userId);
     if (error) throw error;
+    
+    // Log the action
+    await logAdminAction(supabaseClient, adminId, 'Deleted user', 'user', userId);
     
     return { success: true };
   } catch (error) {

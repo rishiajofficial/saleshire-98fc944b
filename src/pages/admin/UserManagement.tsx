@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,7 @@ import {
   AlertCircle,
   CheckCircle,
   UserPlus,
+  FilePenLine,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -49,17 +51,54 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import useDatabaseQuery from "@/hooks/useDatabaseQuery";
 import { useAuth } from "@/contexts/AuthContext";
+import AdminService from "@/services/adminService";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+// Form validation schema
+const userFormSchema = z.object({
+  name: z.string().min(2, {
+    message: "Name must be at least 2 characters.",
+  }),
+  email: z.string().email({
+    message: "Please enter a valid email address.",
+  }),
+  password: z.string().min(6, {
+    message: "Password must be at least 6 characters.",
+  }).optional(),
+  role: z.enum(["admin", "manager", "candidate"]),
+  region: z.string().optional(),
+});
+
+type UserFormValues = z.infer<typeof userFormSchema>;
 
 const UserManagement = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [userToEdit, setUserToEdit] = useState<string | null>(null);
+  const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  // Create form
+  const form = useForm<UserFormValues>({
+    resolver: zodResolver(userFormSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+      role: "candidate",
+      region: "north",
+    },
+  });
+
   // Fetch users from database
-  const { data: fetchedUsers, isLoading: isLoadingUsers } = useDatabaseQuery<any[]>(
+  const { data: fetchedUsers, isLoading: isLoadingUsers, refetch: refetchUsers } = useDatabaseQuery<any[]>(
     'profiles', 
     { order: ['created_at', { ascending: false }] }
   );
@@ -73,6 +112,30 @@ const UserManagement = () => {
   const { data: fetchedManagers, isLoading: isLoadingManagers } = useDatabaseQuery<any[]>(
     'managers'
   );
+
+  useEffect(() => {
+    if (userToEdit) {
+      loadUserData(userToEdit);
+    }
+  }, [userToEdit]);
+
+  const loadUserData = async (userId: string) => {
+    setIsLoading(true);
+    const response = await AdminService.getUser(userId);
+    if (response.success && response.data) {
+      const userData = response.data;
+      form.reset({
+        name: userData.name || "",
+        email: userData.email || "",
+        password: "", // Password is not fetched for security reasons
+        role: userData.role || "candidate",
+        region: fetchedCandidates?.find(c => c.id === userId)?.region || "north",
+      });
+    } else {
+      toast.error("Failed to load user data");
+    }
+    setIsLoading(false);
+  };
 
   // Process users for display
   const users = fetchedUsers ? fetchedUsers.map(user => {
@@ -108,55 +171,59 @@ const UserManagement = () => {
       )
     : [];
 
-  const handleAddNewUser = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = async (values: UserFormValues) => {
     setIsLoading(true);
     
-    const formData = new FormData(e.currentTarget);
-    const name = formData.get('name') as string;
-    const email = formData.get('email') as string;
-    const role = formData.get('role') as string;
-    const region = formData.get('region') as string;
-    
     try {
-      // First, create a random password
-      const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(2, 7).toUpperCase() + '!';
+      let response;
       
-      // Call the edge function to create a user
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) throw sessionError;
-      
-      const { data, error } = await supabase.functions.invoke("admin-operations", {
-        body: {
-          operation: "createUser",
-          data: {
-            name,
-            email,
-            password: tempPassword,
-            role,
-            region,
-            adminId: user?.id
-          }
+      if (formMode === 'create') {
+        response = await AdminService.createUser({
+          name: values.name,
+          email: values.email,
+          password: values.password,
+          role: values.role,
+          region: values.region,
+        });
+        
+        if (response.success) {
+          toast.success(`User ${values.name} created successfully with role: ${values.role}`);
+          form.reset();
+          refetchUsers();
+        } else {
+          toast.error(`Failed to create user: ${response.error}`);
         }
-      });
-      
-      if (error) throw error;
-      if (!data.success) throw new Error(data.error || "Failed to create user");
-      
-      toast.success(`User ${name} created successfully with role: ${role}`);
-      
-      // Reset the form
-      e.currentTarget.reset();
-      
-      // Refresh user list
-      window.location.reload();
-      
+      } else if (formMode === 'edit' && userToEdit) {
+        response = await AdminService.updateUser({
+          id: userToEdit,
+          name: values.name,
+          email: values.email,
+          role: values.role,
+          region: values.region,
+          ...(values.password ? { password: values.password } : {})
+        });
+        
+        if (response.success) {
+          toast.success(`User ${values.name} updated successfully`);
+          setShowEditDialog(false);
+          setUserToEdit(null);
+          refetchUsers();
+        } else {
+          toast.error(`Failed to update user: ${response.error}`);
+        }
+      }
     } catch (error: any) {
-      console.error('Error creating user:', error.message);
-      toast.error(`Failed to create user: ${error.message}`);
+      console.error('Error submitting form:', error.message);
+      toast.error(`Error: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const initiateEditUser = (userId: string) => {
+    setFormMode('edit');
+    setUserToEdit(userId);
+    setShowEditDialog(true);
   };
 
   const handleConfirmDelete = async () => {
@@ -164,31 +231,21 @@ const UserManagement = () => {
     
     setIsLoading(true);
     try {
-      // Call the edge function to delete a user
-      const { data, error } = await supabase.functions.invoke("admin-operations", {
-        body: {
-          operation: "deleteUser",
-          data: {
-            userId: userToDelete,
-            adminId: user?.id
-          }
-        }
-      });
+      const response = await AdminService.deleteUser(userToDelete);
       
-      if (error) throw error;
-      if (!data.success) throw new Error(data.error || "Failed to delete user");
-      
-      toast.success(`User account deleted successfully`);
-      
-      // Refresh user list
-      window.location.reload();
-      
+      if (response.success) {
+        toast.success(`User account deleted successfully`);
+        refetchUsers();
+      } else {
+        toast.error(`Failed to delete user: ${response.error}`);
+      }
     } catch (error: any) {
       console.error('Error deleting user:', error.message);
       toast.error(`Failed to delete user: ${error.message}`);
     } finally {
       setIsLoading(false);
       setShowDeleteDialog(false);
+      setUserToDelete(null);
     }
   };
 
@@ -250,56 +307,117 @@ const UserManagement = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleAddNewUser} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input id="name" name="name" placeholder="Enter full name" required />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input id="email" name="email" type="email" placeholder="email@example.com" required />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="role">Role</Label>
-                  <Select name="role" defaultValue="candidate">
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="candidate">Candidate</SelectItem>
-                      <SelectItem value="manager">Manager</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Full Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter full name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email Address</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="email@example.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="password" 
+                            placeholder={formMode === 'edit' ? 'Leave empty to keep current password' : 'Enter password'} 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="role"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Role</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select role" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="candidate">Candidate</SelectItem>
+                            <SelectItem value="manager">Manager</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <div className="space-y-2" id="regions-select">
-                  <Label htmlFor="region">Region (For Managers & Candidates)</Label>
-                  <Select name="region" defaultValue="north">
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select region" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="north">North Region</SelectItem>
-                      <SelectItem value="south">South Region</SelectItem>
-                      <SelectItem value="east">East Region</SelectItem>
-                      <SelectItem value="west">West Region</SelectItem>
-                      <SelectItem value="central">Central Region</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    You can select multiple regions after creating the user
-                  </p>
-                </div>
-                
-                <div className="pt-2">
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? "Creating User..." : "Create User"}
-                  </Button>
-                </div>
-              </form>
+                  <FormField
+                    control={form.control}
+                    name="region"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Region (For Managers & Candidates)</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select region" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="north">North Region</SelectItem>
+                            <SelectItem value="south">South Region</SelectItem>
+                            <SelectItem value="east">East Region</SelectItem>
+                            <SelectItem value="west">West Region</SelectItem>
+                            <SelectItem value="central">Central Region</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="pt-2">
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? "Creating User..." : "Create User"}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
             </CardContent>
           </Card>
 
@@ -472,7 +590,7 @@ const UserManagement = () => {
                               size="icon"
                               className="h-8 w-8"
                               title="Edit User"
-                              onClick={() => navigate(`/users/edit/${user.id}`)}
+                              onClick={() => initiateEditUser(user.id)}
                             >
                               <PenLine className="h-4 w-4" />
                             </Button>
@@ -498,6 +616,132 @@ const UserManagement = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Edit User Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update user information and permissions
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Full Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter full name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email Address</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="email@example.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="password" 
+                          placeholder="Leave empty to keep current password" 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="role"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Role</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select role" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="candidate">Candidate</SelectItem>
+                          <SelectItem value="manager">Manager</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="region"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Region</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select region" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="north">North Region</SelectItem>
+                          <SelectItem value="south">South Region</SelectItem>
+                          <SelectItem value="east">East Region</SelectItem>
+                          <SelectItem value="west">West Region</SelectItem>
+                          <SelectItem value="central">Central Region</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <DialogFooter className="pt-2">
+                  <Button type="button" variant="outline" onClick={() => setShowEditDialog(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={isLoading}>
+                    {isLoading ? "Saving..." : "Save Changes"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete User Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
