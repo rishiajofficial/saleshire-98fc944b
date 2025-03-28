@@ -6,21 +6,7 @@ import { toast } from 'sonner';
 import { Tables } from '@/integrations/supabase/types';
 
 // Valid table names from our Supabase database
-type TableName = 
-  | 'profiles' 
-  | 'assessments' 
-  | 'candidates' 
-  | 'managers' 
-  | 'assessment_sections' 
-  | 'sales_tasks' 
-  | 'activity_logs' 
-  | 'assessment_results' 
-  | 'interviews' 
-  | 'manager_regions' 
-  | 'questions' 
-  | 'shops' 
-  | 'training_modules' 
-  | 'videos';
+export type TableName = keyof Tables;
 
 export function useDatabaseQuery<T = any>(
   tableName: TableName,
@@ -128,11 +114,10 @@ export function useRealTimeSubscription<T = any>(
     // Only set up subscription if user is logged in
     if (!user) return;
     
-    // Fix for postgres_changes - this is the correct event type
+    // Create a channel to listen for changes
     const channel = supabase
       .channel('schema-db-changes')
-      .on(
-        'postgres_changes',
+      .on('postgres_changes', // This is the correct event type for Supabase
         {
           event,
           schema: 'public',
@@ -145,10 +130,11 @@ export function useRealTimeSubscription<T = any>(
       )
       .subscribe();
       
+    // Clean up subscription on unmount
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
-  }, [tableName, event, user?.id]);
+  }, [tableName, event, user?.id, callback]);
   
   return { data };
 }
