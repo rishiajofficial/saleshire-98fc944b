@@ -26,6 +26,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const navigate = useNavigate();
   const location = useLocation();
 
+  // This flag helps prevent redirect loops
+  const [initialAuthCheckComplete, setInitialAuthCheckComplete] = useState<boolean>(false);
+  
   useEffect(() => {
     console.log("Auth Provider initialized");
     
@@ -47,9 +50,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else if (event === 'SIGNED_OUT') {
           setProfile(null);
           console.log('User signed out');
-          // Only redirect to login if not already there
-          if (location.pathname !== '/login' && location.pathname !== '/register' && 
-              location.pathname !== '/forgot-password' && location.pathname !== '/reset-password') {
+          // Only redirect to login if not already there and not on public pages
+          if (location.pathname !== '/login' && 
+              location.pathname !== '/register' && 
+              location.pathname !== '/forgot-password' && 
+              location.pathname !== '/reset-password' &&
+              location.pathname !== '/') {
             navigate('/login');
           }
         }
@@ -66,9 +72,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         fetchProfile(currentSession.user.id);
       } else {
         setIsLoading(false);
-        // Only redirect to login if not already on auth pages
-        if (location.pathname !== '/login' && location.pathname !== '/register' && 
-            location.pathname !== '/forgot-password' && location.pathname !== '/reset-password' && 
+        setInitialAuthCheckComplete(true);
+        // Only redirect to login if on protected pages
+        if (location.pathname !== '/login' && 
+            location.pathname !== '/register' && 
+            location.pathname !== '/forgot-password' && 
+            location.pathname !== '/reset-password' &&
             location.pathname !== '/') {
           navigate('/login');
         }
@@ -84,7 +93,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchProfile = async (userId: string) => {
     try {
       console.log('Fetching profile for user:', userId);
-      // Fix the query to not use embedded relationships
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -126,6 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Error fetching profile:', error.message);
     } finally {
       setIsLoading(false);
+      setInitialAuthCheckComplete(true);
     }
   };
 

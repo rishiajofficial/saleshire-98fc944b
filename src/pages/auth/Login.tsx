@@ -51,8 +51,12 @@ const Login = () => {
         sessionStorage.removeItem('intendedPath');
         navigate(intendedPath);
       } else {
-        // Redirect based on user role
-        navigate(-1);
+        // Default redirect based on user role if available or redirect back
+        if (location.state?.from) {
+          navigate(location.state.from);
+        } else {
+          navigate('/dashboard/candidate');
+        }
       }
     }
   }, [user, navigate, location]);

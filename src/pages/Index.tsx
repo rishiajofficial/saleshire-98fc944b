@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
   ArrowRight, 
@@ -21,10 +21,18 @@ import {
   CarouselPrevious,
   CarouselNext,
 } from "@/components/ui/carousel";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
   const sectionsRef = useRef<(HTMLElement | null)[]>([]);
   const [activeTestimonial, setActiveTestimonial] = useState(0);
+  const { user, profile } = useAuth();
+  const navigate = useNavigate();
+
+  const handleNavigation = (path: string) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    navigate(path);
+  };
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -145,9 +153,49 @@ const Index = () => {
     { value: "62%", label: "Faster time-to-productivity", icon: <Zap className="h-5 w-5 text-indigo-600" /> }
   ];
 
+  const renderAuthButtons = () => {
+    if (user) {
+      let dashboardPath = '/dashboard/candidate';
+      if (profile?.role === 'admin') {
+        dashboardPath = '/dashboard/admin';
+      } else if (profile?.role === 'manager') {
+        dashboardPath = '/dashboard/manager';
+      }
+      
+      return (
+        <Button 
+          size="lg" 
+          className="rounded-md px-8 py-6 text-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all"
+          onClick={handleNavigation(dashboardPath)}
+        >
+          Go to Dashboard <ArrowRight className="ml-2 h-5 w-5" />
+        </Button>
+      );
+    }
+    
+    return (
+      <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4 animate-fade-in" style={{ animationDelay: "0.2s" }}>
+        <Button 
+          size="lg" 
+          className="rounded-md px-8 py-6 text-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all"
+          onClick={handleNavigation('/register')}
+        >
+          Apply Now <ArrowRight className="ml-2 h-5 w-5" />
+        </Button>
+        <Button 
+          variant="outline" 
+          size="lg" 
+          className="rounded-md px-8 py-6 text-lg border-indigo-200 hover:border-indigo-300 shadow-sm hover:shadow transition-all"
+          onClick={handleNavigation('/login')}
+        >
+          Sign In
+        </Button>
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Hero Section */}
       <section className="relative py-20 md:py-28 overflow-hidden bg-gradient-to-b from-blue-50 via-indigo-50 to-white">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-0 w-full h-full bg-white opacity-50"></div>
@@ -165,18 +213,12 @@ const Index = () => {
               A comprehensive platform for recruiting, training, and evaluating sales talent through a structured, 
               data-driven approach that identifies top performers.
             </p>
-            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4 animate-fade-in" style={{ animationDelay: "0.2s" }}>
-              <Button asChild size="lg" className="rounded-md px-8 py-6 text-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all">
-                <Link to="/register">Apply Now <ArrowRight className="ml-2 h-5 w-5" /></Link>
-              </Button>
-              <Button asChild variant="outline" size="lg" className="rounded-md px-8 py-6 text-lg border-indigo-200 hover:border-indigo-300 shadow-sm hover:shadow transition-all">
-                <Link to="/login">Sign In</Link>
-              </Button>
+            <div className="mt-10">
+              {renderAuthButtons()}
             </div>
           </div>
         </div>
 
-        {/* Stats Section */}
         <div className="max-w-5xl mx-auto mt-20 bg-white rounded-xl shadow-xl animate-slide-up overflow-hidden" style={{ animationDelay: "0.3s" }}>
           <div className="grid grid-cols-1 md:grid-cols-3">
             {stats.map((stat, i) => (
@@ -193,7 +235,6 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Demo Video Section */}
         <div className="mt-24 animate-slide-up" style={{ animationDelay: "0.4s" }}>
           <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="rounded-2xl overflow-hidden shadow-2xl">
@@ -210,7 +251,6 @@ const Index = () => {
                     </h3>
                   </div>
                 </div>
-                {/* Video thumbnail with overlay */}
                 <div className="absolute inset-0">
                   <img 
                     src="/sales-team.jpg" 
@@ -224,7 +264,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Features Section */}
       <section 
         ref={(el) => addToRefs(el, 0)} 
         className="py-24 section-fade-in bg-white"
@@ -254,7 +293,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Process Section with Images */}
       <section 
         ref={(el) => addToRefs(el, 1)} 
         className="py-24 bg-gradient-to-br from-indigo-50 to-white section-fade-in"
@@ -309,7 +347,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Testimonials Section */}
       <section 
         ref={(el) => addToRefs(el, 2)} 
         className="py-24 bg-white section-fade-in"
@@ -374,7 +411,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Benefits Section */}
       <section 
         ref={(el) => addToRefs(el, 3)} 
         className="py-24 bg-gradient-to-br from-indigo-50 to-white section-fade-in"
@@ -433,7 +469,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
       <section 
         ref={(el) => addToRefs(el, 4)} 
         className="py-20 section-fade-in bg-gradient-to-r from-indigo-600 to-purple-600 text-white"
@@ -458,7 +493,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Custom styling for animations and gradients */}
       <style>
         {`
         .text-gradient {
