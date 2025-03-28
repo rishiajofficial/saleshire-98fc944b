@@ -29,12 +29,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
+        console.log('Auth state changed:', event);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
         if (event === 'SIGNED_IN') {
-          // Don't fetch profile here, just log the event
-          console.log('User signed in');
+          console.log('User signed in:', currentSession?.user?.id);
+          if (currentSession?.user) {
+            // Defer profile fetching to avoid potential auth deadlocks
+            setTimeout(() => {
+              fetchProfile(currentSession.user.id);
+            }, 0);
+          }
         } else if (event === 'SIGNED_OUT') {
           setProfile(null);
           console.log('User signed out');
@@ -44,6 +50,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Get the current session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      console.log('Current session:', currentSession?.user?.id);
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       if (currentSession?.user) {
@@ -61,13 +68,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Fetch user profile data from Supabase
   const fetchProfile = async (userId: string) => {
     try {
+      // Fix the query to not use embedded relationships
       const { data, error } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          candidates(*),
-          managers(*)
-        `)
+        .select('*')
         .eq('id', userId)
         .single();
       
@@ -76,7 +80,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (data) {
+        console.log('Profile fetched:', data);
         setProfile(data);
+        
+        // Now fetch additional data separately if needed
+        if (data.role === 'candidate') {
+          const { data: candidateData, error: candidateError } = await supabase
+            .from('candidates')
+            .select('*')
+            .eq('id', userId)
+            .single();
+            
+          if (!candidateError && candidateData) {
+            setProfile(prev => ({ ...prev, candidateData }));
+          }
+        } else if (data.role === 'manager') {
+          const { data: managerData, error: managerError } = await supabase
+            .from('managers')
+            .select('*')
+            .eq('id', userId)
+            .single();
+            
+          if (!managerError && managerData) {
+            setProfile(prev => ({ ...prev, managerData }));
+          }
+        }
       }
     } catch (error: any) {
       console.error('Error fetching profile:', error.message);
@@ -88,23 +116,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Sign in function
   const signIn = async (email: string, password: string) => {
     try {
+      console.log('Signing in with:', email);
+      setIsLoading(true);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
+        console.error('Sign in error:', error.message);
         throw error;
       }
 
       if (data?.user) {
-        await fetchProfile(data.user.id);
+        console.log('Sign in successful for user:', data.user.id);
         toast.success('Successfully signed in');
         
+        // Get the profile to determine redirection
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', data.user.id)
+          .single();
+        
+        if (profileError) {
+          console.error('Error fetching profile for redirect:', profileError.message);
+          // Default redirect if profile can't be fetched
+          navigate('/dashboard/candidate');
+          return;
+        }
+        
+        console.log('User role:', profileData?.role);
+        
         // Redirect based on role
-        if (profile?.role === 'admin') {
+        if (profileData?.role === 'admin') {
           navigate('/dashboard/admin');
-        } else if (profile?.role === 'manager') {
+        } else if (profileData?.role === 'manager') {
           navigate('/dashboard/manager');
         } else {
           navigate('/dashboard/candidate');
@@ -113,6 +161,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error: any) {
       toast.error(error.message || 'Failed to sign in');
       console.error('Error signing in:', error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
