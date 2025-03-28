@@ -1,8 +1,7 @@
 
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -21,52 +20,24 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Users,
-  UserPlus,
   Search,
-  MoreHorizontal,
   User,
   UserCog,
   Settings,
-  PenLine,
-  Trash2,
   AlertCircle,
-  CheckCircle,
   ShieldAlert,
   Video,
   FileText,
-  Plus,
 } from "lucide-react";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import MainLayout from "@/components/layout/MainLayout";
-import { Textarea } from "@/components/ui/textarea";
-import { supabase } from "@/integrations/supabase/client";
-import useDatabaseQuery, { TableName } from "@/hooks/useDatabaseQuery";
+import useDatabaseQuery from "@/hooks/useDatabaseQuery";
 import { useAuth } from "@/contexts/AuthContext";
 
 const AdminDashboard = () => {
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const { user } = useAuth();
-
-  const navigate = useNavigate();
 
   // Fetch users from database
   const { data: fetchedUsers, isLoading: isLoadingUsers } = useDatabaseQuery<any[]>(
@@ -165,104 +136,6 @@ const AdminDashboard = () => {
       } : {})
     };
   }) : [];
-
-  const handleConfirmDelete = async () => {
-    if (!userToDelete) return;
-    
-    setIsLoading(true);
-    try {
-      // Delete user profile (should cascade to their role-specific record)
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', userToDelete);
-      
-      if (error) throw error;
-      
-      toast.success(`User account deleted successfully`);
-      
-      // Log activity
-      await supabase.from('activity_logs').insert({
-        user_id: user?.id,
-        action: 'Deleted user account',
-        entity_type: 'user',
-        entity_id: userToDelete,
-      });
-      
-    } catch (error: any) {
-      console.error('Error deleting user:', error.message);
-      toast.error(`Failed to delete user: ${error.message}`);
-    } finally {
-      setIsLoading(false);
-      setShowDeleteDialog(false);
-    }
-  };
-
-  const initiateDeleteUser = (userId: string) => {
-    setUserToDelete(userId);
-    setShowDeleteDialog(true);
-  };
-
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleAddNewUser = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    const formData = new FormData(e.currentTarget);
-    const name = formData.get('name') as string;
-    const email = formData.get('email') as string;
-    const role = formData.get('role') as string;
-    const region = formData.get('region') as string;
-    
-    try {
-      // First, create the user in Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email,
-        password: 'Password123', // Default password that user will reset
-        email_confirm: true,
-        user_metadata: {
-          name,
-          role,
-          region
-        }
-      });
-      
-      if (authError) throw authError;
-      
-      toast.success(`User ${name} created successfully with role: ${role}`);
-      
-      // Log the activity
-      await supabase.from('activity_logs').insert({
-        user_id: user?.id,
-        action: `Created new user account: ${name} (${role})`,
-        entity_type: 'user',
-        entity_id: authData.user.id,
-      });
-      
-      // Reset the form
-      e.currentTarget.reset();
-      
-    } catch (error: any) {
-      console.error('Error creating user:', error.message);
-      toast.error(`Failed to create user: ${error.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleToggleUserStatus = async (userId: string, currentStatus: string) => {
-    // This is a placeholder - we don't currently have a status field in the profiles table
-    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-    
-    try {
-      toast.success(`User status changed to ${newStatus}`);
-      // We would update the database here if we had the status field
-    } catch (error: any) {
-      console.error('Error updating user status:', error.message);
-      toast.error(`Failed to update status: ${error.message}`);
-    }
-  };
 
   // Filter users based on search query
   const filteredUsers = users 
@@ -423,73 +296,9 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Add New User */}
-          <Card className="lg:col-span-1">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <UserPlus className="h-5 w-5 mr-2" /> Add New User
-              </CardTitle>
-              <CardDescription>
-                Create new user accounts with role assignment
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleAddNewUser} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input id="name" name="name" placeholder="Enter full name" required />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input id="email" name="email" type="email" placeholder="email@example.com" required />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="role">Role</Label>
-                  <Select name="role" defaultValue="candidate">
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="candidate">Candidate</SelectItem>
-                      <SelectItem value="manager">Manager</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2" id="regions-select">
-                  <Label htmlFor="region">Region (For Managers & Candidates)</Label>
-                  <Select name="region" defaultValue="north">
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select region" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="north">North Region</SelectItem>
-                      <SelectItem value="south">South Region</SelectItem>
-                      <SelectItem value="east">East Region</SelectItem>
-                      <SelectItem value="west">West Region</SelectItem>
-                      <SelectItem value="central">Central Region</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    You can select multiple regions after creating the user
-                  </p>
-                </div>
-                
-                <div className="pt-2">
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? "Creating User..." : "Create User"}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-
+        <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
           {/* Recent Activity */}
-          <Card className="lg:col-span-2">
+          <Card>
             <CardHeader>
               <CardTitle>Recent Activity</CardTitle>
               <CardDescription>
@@ -574,13 +383,12 @@ const AdminDashboard = () => {
                     <TableHead>Role</TableHead>
                     <TableHead className="hidden md:table-cell">Status</TableHead>
                     <TableHead className="hidden md:table-cell">Created</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredUsers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                         No users found matching your search criteria
                       </TableCell>
                     </TableRow>
@@ -628,61 +436,19 @@ const AdminDashboard = () => {
                           )}
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                          <Badge
+                            variant={user.status === "active" ? "outline" : "secondary"}
                             className={
                               user.status === "active"
-                                ? "text-green-600 hover:text-green-700 hover:bg-green-50"
-                                : "text-red-600 hover:text-red-700 hover:bg-red-50"
+                                ? "border-green-500 text-green-600"
+                                : "bg-muted text-muted-foreground"
                             }
-                            onClick={() => handleToggleUserStatus(user.id, user.status)}
                           >
-                            <Badge
-                              variant={user.status === "active" ? "outline" : "secondary"}
-                              className={
-                                user.status === "active"
-                                  ? "border-green-500 text-green-600"
-                                  : "bg-muted text-muted-foreground"
-                              }
-                            >
-                              {user.status === "active" ? (
-                                <span className="flex items-center">
-                                  <CheckCircle className="mr-1 h-3 w-3" />
-                                  Active
-                                </span>
-                              ) : (
-                                "Inactive"
-                              )}
-                            </Badge>
-                          </Button>
+                            {user.status === "active" ? "Active" : "Inactive"}
+                          </Badge>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
                           {new Date(user.createdAt).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end space-x-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              title="Edit User"
-                              onClick={() => navigate(`/users/edit/${user.id}`)}
-                            >
-                              <PenLine className="h-4 w-4" />
-                            </Button>
-                            {user.role !== "admin" && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
-                                title="Delete User"
-                                onClick={() => initiateDeleteUser(user.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
                         </TableCell>
                       </TableRow>
                     ))
@@ -693,47 +459,11 @@ const AdminDashboard = () => {
           </CardContent>
           <CardFooter>
             <Button variant="outline" size="sm" className="ml-auto" asChild>
-              <Link to="/users">View All Users</Link>
+              <Link to="/users">Manage All Users</Link>
             </Button>
           </CardFooter>
         </Card>
       </div>
-
-      {/* Delete User Dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this user account? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <div className="p-3 bg-red-50 text-red-600 rounded-lg flex items-start">
-              <AlertCircle className="h-5 w-5 mr-3 mt-0.5 flex-shrink-0" />
-              <p className="text-sm">
-                Deleting this user will remove all their data from the system, including application history and assessment results.
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowDeleteDialog(false)}
-              disabled={isLoading}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmDelete}
-              disabled={isLoading}
-            >
-              {isLoading ? "Deleting..." : "Delete User"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </MainLayout>
   );
 };
