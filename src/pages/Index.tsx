@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -459,8 +460,7 @@ const Index = () => {
       </section>
 
       {/* Custom styling for animations and gradients */}
-      <style>
-        {`
+      <style jsx>{`
         .text-gradient {
           background-size: 300% 300%;
           animation: gradient 8s ease infinite;
@@ -500,8 +500,7 @@ const Index = () => {
           from { opacity: 0; transform: translateY(40px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        `}
-      </style>
+      `}</style>
     </div>
   );
 };
