@@ -1,6 +1,6 @@
 
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -27,7 +27,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -36,12 +35,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
 import {
   Users,
   UserPlus,
@@ -63,110 +56,144 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import MainLayout from "@/components/layout/MainLayout";
 import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
+import useDatabaseQuery, { TableName } from "@/hooks/useDatabaseQuery";
+import { useAuth } from "@/contexts/AuthContext";
 
 const AdminDashboard = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("users");
+  const { user } = useAuth();
 
-  // Mock data for demonstration
-  const stats = {
-    totalUsers: 42,
-    activeManagers: 5,
-    activeCandidates: 24,
-    inactiveUsers: 13,
-  };
+  const navigate = useNavigate();
 
-  const users = [
-    {
-      id: "1",
-      name: "John Smith",
-      email: "john.smith@example.com",
-      role: "manager",
-      status: "active",
-      createdAt: "2023-08-15",
-      candidatesAssigned: 8,
-      regions: ["north", "east"]
-    },
-    {
-      id: "2",
-      name: "Emma Johnson",
-      email: "emma.johnson@example.com",
-      role: "manager",
-      status: "active",
-      createdAt: "2023-07-20",
-      candidatesAssigned: 12,
-      regions: ["south", "west"]
-    },
-    {
-      id: "3",
-      name: "Michael Davis",
-      email: "michael.davis@example.com",
-      role: "manager",
-      status: "inactive",
-      createdAt: "2023-06-10",
-      candidatesAssigned: 0,
-      regions: ["central"]
-    },
-    {
-      id: "4",
-      name: "Jane Smith",
-      email: "jane.smith@example.com",
-      role: "candidate",
-      status: "active",
-      createdAt: "2023-09-28",
-      region: "north"
-    },
-    {
-      id: "5",
-      name: "Robert Johnson",
-      email: "robert.johnson@example.com",
-      role: "candidate",
-      status: "active",
-      createdAt: "2023-09-25",
-      region: "south"
-    },
-    {
-      id: "6",
-      name: "Lisa Brown",
-      email: "lisa.brown@example.com",
-      role: "admin",
-      status: "active",
-      createdAt: "2023-05-10"
-    },
-  ];
+  // Fetch users from database
+  const { data: fetchedUsers, isLoading: isLoadingUsers } = useDatabaseQuery<any[]>(
+    'profiles', 
+    { order: ['created_at', { ascending: false }] }
+  );
 
-  const recentActivity = [
-    {
-      id: 1,
-      user: "Emma Johnson",
-      action: "Created new manager account",
-      timestamp: "2 hours ago",
-    },
-    {
-      id: 2,
-      user: "Admin",
-      action: "Assigned 5 candidates to John Smith",
-      timestamp: "5 hours ago",
-    },
-    {
-      id: 3,
-      user: "System",
-      action: "Automated account cleanup removed 3 inactive accounts",
-      timestamp: "1 day ago",
-    },
-    {
-      id: 4,
-      user: "Lisa Brown",
-      action: "Updated system settings",
-      timestamp: "2 days ago",
-    },
-  ];
+  // Fetch candidate data
+  const { data: fetchedCandidates, isLoading: isLoadingCandidates } = useDatabaseQuery<any[]>(
+    'candidates'
+  );
 
-  const handleConfirmDelete = () => {
-    if (userToDelete) {
+  // Fetch manager data
+  const { data: fetchedManagers, isLoading: isLoadingManagers } = useDatabaseQuery<any[]>(
+    'managers'
+  );
+
+  // Fetch activity logs
+  const { data: activityLogs, isLoading: isLoadingLogs } = useDatabaseQuery<any[]>(
+    'activity_logs',
+    { order: ['created_at', { ascending: false }], limit: 10 }
+  );
+
+  // Calculate stats based on real data
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    activeManagers: 0,
+    activeCandidates: 0,
+    inactiveUsers: 0,
+  });
+
+  useEffect(() => {
+    if (fetchedUsers && fetchedCandidates && fetchedManagers) {
+      setStats({
+        totalUsers: fetchedUsers.length || 0,
+        activeManagers: fetchedManagers.length || 0,
+        activeCandidates: fetchedCandidates.length || 0,
+        inactiveUsers: 0, // We don't have an 'active' flag in the profile table yet, so default to 0
+      });
+    }
+  }, [fetchedUsers, fetchedCandidates, fetchedManagers]);
+
+  // Process activity logs for display
+  const recentActivity = activityLogs ? activityLogs.slice(0, 4).map(log => {
+    // Try to find user name by ID
+    const userName = fetchedUsers?.find(u => u.id === log.user_id)?.name || 'Unknown User';
+    
+    // Format the timestamp
+    const timestamp = new Date(log.created_at);
+    const now = new Date();
+    const diffMs = now.getTime() - timestamp.getTime();
+    const diffMins = Math.round(diffMs / 60000);
+    const diffHours = Math.round(diffMs / 3600000);
+    const diffDays = Math.round(diffMs / 86400000);
+    
+    let formattedTime;
+    if (diffMins < 60) {
+      formattedTime = `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
+    } else if (diffHours < 24) {
+      formattedTime = `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+    } else {
+      formattedTime = `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+    }
+    
+    return {
+      id: log.id,
+      user: userName,
+      userType: fetchedUsers?.find(u => u.id === log.user_id)?.role || 'system',
+      action: log.action,
+      type: log.entity_type,
+      timestamp: formattedTime
+    };
+  }) : [];
+
+  // Process users for display
+  const users = fetchedUsers ? fetchedUsers.map(user => {
+    // Find additional data for candidates and managers
+    const candidateData = fetchedCandidates?.find(c => c.id === user.id);
+    const managerData = fetchedManagers?.find(m => m.id === user.id);
+    
+    return {
+      id: user.id,
+      name: user.name || 'Unnamed User',
+      email: user.email,
+      role: user.role,
+      status: 'active', // Default to active since we don't have this field yet
+      createdAt: user.created_at,
+      // Add role-specific data
+      ...(user.role === 'candidate' && candidateData ? {
+        region: candidateData.region
+      } : {}),
+      ...(user.role === 'manager' && managerData ? {
+        // We'll need to fetch this data differently, but for now:
+        candidatesAssigned: 0,
+        regions: ['north'] // Placeholder
+      } : {})
+    };
+  }) : [];
+
+  const handleConfirmDelete = async () => {
+    if (!userToDelete) return;
+    
+    setIsLoading(true);
+    try {
+      // Delete user profile (should cascade to their role-specific record)
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', userToDelete);
+      
+      if (error) throw error;
+      
       toast.success(`User account deleted successfully`);
+      
+      // Log activity
+      await supabase.from('activity_logs').insert({
+        user_id: user?.id,
+        action: 'Deleted user account',
+        entity_type: 'user',
+        entity_id: userToDelete,
+      });
+      
+    } catch (error: any) {
+      console.error('Error deleting user:', error.message);
+      toast.error(`Failed to delete user: ${error.message}`);
+    } finally {
+      setIsLoading(false);
       setShowDeleteDialog(false);
     }
   };
@@ -176,24 +203,86 @@ const AdminDashboard = () => {
     setShowDeleteDialog(true);
   };
 
-  const handleAddNewUser = (e: React.FormEvent<HTMLFormElement>) => {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleAddNewUser = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    toast.success("New user created successfully");
-    // Reset form fields
-    const form = e.target as HTMLFormElement;
-    form.reset();
+    setIsLoading(true);
+    
+    const formData = new FormData(e.currentTarget);
+    const name = formData.get('name') as string;
+    const email = formData.get('email') as string;
+    const role = formData.get('role') as string;
+    const region = formData.get('region') as string;
+    
+    try {
+      // First, create the user in Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email,
+        password: 'Password123', // Default password that user will reset
+        email_confirm: true,
+        user_metadata: {
+          name,
+          role,
+          region
+        }
+      });
+      
+      if (authError) throw authError;
+      
+      toast.success(`User ${name} created successfully with role: ${role}`);
+      
+      // Log the activity
+      await supabase.from('activity_logs').insert({
+        user_id: user?.id,
+        action: `Created new user account: ${name} (${role})`,
+        entity_type: 'user',
+        entity_id: authData.user.id,
+      });
+      
+      // Reset the form
+      e.currentTarget.reset();
+      
+    } catch (error: any) {
+      console.error('Error creating user:', error.message);
+      toast.error(`Failed to create user: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleToggleUserStatus = (userId: string, currentStatus: string) => {
+  const handleToggleUserStatus = async (userId: string, currentStatus: string) => {
+    // This is a placeholder - we don't currently have a status field in the profiles table
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-    toast.success(`User status changed to ${newStatus}`);
+    
+    try {
+      toast.success(`User status changed to ${newStatus}`);
+      // We would update the database here if we had the status field
+    } catch (error: any) {
+      console.error('Error updating user status:', error.message);
+      toast.error(`Failed to update status: ${error.message}`);
+    }
   };
 
-  const filteredUsers = users.filter(
-    (user) =>
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter users based on search query
+  const filteredUsers = users 
+    ? users.filter(
+        (user) =>
+          user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          user.email.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : [];
+
+  // Show loading state if data is being fetched
+  if (isLoadingUsers || isLoadingCandidates || isLoadingManagers) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center h-[50vh]">
+          <p className="text-lg text-muted-foreground">Loading dashboard data...</p>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -349,17 +438,17 @@ const AdminDashboard = () => {
               <form onSubmit={handleAddNewUser} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Full Name</Label>
-                  <Input id="name" placeholder="Enter full name" required />
+                  <Input id="name" name="name" placeholder="Enter full name" required />
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="email">Email Address</Label>
-                  <Input id="email" type="email" placeholder="email@example.com" required />
+                  <Input id="email" name="email" type="email" placeholder="email@example.com" required />
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="role">Role</Label>
-                  <Select defaultValue="candidate">
+                  <Select name="role" defaultValue="candidate">
                     <SelectTrigger>
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>
@@ -372,10 +461,10 @@ const AdminDashboard = () => {
                 </div>
 
                 <div className="space-y-2" id="regions-select">
-                  <Label htmlFor="regions">Regions (For Managers)</Label>
-                  <Select defaultValue="north">
+                  <Label htmlFor="region">Region (For Managers & Candidates)</Label>
+                  <Select name="region" defaultValue="north">
                     <SelectTrigger>
-                      <SelectValue placeholder="Select regions" />
+                      <SelectValue placeholder="Select region" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="north">North Region</SelectItem>
@@ -391,8 +480,8 @@ const AdminDashboard = () => {
                 </div>
                 
                 <div className="pt-2">
-                  <Button type="submit" className="w-full">
-                    Create User
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? "Creating User..." : "Create User"}
                   </Button>
                 </div>
               </form>
@@ -409,33 +498,39 @@ const AdminDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {recentActivity.map((activity) => (
-                  <div
-                    key={activity.id}
-                    className="flex items-start space-x-4 p-3 border rounded-lg"
-                  >
-                    <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      {activity.user === "System" ? (
-                        <Settings className="h-5 w-5 text-primary" />
-                      ) : activity.user === "Admin" ? (
-                        <ShieldAlert className="h-5 w-5 text-primary" />
-                      ) : (
-                        <User className="h-5 w-5 text-primary" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between">
-                        <p className="font-medium">{activity.user}</p>
-                        <span className="text-xs text-muted-foreground">
-                          {activity.timestamp}
-                        </span>
+                {recentActivity && recentActivity.length > 0 ? (
+                  recentActivity.map((activity) => (
+                    <div
+                      key={activity.id}
+                      className="flex items-start space-x-4 p-3 border rounded-lg"
+                    >
+                      <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        {activity.userType === "system" ? (
+                          <Settings className="h-5 w-5 text-primary" />
+                        ) : activity.userType === "admin" ? (
+                          <ShieldAlert className="h-5 w-5 text-primary" />
+                        ) : (
+                          <User className="h-5 w-5 text-primary" />
+                        )}
                       </div>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {activity.action}
-                      </p>
+                      <div className="flex-1">
+                        <div className="flex justify-between">
+                          <p className="font-medium">{activity.user}</p>
+                          <span className="text-xs text-muted-foreground">
+                            {activity.timestamp}
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {activity.action}
+                        </p>
+                      </div>
                     </div>
+                  ))
+                ) : (
+                  <div className="text-center py-6 text-muted-foreground">
+                    No recent activity to display
                   </div>
-                ))}
+                )}
               </div>
             </CardContent>
             <CardFooter>
@@ -483,7 +578,7 @@ const AdminDashboard = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredUsers.slice(0, 5).length === 0 ? (
+                  {filteredUsers.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                         No users found matching your search criteria
@@ -500,7 +595,7 @@ const AdminDashboard = () => {
                             </div>
                             {user.role === "manager" && user.regions && (
                               <div className="mt-1 flex flex-wrap gap-1">
-                                {user.regions.map((region, index) => (
+                                {user.regions.map((region: string, index: number) => (
                                   <Badge key={index} variant="outline" className="text-xs">
                                     {region}
                                   </Badge>
@@ -572,6 +667,7 @@ const AdminDashboard = () => {
                               size="icon"
                               className="h-8 w-8"
                               title="Edit User"
+                              onClick={() => navigate(`/users/edit/${user.id}`)}
                             >
                               <PenLine className="h-4 w-4" />
                             </Button>
@@ -624,14 +720,16 @@ const AdminDashboard = () => {
             <Button
               variant="outline"
               onClick={() => setShowDeleteDialog(false)}
+              disabled={isLoading}
             >
               Cancel
             </Button>
             <Button
               variant="destructive"
               onClick={handleConfirmDelete}
+              disabled={isLoading}
             >
-              Delete User
+              {isLoading ? "Deleting..." : "Delete User"}
             </Button>
           </DialogFooter>
         </DialogContent>

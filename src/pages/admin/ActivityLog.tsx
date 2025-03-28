@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -33,110 +33,75 @@ import {
   Video,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import useDatabaseQuery from "@/hooks/useDatabaseQuery";
+import { toast } from "sonner";
 
 const ActivityLog = () => {
   const [filter, setFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Mock activity data
-  const activities = [
-    {
-      id: 1,
-      user: "Admin",
-      userType: "admin",
-      action: "Added new training video: 'Product Knowledge: Security Locks Overview'",
-      type: "content",
-      timestamp: "2023-10-15T11:23:45"
-    },
-    {
-      id: 2,
-      user: "John Smith",
-      userType: "manager",
-      action: "Created interview for candidate Robert Johnson",
-      type: "interview",
-      timestamp: "2023-10-15T10:12:30"
-    },
-    {
-      id: 3,
-      user: "System",
-      userType: "system",
-      action: "Automated user cleanup: 3 inactive accounts archived",
-      type: "system",
-      timestamp: "2023-10-14T23:15:00"
-    },
-    {
-      id: 4,
-      user: "Emma Johnson",
-      userType: "manager",
-      action: "Evaluated sales task for Jane Smith - Passed",
-      type: "assessment",
-      timestamp: "2023-10-14T14:45:20"
-    },
-    {
-      id: 5,
-      user: "Admin",
-      userType: "admin",
-      action: "Created new quiz: 'Product Features Comprehension'",
-      type: "content",
-      timestamp: "2023-10-14T12:05:10"
-    },
-    {
-      id: 6,
-      user: "Lisa Brown",
-      userType: "admin",
-      action: "Updated system settings: Changed minimum pass score to 70%",
-      type: "system",
-      timestamp: "2023-10-14T09:30:15"
-    },
-    {
-      id: 7,
-      user: "Robert Johnson",
-      userType: "candidate",
-      action: "Completed training module: 'Sales Techniques'",
-      type: "training",
-      timestamp: "2023-10-13T16:22:40"
-    },
-    {
-      id: 8,
-      user: "Admin",
-      userType: "admin",
-      action: "Created new user account: Michael Davis (Manager)",
-      type: "user",
-      timestamp: "2023-10-13T11:10:05"
-    },
-    {
-      id: 9,
-      user: "Jane Smith",
-      userType: "candidate",
-      action: "Submitted sales task for evaluation",
-      type: "application",
-      timestamp: "2023-10-12T15:35:20"
-    },
-    {
-      id: 10,
-      user: "John Smith",
-      userType: "manager",
-      action: "Deleted draft assessment: 'Initial Product Quiz'",
-      type: "content",
-      timestamp: "2023-10-12T09:15:30"
-    },
-    {
-      id: 11,
-      user: "System",
-      userType: "system",
-      action: "Weekly data backup completed",
-      type: "system",
-      timestamp: "2023-10-11T03:00:00"
-    },
-    {
-      id: 12,
-      user: "Emma Johnson",
-      userType: "manager",
-      action: "Assigned 5 new candidates to North region",
-      type: "user",
-      timestamp: "2023-10-10T14:25:10"
+  // Fetch all activity logs, ordered by most recent first
+  const { data: activityLogs, isLoading } = useDatabaseQuery<any[]>('activity_logs', {
+    order: ['created_at', { ascending: false }]
+  });
+
+  // Fetch users to map user_id to names
+  const { data: users } = useDatabaseQuery<any[]>('profiles');
+
+  // Process and format activity logs
+  const [activities, setActivities] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (activityLogs && users) {
+      const processedLogs = activityLogs.map(log => {
+        const user = users.find(u => u.id === log.user_id);
+        return {
+          id: log.id,
+          user: user?.name || 'Unknown User',
+          userType: user?.role || 'system',
+          action: log.action,
+          type: log.entity_type,
+          timestamp: log.created_at
+        };
+      });
+      setActivities(processedLogs);
     }
-  ];
+  }, [activityLogs, users]);
+
+  // Handle exporting logs
+  const handleExport = () => {
+    if (!activities || activities.length === 0) {
+      toast.error("No activities to export");
+      return;
+    }
+
+    // Format the activities for CSV export
+    const csvContent = [
+      // Header row
+      ['User', 'Type', 'Action', 'Entity Type', 'Timestamp'].join(','),
+      // Data rows
+      ...activities.map(activity => [
+        `"${activity.user}"`,
+        `"${activity.userType}"`,
+        `"${activity.action}"`,
+        `"${activity.type}"`,
+        `"${formatDate(activity.timestamp)}"`
+      ].join(','))
+    ].join('\n');
+
+    // Create a blob and download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `activity-log-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success("Activity log exported successfully");
+  };
 
   // Filter activities based on selected filter and search term
   const filteredActivities = activities
@@ -188,6 +153,34 @@ const ActivityLog = () => {
     });
   };
 
+  // Handle relative time display
+  const getRelativeTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.round(diffMs / 60000);
+    const diffHours = Math.round(diffMs / 3600000);
+    const diffDays = Math.round(diffMs / 86400000);
+    
+    if (diffMins < 60) {
+      return `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
+    } else if (diffHours < 24) {
+      return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+    } else {
+      return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center h-[50vh]">
+          <p className="text-lg text-muted-foreground">Loading activity logs...</p>
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -232,7 +225,7 @@ const ActivityLog = () => {
               </SelectContent>
             </Select>
           </div>
-          <Button variant="outline" className="w-full sm:w-auto">
+          <Button variant="outline" className="w-full sm:w-auto" onClick={handleExport}>
             <Download className="h-4 w-4 mr-2" /> Export Log
           </Button>
         </div>
@@ -277,7 +270,7 @@ const ActivityLog = () => {
                           </p>
                         </div>
                         <div className="text-sm text-muted-foreground mt-1 sm:mt-0 whitespace-nowrap">
-                          {formatDate(activity.timestamp)}
+                          {getRelativeTime(activity.timestamp)}
                         </div>
                       </div>
                       <div className="mt-2">
