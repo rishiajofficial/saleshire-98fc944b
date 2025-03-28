@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,25 +19,57 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+// Indian states array
+const indianStates = [
+  "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", 
+  "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", 
+  "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", 
+  "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", 
+  "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
+  "Andaman and Nicobar Islands", "Chandigarh", "Dadra and Nagar Haveli and Daman and Diu", 
+  "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry"
+];
 
 // Form schema
 const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Please enter a valid email"),
   phone: z.string().optional(),
-  location: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
 });
 
 const Profile = () => {
   const { profile, updateProfile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+
+  // Parse location into city and state
+  const parseLocation = (location: string | undefined) => {
+    if (!location) return { city: "", state: "" };
+    
+    const parts = location.split(", ");
+    if (parts.length === 2) {
+      return { city: parts[0], state: parts[1] };
+    }
+    
+    return { city: location, state: "" };
+  };
+  
+  const locationData = parseLocation(profile?.candidates?.[0]?.location);
 
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
@@ -45,9 +77,25 @@ const Profile = () => {
       name: profile?.name || "",
       email: profile?.email || "",
       phone: profile?.candidates?.[0]?.phone || "",
-      location: profile?.candidates?.[0]?.location || "",
+      city: locationData.city,
+      state: locationData.state,
     },
   });
+
+  // Update form values when profile loads
+  useEffect(() => {
+    if (profile) {
+      const locationData = parseLocation(profile?.candidates?.[0]?.location);
+      
+      form.reset({
+        name: profile.name || "",
+        email: profile.email || "",
+        phone: profile.candidates?.[0]?.phone || "",
+        city: locationData.city,
+        state: locationData.state,
+      });
+    }
+  }, [profile, form]);
 
   const onSubmit = async (values: z.infer<typeof profileSchema>) => {
     setIsLoading(true);
@@ -62,11 +110,14 @@ const Profile = () => {
       
       // If candidate, update candidate table
       if (profile?.role === 'candidate' && profile?.candidates?.[0]) {
-        const { data, error } = await supabase
+        // Combine city and state for location
+        const location = `${values.city}, ${values.state}`;
+        
+        const { error } = await supabase
           .from('candidates')
           .update({
             phone: values.phone,
-            location: values.location,
+            location: location,
           })
           .eq('id', profile.id);
           
@@ -150,7 +201,7 @@ const Profile = () => {
                               <FormLabel>Phone Number</FormLabel>
                               <FormControl>
                                 <Input
-                                  placeholder="Your phone number"
+                                  placeholder="+91 98765 43210"
                                   {...field}
                                   value={field.value || ""}
                                 />
@@ -160,29 +211,59 @@ const Profile = () => {
                           )}
                         />
 
-                        <FormField
-                          control={form.control}
-                          name="location"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Location</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="City, State"
-                                  {...field}
-                                  value={field.value || ""}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 col-span-1 md:col-span-2">
+                          <FormField
+                            control={form.control}
+                            name="city"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>City</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="Mumbai"
+                                    {...field}
+                                    value={field.value || ""}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="state"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>State</FormLabel>
+                                <FormControl>
+                                  <Select
+                                    value={field.value || ""}
+                                    onValueChange={field.onChange}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select a state" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {indianStates.map((state) => (
+                                        <SelectItem key={state} value={state}>
+                                          {state}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
                       </>
                     )}
 
                     <div className="col-span-1 md:col-span-2">
-                      <div className="flex items-center space-x-2">
-                        <div className="py-1 px-2 bg-primary-100 text-primary-800 rounded text-xs font-medium">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="py-1 px-2 bg-primary/10 text-primary rounded text-xs font-medium">
                           {profile.role.charAt(0).toUpperCase() + profile.role.slice(1)}
                         </div>
                         {profile.role === "candidate" && profile.candidates?.[0]?.status && (

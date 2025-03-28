@@ -13,11 +13,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from '@/contexts/AuthContext';
+import { Separator } from "@/components/ui/separator";
+import { 
+  AlertCircle, 
+  Info, 
+  User, 
+  UserCog, 
+  Shield 
+} from "lucide-react";
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showDemoInfo, setShowDemoInfo] = useState(false);
   const { signIn, user } = useAuth();
   const navigate = useNavigate();
 
@@ -34,6 +50,30 @@ const Login = () => {
     
     try {
       await signIn(email, password);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loginWithDemo = async (type: 'candidate' | 'manager' | 'admin') => {
+    setIsLoading(true);
+    let demoEmail = '';
+    let demoPassword = 'password123';
+
+    switch (type) {
+      case 'candidate':
+        demoEmail = 'candidate@example.com';
+        break;
+      case 'manager':
+        demoEmail = 'manager@example.com';
+        break;
+      case 'admin':
+        demoEmail = 'admin@example.com';
+        break;
+    }
+
+    try {
+      await signIn(demoEmail, demoPassword);
     } finally {
       setIsLoading(false);
     }
@@ -98,7 +138,63 @@ const Login = () => {
                 "Sign in"
               )}
             </Button>
-            <div className="text-center text-sm">
+
+            <Separator className="my-4" />
+            
+            <div className="space-y-2">
+              <div className="flex items-center mb-2">
+                <Info size={16} className="mr-2 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">
+                  Demo logins for testing
+                </span>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="ml-1 h-6 px-1 text-primary hover:bg-transparent hover:underline"
+                  onClick={() => setShowDemoInfo(true)}
+                >
+                  Info
+                </Button>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => loginWithDemo('candidate')}
+                  disabled={isLoading}
+                >
+                  <User size={14} className="mr-1" />
+                  Candidate
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => loginWithDemo('manager')}
+                  disabled={isLoading}
+                >
+                  <UserCog size={14} className="mr-1" />
+                  Manager
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => loginWithDemo('admin')}
+                  disabled={isLoading}
+                >
+                  <Shield size={14} className="mr-1" />
+                  Admin
+                </Button>
+              </div>
+            </div>
+
+            <div className="text-center text-sm mt-4">
               Don't have an account?{" "}
               <Link to="/register" className="text-primary hover:underline">
                 Sign up
@@ -107,6 +203,50 @@ const Login = () => {
           </CardFooter>
         </form>
       </Card>
+
+      <Dialog open={showDemoInfo} onOpenChange={setShowDemoInfo}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Demo Login Information</DialogTitle>
+            <DialogDescription>
+              These demo accounts are for testing purposes only.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <h4 className="font-medium flex items-center"><User size={16} className="mr-2" /> Candidate Account</h4>
+              <div className="pl-6 space-y-1 text-sm">
+                <p><span className="font-semibold">Email:</span> candidate@example.com</p>
+                <p><span className="font-semibold">Password:</span> password123</p>
+                <p className="text-muted-foreground text-xs">Access to candidate features, training modules, and assessments.</p>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <h4 className="font-medium flex items-center"><UserCog size={16} className="mr-2" /> Manager Account</h4>
+              <div className="pl-6 space-y-1 text-sm">
+                <p><span className="font-semibold">Email:</span> manager@example.com</p>
+                <p><span className="font-semibold">Password:</span> password123</p>
+                <p className="text-muted-foreground text-xs">Access to candidate management, assessments, and analytics.</p>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <h4 className="font-medium flex items-center"><Shield size={16} className="mr-2" /> Admin Account</h4>
+              <div className="pl-6 space-y-1 text-sm">
+                <p><span className="font-semibold">Email:</span> admin@example.com</p>
+                <p><span className="font-semibold">Password:</span> password123</p>
+                <p className="text-muted-foreground text-xs">Full access to all features including user management and system settings.</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center mt-4 bg-amber-50 p-3 rounded-md text-amber-800 text-sm">
+              <AlertCircle size={16} className="mr-2 flex-shrink-0" />
+              <p>Note: In a production environment, manager accounts are created by admin users only.</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

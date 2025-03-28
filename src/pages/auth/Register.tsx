@@ -21,15 +21,28 @@ import { Label } from "@/components/ui/label";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Region } from "@/types";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+// Indian states array
+const indianStates = [
+  "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", 
+  "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", 
+  "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", 
+  "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", 
+  "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
+  "Andaman and Nicobar Islands", "Chandigarh", "Dadra and Nagar Haveli and Daman and Diu", 
+  "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry"
+];
 
 const Register = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState("candidate");
   const [phone, setPhone] = useState("");
-  const [location, setLocation] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
   const [region, setRegion] = useState<Region>("north");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -62,20 +75,17 @@ const Register = () => {
     setError("");
     
     try {
-      // Create user object based on role
+      // Create location string combining city and state
+      const location = `${city}, ${state}`;
+      
+      // Create user data object for candidate
       const userData = {
         name,
-        role,
+        role: 'candidate',
+        phone,
+        location,
+        region
       };
-      
-      // Add additional fields for candidates
-      if (role === 'candidate') {
-        Object.assign(userData, {
-          phone,
-          location,
-          region
-        });
-      }
 
       await signUp(email, password, userData);
       navigate("/login");
@@ -90,24 +100,25 @@ const Register = () => {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
+          <CardTitle className="text-2xl font-bold">Create a Candidate Account</CardTitle>
           <CardDescription>
-            Enter your information to create your account
+            Enter your information to apply for our sales roles
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
             {error && (
-              <div className="bg-red-50 text-red-700 px-4 py-2 rounded border border-red-300 text-sm">
-                {error}
-              </div>
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
             )}
             
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
               <Input
                 id="name"
-                placeholder="John Doe"
+                placeholder="Rahul Singh"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -119,7 +130,7 @@ const Register = () => {
               <Input
                 id="email"
                 type="email"
-                placeholder="name@example.com"
+                placeholder="rahul.singh@example.com"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -149,63 +160,69 @@ const Register = () => {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="role">Account Type</Label>
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input
+                id="phone"
+                placeholder="+91 98765 43210"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="city">City</Label>
+                <Input
+                  id="city"
+                  placeholder="Mumbai"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="state">State</Label>
+                <Select
+                  value={state}
+                  onValueChange={(value) => setState(value)}
+                >
+                  <SelectTrigger id="state">
+                    <SelectValue placeholder="Select state" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {indianStates.map((stateName) => (
+                      <SelectItem key={stateName} value={stateName}>
+                        {stateName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="region">Preferred Sales Region</Label>
               <Select
-                value={role}
-                onValueChange={(value: string) => setRole(value)}
+                value={region}
+                onValueChange={(value: Region) => setRegion(value)}
               >
-                <SelectTrigger id="role">
-                  <SelectValue placeholder="Select role" />
+                <SelectTrigger id="region">
+                  <SelectValue placeholder="Select region" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="candidate">Candidate</SelectItem>
-                  <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="north">North Zone</SelectItem>
+                  <SelectItem value="south">South Zone</SelectItem>
+                  <SelectItem value="east">East Zone</SelectItem>
+                  <SelectItem value="west">West Zone</SelectItem>
+                  <SelectItem value="central">Central Zone</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            
-            {role === "candidate" && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <Input
-                    id="phone"
-                    placeholder="+1 123 456 7890"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    placeholder="City, State"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="region">Region</Label>
-                  <Select
-                    value={region}
-                    onValueChange={(value: Region) => setRegion(value)}
-                  >
-                    <SelectTrigger id="region">
-                      <SelectValue placeholder="Select region" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="north">North</SelectItem>
-                      <SelectItem value="south">South</SelectItem>
-                      <SelectItem value="east">East</SelectItem>
-                      <SelectItem value="west">West</SelectItem>
-                      <SelectItem value="central">Central</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </>
-            )}
+
+            <div className="bg-blue-50 p-3 rounded-md text-blue-700 text-sm mt-4">
+              <p className="font-medium">Note:</p>
+              <p>Only candidate accounts can be created through registration. Manager accounts are created by administrators.</p>
+            </div>
           </CardContent>
           
           <CardFooter className="flex flex-col space-y-4">
