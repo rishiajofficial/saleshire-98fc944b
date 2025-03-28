@@ -34,10 +34,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(currentSession?.user ?? null);
         
         if (event === 'SIGNED_IN') {
-          // Don't fetch profile here, just log the event
           console.log('User signed in:', currentSession?.user?.id);
           if (currentSession?.user) {
-            fetchProfile(currentSession.user.id);
+            // Defer profile fetching to avoid potential auth deadlocks
+            setTimeout(() => {
+              fetchProfile(currentSession.user.id);
+            }, 0);
           }
         } else if (event === 'SIGNED_OUT') {
           setProfile(null);
@@ -66,13 +68,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Fetch user profile data from Supabase
   const fetchProfile = async (userId: string) => {
     try {
+      // Fix the query to not use embedded relationships
       const { data, error } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          candidates(*),
-          managers(*)
-        `)
+        .select('*')
         .eq('id', userId)
         .single();
       
@@ -83,6 +82,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data) {
         console.log('Profile fetched:', data);
         setProfile(data);
+        
+        // Now fetch additional data separately if needed
+        if (data.role === 'candidate') {
+          const { data: candidateData, error: candidateError } = await supabase
+            .from('candidates')
+            .select('*')
+            .eq('id', userId)
+            .single();
+            
+          if (!candidateError && candidateData) {
+            setProfile(prev => ({ ...prev, candidateData }));
+          }
+        } else if (data.role === 'manager') {
+          const { data: managerData, error: managerError } = await supabase
+            .from('managers')
+            .select('*')
+            .eq('id', userId)
+            .single();
+            
+          if (!managerError && managerData) {
+            setProfile(prev => ({ ...prev, managerData }));
+          }
+        }
       }
     } catch (error: any) {
       console.error('Error fetching profile:', error.message);
@@ -111,15 +133,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('Sign in successful for user:', data.user.id);
         toast.success('Successfully signed in');
         
-        // Fetch profile after signing in
-        await fetchProfile(data.user.id);
-        
         // Get the profile to determine redirection
-        const { data: profileData } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('role')
           .eq('id', data.user.id)
           .single();
+        
+        if (profileError) {
+          console.error('Error fetching profile for redirect:', profileError.message);
+          // Default redirect if profile can't be fetched
+          navigate('/dashboard/candidate');
+          return;
+        }
         
         console.log('User role:', profileData?.role);
         
