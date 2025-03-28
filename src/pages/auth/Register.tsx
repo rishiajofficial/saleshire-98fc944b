@@ -18,10 +18,10 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Region } from "@/types";
-import { AlertCircle, Eye, EyeOff } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // Indian states array
@@ -46,43 +46,16 @@ const Register = () => {
   const [region, setRegion] = useState<Region>("north");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   const { signUp, user } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
 
   useEffect(() => {
-    // If user is already logged in and we're on the register page, redirect
-    if (user && location.pathname === '/register') {
+    // If user is already logged in, redirect
+    if (user) {
       navigate("/");
     }
-  }, [user, navigate, location]);
-
-  const formatPhoneNumber = (value: string) => {
-    // Remove all non-digit characters
-    const cleaned = value.replace(/\D/g, '');
-    
-    // Format the phone number
-    let formatted = '';
-    
-    if (cleaned.length <= 5) {
-      formatted = cleaned;
-    } else if (cleaned.length <= 10) {
-      formatted = `${cleaned.slice(0, 5)} ${cleaned.slice(5)}`;
-    } else {
-      formatted = `${cleaned.slice(0, 5)} ${cleaned.slice(5, 10)}`;
-    }
-    
-    // Add the +91 prefix
-    return cleaned.length > 0 ? `+91 ${formatted}` : '';
-  };
-
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formattedPhone = formatPhoneNumber(e.target.value);
-    setPhone(formattedPhone);
-  };
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,42 +139,24 @@ const Register = () => {
             
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-                <button 
-                  type="button"
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
+              <Input
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
             </div>
             
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <div className="relative">
-                <Input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  required
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                />
-                <button 
-                  type="button"
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
+              <Input
+                id="confirmPassword"
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
             </div>
             
             <div className="space-y-2">
@@ -210,7 +165,7 @@ const Register = () => {
                 id="phone"
                 placeholder="+91 98765 43210"
                 value={phone}
-                onChange={handlePhoneChange}
+                onChange={(e) => setPhone(e.target.value)}
               />
             </div>
             
