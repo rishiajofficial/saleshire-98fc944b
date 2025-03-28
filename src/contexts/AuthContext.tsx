@@ -144,6 +144,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Signing in with:', email);
       setIsLoading(true);
       
+      // Check if demo credentials are being used
+      const isDemoAccount = 
+        (email === 'candidate@example.com' || 
+         email === 'manager@example.com' || 
+         email === 'admin@example.com') && 
+        password === 'password123';
+      
+      // For demo accounts in development: first try to create the account if it doesn't exist
+      if (isDemoAccount && process.env.NODE_ENV === 'development') {
+        try {
+          const { error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              data: {
+                name: email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1),
+                role: email.split('@')[0]
+              }
+            }
+          });
+          
+          if (error && error.message !== "User already registered") {
+            console.warn('Demo account creation failed:', error.message);
+          } else {
+            console.log('Demo account created or already exists');
+          }
+        } catch (err) {
+          console.warn('Error in demo account setup:', err);
+        }
+      }
+      
+      // Proceed with sign in
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,

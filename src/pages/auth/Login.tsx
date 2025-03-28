@@ -76,25 +76,36 @@ const Login = () => {
 
   const loginWithDemo = async (type: 'candidate' | 'manager' | 'admin') => {
     setIsLoading(true);
-    let demoEmail = '';
-    let demoPassword = 'password123';
-
-    switch (type) {
-      case 'candidate':
-        demoEmail = 'candidate@example.com';
-        break;
-      case 'manager':
-        demoEmail = 'manager@example.com';
-        break;
-      case 'admin':
-        demoEmail = 'admin@example.com';
-        break;
-    }
-
+    
     try {
-      console.log(`Attempting demo login as ${type} with email: ${demoEmail}`);
-      await signIn(demoEmail, demoPassword);
-    } catch (error) {
+      // Fixed demo credentials
+      const demoCredentials = {
+        candidate: {
+          email: 'candidate@example.com',
+          password: 'password123'
+        },
+        manager: {
+          email: 'manager@example.com',
+          password: 'password123'
+        },
+        admin: {
+          email: 'admin@example.com',
+          password: 'password123'
+        }
+      };
+      
+      const credentials = demoCredentials[type];
+      console.log(`Attempting demo login as ${type} with email: ${credentials.email}`);
+      
+      // Set the email and password fields for visual feedback
+      setEmail(credentials.email);
+      setPassword(credentials.password);
+      
+      // Wait a moment for the UI to update before submitting
+      setTimeout(async () => {
+        await signIn(credentials.email, credentials.password);
+      }, 100);
+    } catch (error: any) {
       console.error(`Demo login error (${type}):`, error);
       toast.error(`Failed to sign in with demo ${type} account. Please try again.`);
     } finally {
