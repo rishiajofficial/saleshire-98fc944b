@@ -3,10 +3,10 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Tables } from '@/integrations/supabase/types';
+import { Database } from '@/integrations/supabase/types';
 
-// Valid table names from our Supabase database
-export type TableName = keyof Tables;
+// Define table names as literal types derived from the Database type
+export type TableName = keyof Database['public']['Tables'];
 
 export function useDatabaseQuery<T = any>(
   tableName: TableName,
@@ -37,7 +37,8 @@ export function useDatabaseQuery<T = any>(
           return;
         }
         
-        let query = supabase.from(tableName).select(options.columns || '*');
+        // Use type assertion to handle the table name
+        let query = supabase.from(tableName as string).select(options.columns || '*');
         
         // Apply filter if provided
         if (options.filter) {
@@ -115,13 +116,15 @@ export function useRealTimeSubscription<T = any>(
     if (!user) return;
     
     // Create a channel to listen for changes
+    // Using a type assertion for channel.on since the TypeScript types 
+    // for Supabase realtime are not fully compatible with our usage
     const channel = supabase
       .channel('schema-db-changes')
-      .on('postgres_changes', // This is the correct event type for Supabase
+      .on('postgres_changes' as any, // Type assertion to bypass strict type checking
         {
           event,
           schema: 'public',
-          table: tableName
+          table: tableName as string
         },
         (payload) => {
           setData(payload.new as T);
