@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
@@ -66,7 +65,6 @@ const AssessmentQuiz = () => {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number>(0);
   
-  // Track if leaving page is restricted
   const [preventTabChange, setPreventTabChange] = useState(false);
   
   useEffect(() => {
@@ -81,7 +79,6 @@ const AssessmentQuiz = () => {
     };
   }, [assessmentId, user]);
   
-  // Prevent tab changing and window closing
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (preventTabChange && assessmentStarted && !assessmentCompleted) {
@@ -98,7 +95,6 @@ const AssessmentQuiz = () => {
     };
   }, [preventTabChange, assessmentStarted, assessmentCompleted]);
   
-  // Handle tab visibility change
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (assessmentStarted && !assessmentCompleted && document.visibilityState === "hidden") {
@@ -119,7 +115,6 @@ const AssessmentQuiz = () => {
     try {
       setIsLoading(true);
       
-      // Fetch assessment data
       const { data: assessmentData, error: assessmentError } = await supabase
         .from('assessments')
         .select('*')
@@ -128,7 +123,6 @@ const AssessmentQuiz = () => {
       
       if (assessmentError) throw assessmentError;
       
-      // Fetch assessment sections
       const { data: sectionsData, error: sectionsError } = await supabase
         .from('assessment_sections')
         .select('*')
@@ -137,7 +131,6 @@ const AssessmentQuiz = () => {
       
       if (sectionsError) throw sectionsError;
       
-      // Fetch questions for each section
       const sections: Section[] = [];
       
       for (const section of sectionsData) {
@@ -148,13 +141,11 @@ const AssessmentQuiz = () => {
           
         if (questionsError) throw questionsError;
         
-        // Parse options from JSONB
         const questions = questionsData.map((q: any) => ({
           ...q,
           options: Array.isArray(q.options) ? q.options : JSON.parse(q.options)
         }));
         
-        // Randomize questions if enabled
         const randomizedQuestions = assessmentData.randomize_questions 
           ? shuffleArray([...questions]) 
           : questions;
@@ -177,7 +168,6 @@ const AssessmentQuiz = () => {
         sections
       });
       
-      // Set initial time limit
       if (sections.length > 0 && sections[0].questions.length > 0) {
         const questionTimeLimit = sections[0].questions[0].timeLimit || assessmentData.time_limit || 30;
         setTimeRemaining(questionTimeLimit);
@@ -198,19 +188,15 @@ const AssessmentQuiz = () => {
   };
   
   const startTimer = () => {
-    // Clear any existing timer
     if (timerRef.current) {
       clearInterval(timerRef.current);
     }
     
-    // Record start time
     startTimeRef.current = Date.now();
     
-    // Start the timer
     timerRef.current = setInterval(() => {
       setTimeRemaining((prev) => {
         if (prev <= 1) {
-          // Time's up for this question - auto submit
           handleAutoSubmit();
           return 0;
         }
@@ -234,7 +220,6 @@ const AssessmentQuiz = () => {
   };
   
   const handleSubmitAnswer = async () => {
-    // Stop the timer
     if (timerRef.current) {
       clearInterval(timerRef.current);
     }
@@ -242,14 +227,11 @@ const AssessmentQuiz = () => {
     const currentQuestion = getCurrentQuestion();
     if (!currentQuestion) return;
     
-    // Calculate time taken
     const timeTaken = Math.round((Date.now() - startTimeRef.current) / 1000);
     
-    // Save answer and timing
     const newAnswers = { ...answers };
     const newTimings = { ...answerTimings };
     
-    // Only save if an answer was selected
     if (selectedAnswer !== null) {
       newAnswers[currentQuestion.id] = selectedAnswer;
     }
@@ -259,31 +241,25 @@ const AssessmentQuiz = () => {
     setAnswers(newAnswers);
     setAnswerTimings(newTimings);
     
-    // Move to next question or section
     const nextQuestionIndex = currentQuestionIndex + 1;
     const currentSection = assessment?.sections[currentSectionIndex];
     
     if (currentSection && nextQuestionIndex < currentSection.questions.length) {
-      // Move to next question in current section
       setCurrentQuestionIndex(nextQuestionIndex);
       setSelectedAnswer(null);
       
-      // Reset timer for next question
       const nextQuestion = currentSection.questions[nextQuestionIndex];
       const questionTimeLimit = nextQuestion.timeLimit || assessment?.timeLimit || 30;
       setTimeRemaining(questionTimeLimit);
       startTimer();
     } else {
-      // Check if we have more sections
       const nextSectionIndex = currentSectionIndex + 1;
       
       if (assessment && nextSectionIndex < assessment.sections.length) {
-        // Move to next section
         setCurrentSectionIndex(nextSectionIndex);
         setCurrentQuestionIndex(0);
         setSelectedAnswer(null);
         
-        // Reset timer for first question in next section
         const nextSection = assessment.sections[nextSectionIndex];
         if (nextSection.questions.length > 0) {
           const nextQuestion = nextSection.questions[0];
@@ -292,7 +268,6 @@ const AssessmentQuiz = () => {
           startTimer();
         }
       } else {
-        // Assessment is complete
         await submitAssessment(newAnswers, newTimings);
       }
     }
@@ -305,7 +280,6 @@ const AssessmentQuiz = () => {
     try {
       setIsSubmitting(true);
       
-      // Calculate score
       let totalQuestions = 0;
       let correctAnswers = 0;
       
@@ -322,9 +296,7 @@ const AssessmentQuiz = () => {
       const calculatedScore = (correctAnswers / totalQuestions) * 100;
       setScore(calculatedScore);
       
-      // Save results to database
       if (user && assessment) {
-        // First, get the candidate ID from the candidates table
         const { data: candidateData, error: candidateError } = await supabase
           .from('candidates')
           .select('id')
@@ -333,7 +305,6 @@ const AssessmentQuiz = () => {
           
         if (candidateError) throw candidateError;
         
-        // Save assessment result
         const { error: resultError } = await supabase
           .from('assessment_results')
           .insert({
@@ -348,7 +319,6 @@ const AssessmentQuiz = () => {
           
         if (resultError) throw resultError;
         
-        // Log activity
         const { error: activityError } = await supabase
           .from('activity_logs')
           .insert({
@@ -362,7 +332,6 @@ const AssessmentQuiz = () => {
         if (activityError) throw activityError;
       }
       
-      // Mark assessment as completed
       setAssessmentCompleted(true);
       setPreventTabChange(false);
       
@@ -386,17 +355,14 @@ const AssessmentQuiz = () => {
     let totalQuestions = 0;
     let completedQuestions = 0;
     
-    // Count total questions
     assessment.sections.forEach(section => {
       totalQuestions += section.questions.length;
     });
     
-    // Count completed questions in previous sections
     for (let i = 0; i < currentSectionIndex; i++) {
       completedQuestions += assessment.sections[i].questions.length;
     }
     
-    // Add current section's completed questions
     completedQuestions += currentQuestionIndex;
     
     return Math.round((completedQuestions / totalQuestions) * 100);
@@ -530,7 +496,7 @@ const AssessmentQuiz = () => {
                 </ul>
               </div>
               
-              <Alert variant="warning">
+              <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>Important Note</AlertTitle>
                 <AlertDescription>

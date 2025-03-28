@@ -3,9 +3,27 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { Tables } from '@/integrations/supabase/types';
+
+// Valid table names from our Supabase database
+type TableName = 
+  | 'profiles' 
+  | 'assessments' 
+  | 'candidates' 
+  | 'managers' 
+  | 'assessment_sections' 
+  | 'sales_tasks' 
+  | 'activity_logs' 
+  | 'assessment_results' 
+  | 'interviews' 
+  | 'manager_regions' 
+  | 'questions' 
+  | 'shops' 
+  | 'training_modules' 
+  | 'videos';
 
 export function useDatabaseQuery<T = any>(
-  tableName: string,
+  tableName: TableName,
   options: {
     columns?: string;
     filter?: Record<string, any>;
@@ -99,7 +117,7 @@ export function useDatabaseQuery<T = any>(
 }
 
 export function useRealTimeSubscription<T = any>(
-  tableName: string,
+  tableName: TableName,
   event: 'INSERT' | 'UPDATE' | 'DELETE' | '*' = '*',
   callback?: (payload: any) => void
 ) {
@@ -110,6 +128,7 @@ export function useRealTimeSubscription<T = any>(
     // Only set up subscription if user is logged in
     if (!user) return;
     
+    // Fix for postgres_changes - this is the correct event type
     const channel = supabase
       .channel('schema-db-changes')
       .on(
