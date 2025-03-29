@@ -15,7 +15,7 @@ import DashboardStats from "@/components/dashboard/DashboardStats";
 import CandidateList from "@/components/dashboard/CandidateList";
 import InterviewList from "@/components/dashboard/InterviewList";
 import AssessmentList from "@/components/dashboard/AssessmentList";
-import { Clock } from "lucide-react";
+import { Interview } from "@/types";
 
 const ManagerDashboard = () => {
   const { toast } = useToast();
@@ -35,7 +35,7 @@ const ManagerDashboard = () => {
             updated_at,
             profiles:id(name, email)
           `)
-          .in('status', ['applied', 'screening', 'training', 'sales_task'])
+          .in('status', ['applied', 'hr_review', 'hr_approved', 'training', 'final_interview'])
           .order('updated_at', { ascending: false });
         
         if (error) {
@@ -56,7 +56,7 @@ const ManagerDashboard = () => {
   });
 
   // Fetch upcoming interviews
-  const { data: upcomingInterviews, isLoading: isLoadingInterviews } = useQuery({
+  const { data: upcomingInterviewsRaw, isLoading: isLoadingInterviews } = useQuery({
     queryKey: ['upcomingInterviews'],
     queryFn: async () => {
       try {
@@ -66,10 +66,7 @@ const ManagerDashboard = () => {
             id,
             scheduled_at,
             status,
-            candidate:candidate_id(
-              id,
-              profiles:id(name, email)
-            )
+            candidate_id
           `)
           .in('status', ['scheduled', 'confirmed'])
           .gte('scheduled_at', new Date().toISOString())
@@ -92,6 +89,57 @@ const ManagerDashboard = () => {
       }
     }
   });
+
+  // Fetch candidate names for the interviews in a separate query
+  const { data: candidateProfiles, isLoading: isLoadingProfiles } = useQuery({
+    queryKey: ['candidateProfiles', upcomingInterviewsRaw],
+    queryFn: async () => {
+      if (!upcomingInterviewsRaw || upcomingInterviewsRaw.length === 0) return {};
+      
+      try {
+        const candidateIds = upcomingInterviewsRaw.map(interview => interview.candidate_id);
+        
+        const { data, error } = await supabase
+          .from('profiles')
+          .select(`id, name, email`)
+          .in('id', candidateIds);
+          
+        if (error) {
+          toast({
+            variant: "destructive",
+            title: "Error fetching candidate profiles",
+            description: error.message,
+          });
+          throw error;
+        }
+        
+        // Convert to a map for easy lookup
+        return data.reduce((acc, profile) => {
+          acc[profile.id] = profile;
+          return acc;
+        }, {} as Record<string, {id: string, name: string, email: string}>);
+      } catch (err) {
+        console.error("Error in candidateProfiles query:", err);
+        return {};
+      }
+    },
+    enabled: !!upcomingInterviewsRaw && upcomingInterviewsRaw.length > 0,
+  });
+
+  // Combine interview data with candidate names
+  const upcomingInterviews: Interview[] = React.useMemo(() => {
+    if (!upcomingInterviewsRaw || !candidateProfiles) return [];
+    
+    return upcomingInterviewsRaw.map(interview => ({
+      id: interview.id,
+      candidateId: interview.candidate_id,
+      candidateName: candidateProfiles[interview.candidate_id]?.name || "Unknown",
+      candidateEmail: candidateProfiles[interview.candidate_id]?.email || "Unknown",
+      managerId: "", // This will be populated in a full implementation
+      scheduledAt: interview.scheduled_at,
+      status: interview.status,
+    }));
+  }, [upcomingInterviewsRaw, candidateProfiles]);
 
   // Fetch recent assessments
   const { data: recentAssessments, isLoading: isLoadingAssessments } = useQuery({
@@ -159,15 +207,17 @@ const ManagerDashboard = () => {
   const dashboardStats = {
     totalCandidates: pendingCandidates?.length || 0,
     pendingReviews: pendingCandidates?.filter(c => 
-      c.status === 'applied' || c.status === 'screening'
+      c.status === 'applied' || c.status === 'hr_review' || c.status === 'final_interview'
     ).length || 0,
     interviewsScheduled: upcomingInterviews?.length || 0,
   };
 
   // Get next interview date if any
   const nextInterviewDate = upcomingInterviews && upcomingInterviews.length > 0
-    ? upcomingInterviews[0].scheduled_at
+    ? upcomingInterviews[0].scheduledAt
     : undefined;
+
+  const isLoading = isLoadingCandidates || isLoadingInterviews || isLoadingProfiles;
 
   return (
     <MainLayout>
@@ -184,7 +234,7 @@ const ManagerDashboard = () => {
           pendingReviews={dashboardStats.pendingReviews}
           interviewsScheduled={dashboardStats.interviewsScheduled}
           nextInterviewDate={nextInterviewDate}
-          isLoading={isLoadingCandidates || isLoadingInterviews}
+          isLoading={isLoading}
         />
 
         <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
@@ -204,7 +254,7 @@ const ManagerDashboard = () => {
           <TabsContent value="upcoming-interviews">
             <InterviewList 
               interviews={upcomingInterviews || []} 
-              isLoading={isLoadingInterviews} 
+              isLoading={isLoading} 
             />
           </TabsContent>
           

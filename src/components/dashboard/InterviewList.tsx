@@ -15,9 +15,10 @@ import {
   Calendar,
   User,
 } from "lucide-react";
+import { Interview } from "@/types";
 
 interface InterviewListProps {
-  interviews: any[];
+  interviews: Interview[];
   isLoading: boolean;
 }
 
@@ -27,6 +28,7 @@ const InterviewList: React.FC<InterviewListProps> = ({
 }) => {
   // Format datetime for display
   const formatDateTime = (dateString: string) => {
+    if (!dateString) return "Not scheduled";
     const date = new Date(dateString);
     return `${date.toLocaleDateString()} at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
   };
@@ -44,6 +46,18 @@ const InterviewList: React.FC<InterviewListProps> = ({
         return (
           <Badge className="bg-yellow-100 text-yellow-800">
             Pending
+          </Badge>
+        );
+      case "completed":
+        return (
+          <Badge className="bg-blue-100 text-blue-800">
+            Completed
+          </Badge>
+        );
+      case "cancelled":
+        return (
+          <Badge className="bg-red-100 text-red-800">
+            Cancelled
           </Badge>
         );
       default:
@@ -64,23 +78,23 @@ const InterviewList: React.FC<InterviewListProps> = ({
           {isLoading ? (
             <div className="text-center py-4">Loading interviews...</div>
           ) : interviews && interviews.length > 0 ? (
-            interviews.map((interview: any) => (
+            interviews.map((interview) => (
               <div
                 key={interview.id}
                 className="flex items-center justify-between p-3 border rounded-lg hover:bg-secondary/50 transition-colors"
               >
                 <div className="flex items-center">
                   <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                    {interview.candidate?.profiles?.name ? 
-                      interview.candidate?.profiles.name.split(' ').map((n: string) => n[0]).join('') : 
+                    {interview.candidateName ? 
+                      interview.candidateName.split(' ').map((n) => n[0]).join('').toUpperCase() : 
                       <User className="h-5 w-5" />
                     }
                   </div>
                   <div className="ml-3">
-                    <p className="font-medium">{interview.candidate?.profiles?.name || "Candidate"}</p>
+                    <p className="font-medium">{interview.candidateName || "Candidate"}</p>
                     <div className="flex items-center text-xs text-muted-foreground">
                       <Calendar className="h-3 w-3 mr-1" />
-                      {formatDateTime(interview.scheduled_at)}
+                      {formatDateTime(interview.scheduledAt)}
                     </div>
                   </div>
                 </div>

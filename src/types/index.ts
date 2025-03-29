@@ -1,5 +1,5 @@
 
-export type UserRole = 'candidate' | 'manager' | 'admin';
+export type UserRole = 'candidate' | 'manager' | 'admin' | 'hr' | 'director';
 export type Region = 'north' | 'south' | 'east' | 'west' | 'central';
 
 export interface User {
@@ -14,16 +14,24 @@ export interface Candidate extends User {
   phone: string;
   location: string;
   region: Region;
-  status: 'applied' | 'screening' | 'training' | 'sales_task' | 'interview' | 'hired' | 'rejected';
+  status: 'applied' | 'hr_review' | 'hr_approved' | 'training' | 'final_interview' | 'project' | 'hired' | 'rejected';
   resume?: string;
   aboutMeVideo?: string;
   salesPitchVideo?: string;
-  currentStep: 1 | 2 | 3 | 4;
+  currentStep: 1 | 2 | 3 | 4 | 5;
   assignedManager?: string;
 }
 
 export interface Manager extends User {
   candidates: string[];
+  regions: Region[];
+}
+
+export interface HR extends User {
+  candidates: string[];
+}
+
+export interface Director extends User {
   regions: Region[];
 }
 
@@ -109,10 +117,12 @@ export interface Shop {
 export interface Interview {
   id: string;
   candidateId: string;
+  candidateName?: string;
+  candidateEmail?: string;
   managerId: string;
-  scheduledAt: Date;
+  scheduledAt: string;
   notes?: string;
-  status: 'scheduled' | 'completed' | 'cancelled';
+  status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
   decision?: 'hired' | 'rejected';
   feedback?: string;
 }
