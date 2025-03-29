@@ -99,7 +99,7 @@ export const AdminService = {
             time_limit: data.timeLimit ? parseInt(data.timeLimit) : null,
             prevent_backtracking: data.preventBacktracking || false,
             randomize_questions: data.randomizeQuestions || false,
-            updated_at: new Date()
+            updated_at: new Date().toISOString() // Convert Date to string
           })
           .eq('id', id)
           .select()
