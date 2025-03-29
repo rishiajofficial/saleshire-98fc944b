@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -29,81 +29,83 @@ export function useDatabaseQuery<T = any>(
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        
-        // Only run query if user is logged in
-        if (!user) {
-          setIsLoading(false);
-          return;
-        }
-        
-        // Type assertion to fix the deep type instantiation error
-        const query = supabase.from(tableName as any).select(options.columns || '*');
-        
-        // Apply filter if provided
-        if (options.filter) {
-          Object.entries(options.filter).forEach(([key, value]) => {
-            query.eq(key, value);
-          });
-        }
-        
-        // Apply eq filter if provided
-        if (options.eq) {
-          query.eq(options.eq[0], options.eq[1]);
-        }
-        
-        // Apply in filter if provided
-        if (options.in) {
-          query.in(options.in[0], options.in[1]);
-        }
-        
-        // Apply order if provided
-        if (options.order) {
-          query.order(options.order[0], { ascending: options.order[1].ascending });
-        }
-        
-        // Apply limit if provided
-        if (options.limit) {
-          query.limit(options.limit);
-        }
-        
-        // Apply range if provided
-        if (options.range) {
-          query.range(options.range[0], options.range[1]);
-        }
-        
-        // Get single result if specified
-        if (options.single) {
-          const { data: result, error } = await query.single();
-          
-          if (error) throw error;
-          setData(result as T);
-        } else {
-          const { data: result, error } = await query;
-          
-          if (error) throw error;
-          setData(result as T);
-        }
-        
-      } catch (error: any) {
-        console.error(`Error fetching data from ${tableName}:`, error.message);
-        setError(error);
-        toast.error(`Failed to fetch data: ${error.message}`);
-      } finally {
+  const fetchData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      
+      // Only run query if user is logged in
+      if (!user) {
         setIsLoading(false);
+        return;
       }
-    };
-
-    fetchData();
+      
+      // Type assertion to fix the deep type instantiation error
+      const query = supabase.from(tableName as any).select(options.columns || '*');
+      
+      // Apply filter if provided
+      if (options.filter) {
+        Object.entries(options.filter).forEach(([key, value]) => {
+          query.eq(key, value);
+        });
+      }
+      
+      // Apply eq filter if provided
+      if (options.eq) {
+        query.eq(options.eq[0], options.eq[1]);
+      }
+      
+      // Apply in filter if provided
+      if (options.in) {
+        query.in(options.in[0], options.in[1]);
+      }
+      
+      // Apply order if provided
+      if (options.order) {
+        query.order(options.order[0], { ascending: options.order[1].ascending });
+      }
+      
+      // Apply limit if provided
+      if (options.limit) {
+        query.limit(options.limit);
+      }
+      
+      // Apply range if provided
+      if (options.range) {
+        query.range(options.range[0], options.range[1]);
+      }
+      
+      // Get single result if specified
+      if (options.single) {
+        const { data: result, error } = await query.single();
+        
+        if (error) throw error;
+        setData(result as T);
+      } else {
+        const { data: result, error } = await query;
+        
+        if (error) throw error;
+        setData(result as T);
+      }
+      
+    } catch (error: any) {
+      console.error(`Error fetching data from ${tableName}:`, error.message);
+      setError(error);
+      toast.error(`Failed to fetch data: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
   }, [tableName, options.columns, JSON.stringify(options.filter), 
       JSON.stringify(options.eq), JSON.stringify(options.in), 
       JSON.stringify(options.order), options.limit, options.single, 
       JSON.stringify(options.range), user?.id]);
 
-  return { data, error, isLoading };
+  // Initial data fetch
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Return the refetch function along with data, error, and isLoading
+  return { data, error, isLoading, refetch: fetchData };
 }
 
 export function useRealTimeSubscription<T = any>(
