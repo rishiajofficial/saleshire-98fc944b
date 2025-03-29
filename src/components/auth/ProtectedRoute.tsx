@@ -58,11 +58,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     } else if (profile.role === 'manager') {
       return <Navigate to="/dashboard/manager" replace />;
     } else if (profile.role === 'hr') {
-      // For HR role, redirect to manager dashboard as there's no specific HR dashboard
-      return <Navigate to="/dashboard/manager" replace />;
+      return <Navigate to="/dashboard/manager" replace />; // HR users use the manager dashboard
     } else if (profile.role === 'director') {
-      // For Director role, redirect to manager dashboard as there's no specific Director dashboard
-      return <Navigate to="/dashboard/manager" replace />;
+      return <Navigate to="/dashboard/manager" replace />; // Directors use the manager dashboard
     } else {
       return <Navigate to="/dashboard/candidate" replace />;
     }

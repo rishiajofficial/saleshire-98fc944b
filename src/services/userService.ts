@@ -2,12 +2,14 @@
 import { supabase } from "@/integrations/supabase/client";
 import { BaseService, ServiceResponse } from "./baseService";
 
+export type UserRole = 'admin' | 'manager' | 'candidate' | 'hr' | 'director';
+
 export type UserData = {
   id?: string;
   name: string;
   email: string;
   password?: string;
-  role: 'admin' | 'manager' | 'candidate';
+  role: UserRole;
   region?: string;
 };
 

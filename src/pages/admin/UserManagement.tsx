@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -68,7 +67,7 @@ const userFormSchema = z.object({
   password: z.string().min(6, {
     message: "Password must be at least 6 characters.",
   }).optional(),
-  role: z.enum(["admin", "manager", "candidate"]),
+  role: z.enum(["admin", "manager", "candidate", "hr", "director"]),
   region: z.string().optional(),
 });
 
@@ -374,6 +373,8 @@ const UserManagement = () => {
                           <SelectContent>
                             <SelectItem value="candidate">Candidate</SelectItem>
                             <SelectItem value="manager">Manager</SelectItem>
+                            <SelectItem value="hr">HR</SelectItem>
+                            <SelectItem value="director">Director</SelectItem>
                             <SelectItem value="admin">Admin</SelectItem>
                           </SelectContent>
                         </Select>
@@ -539,7 +540,11 @@ const UserManagement = () => {
                                 ? "bg-purple-100 text-purple-800"
                                 : user.role === "manager"
                                 ? "bg-blue-100 text-blue-800"
-                                : "bg-green-100 text-green-800"
+                                : user.role === "green"
+                                ? "bg-green-100 text-green-800"
+                                : user.role === "hr"
+                                ? "bg-orange-100 text-orange-800"
+                                : "bg-yellow-100 text-yellow-800"
                             }`}
                           >
                             {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
@@ -693,6 +698,8 @@ const UserManagement = () => {
                         <SelectContent>
                           <SelectItem value="candidate">Candidate</SelectItem>
                           <SelectItem value="manager">Manager</SelectItem>
+                          <SelectItem value="hr">HR</SelectItem>
+                          <SelectItem value="director">Director</SelectItem>
                           <SelectItem value="admin">Admin</SelectItem>
                         </SelectContent>
                       </Select>
