@@ -88,27 +88,27 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      // Fixed demo credentials - these should exist in the database
+      // Demo credentials - these are provided by Supabase and should match existing users
       const demoCredentials = {
         candidate: {
-          email: 'candidate@example.com',
-          password: 'candidate123'
+          email: 'candidate1@example.com',
+          password: 'password123'
         },
         manager: {
           email: 'manager@example.com',
-          password: 'manager123'
+          password: 'password123'
         },
         admin: {
           email: 'admin@example.com',
-          password: 'admin123'
+          password: 'password123'
         },
         hr: {
           email: 'hr@example.com',
-          password: 'hr123'
+          password: 'password123'
         },
         director: {
           email: 'director@example.com',
-          password: 'director123'
+          password: 'password123'
         }
       };
       
@@ -212,7 +212,7 @@ const Login = () => {
                 <div className="flex items-center mb-2">
                   <Info size={16} className="mr-2 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">
-                    Demo logins for testing
+                    Demo accounts (password: password123)
                   </span>
                   <Button 
                     variant="ghost" 
@@ -307,53 +307,54 @@ const Login = () => {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <h4 className="font-medium flex items-center"><User size={16} className="mr-2" /> Candidate Account</h4>
+              <h4 className="font-medium flex items-center"><User size={16} className="mr-2" /> Candidate Account (John Smith)</h4>
               <div className="pl-6 space-y-1 text-sm">
-                <p><span className="font-semibold">Email:</span> candidate@example.com</p>
-                <p><span className="font-semibold">Password:</span> candidate123</p>
-                <p className="text-muted-foreground text-xs">Access to training modules, assessments, and application process.</p>
+                <p><span className="font-semibold">Email:</span> candidate1@example.com</p>
+                <p><span className="font-semibold">Password:</span> password123</p>
+                <p><span className="font-semibold">Status:</span> Applied</p>
+                <p className="text-muted-foreground text-xs">A new applicant at the first stage of the hiring process.</p>
               </div>
             </div>
             
             <div className="space-y-2">
-              <h4 className="font-medium flex items-center"><UserCog size={16} className="mr-2" /> Manager Account</h4>
+              <h4 className="font-medium flex items-center"><UserCog size={16} className="mr-2" /> Manager Account (James Thompson)</h4>
               <div className="pl-6 space-y-1 text-sm">
                 <p><span className="font-semibold">Email:</span> manager@example.com</p>
-                <p><span className="font-semibold">Password:</span> manager123</p>
-                <p className="text-muted-foreground text-xs">Access to candidate management, interviews, and region-based assignments.</p>
+                <p><span className="font-semibold">Password:</span> password123</p>
+                <p className="text-muted-foreground text-xs">Has access to candidate management and interviews for the North and West regions.</p>
               </div>
             </div>
             
             <div className="space-y-2">
-              <h4 className="font-medium flex items-center"><Shield size={16} className="mr-2" /> Admin Account</h4>
+              <h4 className="font-medium flex items-center"><Shield size={16} className="mr-2" /> Admin Account (Robert Chen)</h4>
               <div className="pl-6 space-y-1 text-sm">
                 <p><span className="font-semibold">Email:</span> admin@example.com</p>
-                <p><span className="font-semibold">Password:</span> admin123</p>
-                <p className="text-muted-foreground text-xs">Full access to all features including user management and system settings.</p>
+                <p><span className="font-semibold">Password:</span> password123</p>
+                <p className="text-muted-foreground text-xs">Full access to all features including user management, training modules, and assessments.</p>
               </div>
             </div>
             
             <div className="space-y-2">
-              <h4 className="font-medium flex items-center"><Briefcase size={16} className="mr-2" /> HR Account</h4>
+              <h4 className="font-medium flex items-center"><Briefcase size={16} className="mr-2" /> HR Account (Lisa Patel)</h4>
               <div className="pl-6 space-y-1 text-sm">
                 <p><span className="font-semibold">Email:</span> hr@example.com</p>
-                <p><span className="font-semibold">Password:</span> hr123</p>
-                <p className="text-muted-foreground text-xs">Access to candidate screening and initial application reviews.</p>
+                <p><span className="font-semibold">Password:</span> password123</p>
+                <p className="text-muted-foreground text-xs">Access to candidate screening, particularly for candidates in the training phase.</p>
               </div>
             </div>
             
             <div className="space-y-2">
-              <h4 className="font-medium flex items-center"><Building size={16} className="mr-2" /> Director Account</h4>
+              <h4 className="font-medium flex items-center"><Building size={16} className="mr-2" /> Director Account (Carol Martinez)</h4>
               <div className="pl-6 space-y-1 text-sm">
                 <p><span className="font-semibold">Email:</span> director@example.com</p>
-                <p><span className="font-semibold">Password:</span> director123</p>
-                <p className="text-muted-foreground text-xs">Access to performance metrics, region oversight, and final hiring decisions.</p>
+                <p><span className="font-semibold">Password:</span> password123</p>
+                <p className="text-muted-foreground text-xs">Oversees all regions with access to performance metrics and final hiring decisions.</p>
               </div>
             </div>
             
             <div className="flex items-center mt-4 bg-amber-50 p-3 rounded-md text-amber-800 text-sm">
               <AlertCircle size={16} className="mr-2 flex-shrink-0" />
-              <p>Note: In a production environment, accounts are created by admin users or through the registration process.</p>
+              <p>Important: You need to create these users in Supabase Authentication with the exact email addresses and passwords shown above.</p>
             </div>
           </div>
         </DialogContent>
