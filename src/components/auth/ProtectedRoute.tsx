@@ -16,6 +16,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { user, profile, isLoading } = useAuth();
   const location = useLocation();
   
+  console.log("ProtectedRoute - Current profile:", profile);
+  console.log("ProtectedRoute - Allowed roles:", allowedRoles);
+  
   // Save current path for redirect after login
   useEffect(() => {
     if (!user && !isLoading) {
@@ -36,11 +39,29 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/login" replace />;
   }
   
+  // Check if profile is loaded
+  if (!profile) {
+    console.log("Profile not loaded yet but user is authenticated");
+    return <div className="flex items-center justify-center h-screen">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+    </div>;
+  }
+  
+  console.log("User role:", profile.role);
+  console.log("Is role allowed:", allowedRoles.includes(profile.role));
+  
   // If profile is loaded and role is not allowed, redirect to appropriate dashboard
-  if (profile && !allowedRoles.includes(profile.role as UserRole)) {
+  if (!allowedRoles.includes(profile.role as UserRole)) {
+    console.log("Redirecting to correct dashboard based on role:", profile.role);
     if (profile.role === 'admin') {
       return <Navigate to="/dashboard/admin" replace />;
     } else if (profile.role === 'manager') {
+      return <Navigate to="/dashboard/manager" replace />;
+    } else if (profile.role === 'hr') {
+      // For HR role, redirect to manager dashboard as there's no specific HR dashboard
+      return <Navigate to="/dashboard/manager" replace />;
+    } else if (profile.role === 'director') {
+      // For Director role, redirect to manager dashboard as there's no specific Director dashboard
       return <Navigate to="/dashboard/manager" replace />;
     } else {
       return <Navigate to="/dashboard/candidate" replace />;

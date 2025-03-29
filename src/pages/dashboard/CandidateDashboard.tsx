@@ -24,87 +24,193 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const CandidateDashboard = () => {
+  const { profile, user } = useAuth();
   const [candidateData, setCandidateData] = useState({
-    name: "Jane Smith",
-    email: "candidate@example.com",
-    currentStep: 2,
+    name: "",
+    email: "",
+    currentStep: 1,
     stepStatus: {
-      application: "completed",
-      training: "in_progress",
+      application: "pending",
+      training: "pending",
       salesTask: "pending",
       interview: "pending",
     },
-    trainingProgress: 60,
+    trainingProgress: 0,
     upcomingDeadline: "2023-10-15",
     notifications: [
       {
         id: 1,
-        message: "Your application has been reviewed and approved",
-        date: "2 days ago",
-        read: true,
-      },
-      {
-        id: 2,
-        message: "New training module available: Product Knowledge",
-        date: "1 day ago",
+        message: "Your application is being reviewed",
+        date: "Just now",
         read: false,
-      },
-      {
-        id: 3,
-        message: "Quiz reminder: Complete Sales Techniques quiz by Friday",
-        date: "5 hours ago",
-        read: false,
-      },
+      }
     ],
   });
 
-  // Load user from local storage if available
+  // Fetch candidate data including current step and status
   useEffect(() => {
-    const userStr = localStorage.getItem('currentUser');
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        // Update name and email if available
-        setCandidateData(prev => ({
-          ...prev,
-          name: user.name || prev.name,
-          email: user.email || prev.email,
-          currentStep: user.currentStep || prev.currentStep,
-        }));
-      } catch (e) {
-        console.error("Error parsing user data from localStorage", e);
+    const fetchCandidateData = async () => {
+      if (user && profile) {
+        try {
+          console.log("Fetching candidate data for user:", user.id);
+          // First, set basic profile information
+          setCandidateData(prev => ({
+            ...prev,
+            name: profile.name || prev.name,
+            email: profile.email || prev.email,
+          }));
+
+          // Then fetch candidate-specific data
+          const { data, error } = await supabase
+            .from('candidates')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+          if (error) {
+            console.error("Error fetching candidate data:", error);
+            return;
+          }
+
+          if (data) {
+            console.log("Candidate data retrieved:", data);
+            
+            // Map status to step statuses
+            const stepStatus = {
+              application: data.current_step >= 1 ? "completed" : "pending",
+              training: data.current_step >= 2 ? (data.current_step > 2 ? "completed" : "in_progress") : "pending",
+              salesTask: data.current_step >= 3 ? (data.current_step > 3 ? "completed" : "in_progress") : "pending",
+              interview: data.current_step >= 4 ? (data.current_step > 4 ? "completed" : "in_progress") : "pending",
+            };
+
+            // Calculate training progress based on step
+            let trainingProgress = 0;
+            switch (data.current_step) {
+              case 1: trainingProgress = 0; break;
+              case 2: trainingProgress = 60; break;
+              case 3: trainingProgress = 100; break;
+              case 4: trainingProgress = 100; break;
+              case 5: trainingProgress = 100; break;
+              default: trainingProgress = 0;
+            }
+
+            // Generate relevant notifications based on step and status
+            const notifications = [];
+            
+            if (data.current_step === 1) {
+              notifications.push({
+                id: 1,
+                message: "Your application has been submitted and is being reviewed",
+                date: "Just now",
+                read: false,
+              });
+            } else if (data.current_step === 2) {
+              notifications.push({
+                id: 1,
+                message: "Your application has been reviewed and approved",
+                date: "2 days ago",
+                read: true,
+              });
+              notifications.push({
+                id: 2,
+                message: "New training module available: Product Knowledge",
+                date: "1 day ago",
+                read: false,
+              });
+              notifications.push({
+                id: 3,
+                message: "Quiz reminder: Complete Sales Techniques quiz by Friday",
+                date: "5 hours ago",
+                read: false,
+              });
+            } else if (data.current_step === 3) {
+              notifications.push({
+                id: 1,
+                message: "Congratulations! You've completed all training modules",
+                date: "3 days ago",
+                read: true,
+              });
+              notifications.push({
+                id: 2,
+                message: "Sales task assigned: Visit 3 shops this week",
+                date: "2 days ago",
+                read: false,
+              });
+            } else if (data.current_step === 4) {
+              notifications.push({
+                id: 1,
+                message: "Sales task completed successfully!",
+                date: "5 days ago",
+                read: true,
+              });
+              notifications.push({
+                id: 2,
+                message: "Interview scheduled with regional manager",
+                date: "1 day ago",
+                read: false,
+              });
+            } else if (data.current_step >= 5) {
+              notifications.push({
+                id: 1,
+                message: "Congratulations! You've been approved for the next step",
+                date: "2 days ago",
+                read: false,
+              });
+              notifications.push({
+                id: 2,
+                message: "Please complete your onboarding documents",
+                date: "1 day ago",
+                read: false,
+              });
+            }
+
+            setCandidateData(prev => ({
+              ...prev,
+              currentStep: data.current_step || prev.currentStep,
+              stepStatus,
+              trainingProgress,
+              notifications,
+            }));
+          }
+        } catch (error) {
+          console.error("Error in candidate data fetch:", error);
+        }
       }
-    }
-  }, []);
+    };
+
+    fetchCandidateData();
+  }, [user, profile]);
 
   const trainingModules = [
     {
       id: 1,
       title: "Product Knowledge",
       description: "Learn about our security products, features, and target customers",
-      progress: 100,
-      status: "completed",
-      quizScore: "85%",
+      progress: candidateData.currentStep >= 2 ? 100 : 0,
+      status: candidateData.currentStep >= 2 ? "completed" : "locked",
+      quizScore: candidateData.currentStep >= 2 ? "85%" : null,
       path: "/training?module=product"
     },
     {
       id: 2,
       title: "Sales Techniques",
       description: "Master effective pitching, objection handling, and closing techniques",
-      progress: 70,
-      status: "in_progress",
-      quizScore: null,
+      progress: candidateData.currentStep >= 2 ? (candidateData.currentStep >= 3 ? 100 : 70) : 0,
+      status: candidateData.currentStep >= 3 ? "completed" : (candidateData.currentStep >= 2 ? "in_progress" : "locked"),
+      quizScore: candidateData.currentStep >= 3 ? "78%" : null,
       path: "/training?module=sales"
     },
     {
       id: 3,
       title: "Retailer Relationships",
       description: "Strategies for building and maintaining relationships with retailers",
-      progress: 0,
-      status: "locked",
-      quizScore: null,
+      progress: candidateData.currentStep >= 3 ? (candidateData.currentStep >= 4 ? 100 : 50) : 0,
+      status: candidateData.currentStep >= 4 ? "completed" : (candidateData.currentStep >= 3 ? "in_progress" : "locked"),
+      quizScore: candidateData.currentStep >= 4 ? "92%" : null,
       path: "/training"
     },
   ];
@@ -171,6 +277,84 @@ const CandidateDashboard = () => {
         );
       default:
         return null;
+    }
+  };
+
+  // Get current step name based on step number
+  const getCurrentStepName = () => {
+    switch (candidateData.currentStep) {
+      case 1:
+        return "Application Review";
+      case 2:
+        return "Training & Quizzes";
+      case 3:
+        return "Sales Task";
+      case 4:
+        return "Interview Preparation";
+      case 5:
+        return "Final Approval";
+      default:
+        return "Application";
+    }
+  };
+
+  // Get current step description based on step number
+  const getCurrentStepDescription = () => {
+    switch (candidateData.currentStep) {
+      case 1:
+        return "Your application is being reviewed by our HR team.";
+      case 2:
+        return "Complete all training modules and pass the corresponding quizzes to move to the next step.";
+      case 3:
+        return "Complete your assigned sales tasks to demonstrate your skills.";
+      case 4:
+        return "Prepare for your upcoming interview with the hiring manager.";
+      case 5:
+        return "You've completed all steps and your application is in final approval.";
+      default:
+        return "Complete your application to begin the hiring process.";
+    }
+  };
+
+  // Get status badge for the dashboard header
+  const getStatusBadge = () => {
+    switch (candidateData.currentStep) {
+      case 1:
+        return (
+          <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+            <Clock className="mr-1 h-3 w-3" /> Application Under Review
+          </Badge>
+        );
+      case 2:
+        return (
+          <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+            <Clock className="mr-1 h-3 w-3" /> In Training Phase
+          </Badge>
+        );
+      case 3:
+        return (
+          <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+            <Clock className="mr-1 h-3 w-3" /> Sales Task Phase
+          </Badge>
+        );
+      case 4:
+        return (
+          <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+            <Clock className="mr-1 h-3 w-3" /> Interview Phase
+          </Badge>
+        );
+      case 5:
+        return (
+          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+            <CheckCircle2 className="mr-1 h-3 w-3" /> Final Approval
+          </Badge>
+        );
+      default:
+        return (
+          <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+            <Clock className="mr-1 h-3 w-3" /> Application Phase
+          </Badge>
+        );
     }
   };
 
@@ -244,23 +428,25 @@ const CandidateDashboard = () => {
                 </div>
                 
                 <div className="mt-4 p-4 bg-secondary/50 rounded-lg">
-                  <h4 className="font-medium mb-2">Current Step: Training & Quizzes</h4>
+                  <h4 className="font-medium mb-2">Current Step: {getCurrentStepName()}</h4>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Complete all training modules and pass the corresponding quizzes to move to the next step.
+                    {getCurrentStepDescription()}
                   </p>
                   <div className="flex items-center space-x-4">
                     <div className="flex-1">
                       <div className="flex justify-between mb-1">
-                        <span className="text-sm font-medium">Overall Training Progress</span>
-                        <span className="text-sm font-medium">{candidateData.trainingProgress}%</span>
+                        <span className="text-sm font-medium">Overall Progress</span>
+                        <span className="text-sm font-medium">{Math.min(candidateData.currentStep * 20, 100)}%</span>
                       </div>
-                      <Progress value={candidateData.trainingProgress} className="h-2" />
+                      <Progress value={Math.min(candidateData.currentStep * 20, 100)} className="h-2" />
                     </div>
-                    <Button size="sm" asChild>
-                      <Link to="/training">
-                        Continue Training <ArrowRight className="ml-2 h-4 w-4" />
-                      </Link>
-                    </Button>
+                    {candidateData.currentStep === 2 && (
+                      <Button size="sm" asChild>
+                        <Link to="/training">
+                          Continue Training <ArrowRight className="ml-2 h-4 w-4" />
+                        </Link>
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -352,9 +538,7 @@ const CandidateDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="flex items-center">
-                  <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-                    <Clock className="mr-1 h-3 w-3" /> In Training Phase
-                  </Badge>
+                  {getStatusBadge()}
                 </div>
                 <div className="mt-4 flex items-center text-sm">
                   <CalendarPlus className="text-muted-foreground mr-2 h-5 w-5" />
@@ -420,9 +604,13 @@ const CandidateDashboard = () => {
                     Training Center
                   </Link>
                 </Button>
-                <Button variant="outline" className="w-full justify-start" disabled>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start" 
+                  disabled={candidateData.currentStep < 3}
+                >
                   <Briefcase className="mr-2 h-4 w-4" />
-                  Sales Task (Coming Soon)
+                  {candidateData.currentStep >= 3 ? "Sales Task" : "Sales Task (Coming Soon)"}
                 </Button>
               </CardContent>
             </Card>
