@@ -25,29 +25,33 @@ const ManagerDashboard = () => {
   const { data: pendingCandidates, isLoading: isLoadingCandidates } = useQuery({
     queryKey: ['pendingCandidates'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('candidates')
-        .select(`
-          id,
-          profiles:id(name, email),
-          status,
-          current_step,
-          updated_at,
-          assessment_results(score)
-        `)
-        .in('status', ['applied', 'screening', 'training', 'sales_task'])
-        .order('updated_at', { ascending: false });
-      
-      if (error) {
-        toast({
-          variant: "destructive",
-          title: "Error fetching candidates",
-          description: error.message,
-        });
-        throw error;
+      try {
+        const { data, error } = await supabase
+          .from('candidates')
+          .select(`
+            id,
+            status,
+            current_step,
+            updated_at,
+            profiles:id(name, email)
+          `)
+          .in('status', ['applied', 'screening', 'training', 'sales_task'])
+          .order('updated_at', { ascending: false });
+        
+        if (error) {
+          toast({
+            variant: "destructive",
+            title: "Error fetching candidates",
+            description: error.message,
+          });
+          throw error;
+        }
+        
+        return data || [];
+      } catch (err) {
+        console.error("Error in pendingCandidates query:", err);
+        return [];
       }
-      
-      return data || [];
     }
   });
 
@@ -55,33 +59,37 @@ const ManagerDashboard = () => {
   const { data: upcomingInterviews, isLoading: isLoadingInterviews } = useQuery({
     queryKey: ['upcomingInterviews'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('interviews')
-        .select(`
-          id,
-          scheduled_at,
-          status,
-          candidate_id,
-          candidates(
+      try {
+        const { data, error } = await supabase
+          .from('interviews')
+          .select(`
             id,
-            profiles:id(name, email)
-          )
-        `)
-        .in('status', ['scheduled', 'confirmed'])
-        .gte('scheduled_at', new Date().toISOString())
-        .order('scheduled_at', { ascending: true })
-        .limit(5);
-      
-      if (error) {
-        toast({
-          variant: "destructive",
-          title: "Error fetching interviews",
-          description: error.message,
-        });
-        throw error;
+            scheduled_at,
+            status,
+            candidate:candidate_id(
+              id,
+              profiles:id(name, email)
+            )
+          `)
+          .in('status', ['scheduled', 'confirmed'])
+          .gte('scheduled_at', new Date().toISOString())
+          .order('scheduled_at', { ascending: true })
+          .limit(5);
+        
+        if (error) {
+          toast({
+            variant: "destructive",
+            title: "Error fetching interviews",
+            description: error.message,
+          });
+          throw error;
+        }
+        
+        return data || [];
+      } catch (err) {
+        console.error("Error in upcomingInterviews query:", err);
+        return [];
       }
-      
-      return data || [];
     }
   });
 
@@ -89,57 +97,61 @@ const ManagerDashboard = () => {
   const { data: recentAssessments, isLoading: isLoadingAssessments } = useQuery({
     queryKey: ['recentAssessments'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('assessments')
-        .select(`
-          id,
-          title,
-          difficulty,
-          created_at,
-          updated_at,
-          assessment_results(count)
-        `)
-        .order('updated_at', { ascending: false })
-        .limit(3);
-      
-      if (error) {
-        toast({
-          variant: "destructive",
-          title: "Error fetching assessments",
-          description: error.message,
-        });
-        throw error;
-      }
-      
-      // Get the average scores for each assessment
-      const assessmentsWithStats = await Promise.all(data.map(async (assessment) => {
-        const { data: resultsData, error: resultsError } = await supabase
-          .from('assessment_results')
-          .select('score')
-          .eq('assessment_id', assessment.id);
+      try {
+        const { data, error } = await supabase
+          .from('assessments')
+          .select(`
+            id,
+            title,
+            difficulty,
+            created_at,
+            updated_at
+          `)
+          .order('updated_at', { ascending: false })
+          .limit(3);
         
-        if (resultsError) {
-          console.error("Error fetching assessment results:", resultsError);
-          return {
-            ...assessment,
-            avgScore: 0,
-            submissions: 0
-          };
+        if (error) {
+          toast({
+            variant: "destructive",
+            title: "Error fetching assessments",
+            description: error.message,
+          });
+          throw error;
         }
         
-        const scores = resultsData.map(r => r.score);
-        const avgScore = scores.length > 0 
-          ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) 
-          : 0;
+        // Get the submissions count and average scores as separate queries
+        const assessmentsWithStats = await Promise.all(data.map(async (assessment) => {
+          const { data: resultsData, error: resultsError } = await supabase
+            .from('assessment_results')
+            .select('score')
+            .eq('assessment_id', assessment.id);
+          
+          if (resultsError) {
+            console.error("Error fetching assessment results:", resultsError);
+            return {
+              ...assessment,
+              avgScore: 0,
+              submissions: 0
+            };
+          }
+          
+          const scores = resultsData.map(r => r.score);
+          const avgScore = scores.length > 0 
+            ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) 
+            : 0;
+          
+          return {
+            ...assessment,
+            avgScore,
+            submissions: scores.length
+          };
+        }));
         
-        return {
-          ...assessment,
-          avgScore,
-          submissions: scores.length
-        };
-      }));
-      
-      return assessmentsWithStats || [];
+        return assessmentsWithStats || [];
+      } catch (err) {
+        console.error("Error in recentAssessments query:", err);
+        return [];
+      }
     }
   });
 

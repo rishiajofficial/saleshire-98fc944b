@@ -71,13 +71,13 @@ const InterviewList: React.FC<InterviewListProps> = ({
               >
                 <div className="flex items-center">
                   <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                    {interview.candidates?.profiles?.name ? 
-                      interview.candidates.profiles.name.split(' ').map((n: string) => n[0]).join('') : 
+                    {interview.candidate?.profiles?.name ? 
+                      interview.candidate?.profiles.name.split(' ').map((n: string) => n[0]).join('') : 
                       <User className="h-5 w-5" />
                     }
                   </div>
                   <div className="ml-3">
-                    <p className="font-medium">{interview.candidates?.profiles?.name || "Candidate"}</p>
+                    <p className="font-medium">{interview.candidate?.profiles?.name || "Candidate"}</p>
                     <div className="flex items-center text-xs text-muted-foreground">
                       <Calendar className="h-3 w-3 mr-1" />
                       {formatDateTime(interview.scheduled_at)}
