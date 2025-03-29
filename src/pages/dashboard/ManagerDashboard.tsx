@@ -137,7 +137,7 @@ const ManagerDashboard = () => {
       candidateEmail: candidateProfiles[interview.candidate_id]?.email || "Unknown",
       managerId: "", // This will be populated in a full implementation
       scheduledAt: interview.scheduled_at,
-      status: interview.status,
+      status: interview.status as 'scheduled' | 'confirmed' | 'completed' | 'cancelled',
     }));
   }, [upcomingInterviewsRaw, candidateProfiles]);
 

@@ -34,7 +34,7 @@ const InterviewList: React.FC<InterviewListProps> = ({
   };
   
   // Get interview status badge component based on status string
-  const getInterviewStatusBadge = (status: string) => {
+  const getInterviewStatusBadge = (status: Interview['status']) => {
     switch (status) {
       case "confirmed":
         return (
