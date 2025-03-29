@@ -34,22 +34,45 @@ export const AdminService = {
     try {
       console.log(`Creating ${contentType}:`, data);
       
-      const { data: response, error } = await supabase.functions.invoke("admin-operations", {
-        body: {
-          operation: "updateContent",
-          data: {
-            contentType,
-            action: 'create',
-            data
+      // For assessments, directly insert into the database
+      if (contentType === 'assessment') {
+        const { data: result, error } = await supabase
+          .from('assessments')
+          .insert({
+            title: data.title,
+            description: data.description,
+            difficulty: data.difficulty,
+            time_limit: data.timeLimit ? parseInt(data.timeLimit) : null,
+            prevent_backtracking: data.preventBacktracking || false,
+            randomize_questions: data.randomizeQuestions || false,
+            created_by: data.createdBy
+          })
+          .select()
+          .single();
+        
+        if (error) throw error;
+        
+        console.log(`${contentType} created successfully:`, result);
+        return { success: true, data: result };
+      } else {
+        // For other content types, use the edge function
+        const { data: response, error } = await supabase.functions.invoke("admin-operations", {
+          body: {
+            operation: "updateContent",
+            data: {
+              contentType,
+              action: 'create',
+              data
+            }
           }
-        }
-      });
-      
-      if (error) throw error;
-      if (!response.success) throw new Error(response.error || `Failed to create ${contentType}`);
-      
-      console.log(`${contentType} created successfully:`, response.data);
-      return { success: true, data: response.data };
+        });
+        
+        if (error) throw error;
+        if (!response.success) throw new Error(response.error || `Failed to create ${contentType}`);
+        
+        console.log(`${contentType} created successfully:`, response.data);
+        return { success: true, data: response.data };
+      }
     } catch (error: any) {
       console.error(`Error creating ${contentType}:`, error.message);
       return { success: false, error: error.message };
@@ -65,25 +88,48 @@ export const AdminService = {
     try {
       console.log(`Updating ${contentType} ${id}:`, data);
       
-      // Ensure ID is included in the data
-      const contentData = { ...data, id };
-      
-      const { data: response, error } = await supabase.functions.invoke("admin-operations", {
-        body: {
-          operation: "updateContent",
-          data: {
-            contentType,
-            action: 'update',
-            data: contentData
+      // For assessments, directly update the database
+      if (contentType === 'assessment') {
+        const { data: result, error } = await supabase
+          .from('assessments')
+          .update({
+            title: data.title,
+            description: data.description,
+            difficulty: data.difficulty,
+            time_limit: data.timeLimit ? parseInt(data.timeLimit) : null,
+            prevent_backtracking: data.preventBacktracking || false,
+            randomize_questions: data.randomizeQuestions || false,
+            updated_at: new Date()
+          })
+          .eq('id', id)
+          .select()
+          .single();
+        
+        if (error) throw error;
+        
+        console.log(`${contentType} updated successfully:`, result);
+        return { success: true, data: result };
+      } else {
+        // Ensure ID is included in the data
+        const contentData = { ...data, id };
+        
+        const { data: response, error } = await supabase.functions.invoke("admin-operations", {
+          body: {
+            operation: "updateContent",
+            data: {
+              contentType,
+              action: 'update',
+              data: contentData
+            }
           }
-        }
-      });
-      
-      if (error) throw error;
-      if (!response.success) throw new Error(response.error || `Failed to update ${contentType}`);
-      
-      console.log(`${contentType} updated successfully:`, response.data);
-      return { success: true, data: response.data };
+        });
+        
+        if (error) throw error;
+        if (!response.success) throw new Error(response.error || `Failed to update ${contentType}`);
+        
+        console.log(`${contentType} updated successfully:`, response.data);
+        return { success: true, data: response.data };
+      }
     } catch (error: any) {
       console.error(`Error updating ${contentType}:`, error.message);
       return { success: false, error: error.message };
@@ -98,24 +144,62 @@ export const AdminService = {
     try {
       console.log(`Deleting ${contentType} ${id}`);
       
-      const { data: response, error } = await supabase.functions.invoke("admin-operations", {
-        body: {
-          operation: "updateContent",
-          data: {
-            contentType,
-            action: 'delete',
-            data: { id }
+      // For assessments, directly delete from the database
+      if (contentType === 'assessment') {
+        const { error } = await supabase
+          .from('assessments')
+          .delete()
+          .eq('id', id);
+        
+        if (error) throw error;
+        
+        console.log(`${contentType} deleted successfully`);
+        return { success: true };
+      } else {
+        const { data: response, error } = await supabase.functions.invoke("admin-operations", {
+          body: {
+            operation: "updateContent",
+            data: {
+              contentType,
+              action: 'delete',
+              data: { id }
+            }
           }
-        }
-      });
-      
-      if (error) throw error;
-      if (!response.success) throw new Error(response.error || `Failed to delete ${contentType}`);
-      
-      console.log(`${contentType} deleted successfully`);
-      return { success: true };
+        });
+        
+        if (error) throw error;
+        if (!response.success) throw new Error(response.error || `Failed to delete ${contentType}`);
+        
+        console.log(`${contentType} deleted successfully`);
+        return { success: true };
+      }
     } catch (error: any) {
       console.error(`Error deleting ${contentType}:`, error.message);
+      return { success: false, error: error.message };
+    }
+  },
+  
+  // Fetch assessment results
+  async getAssessmentResults(assessmentId: string): Promise<AdminServiceResponse> {
+    try {
+      console.log(`Fetching results for assessment ${assessmentId}`);
+      
+      const { data, error } = await supabase
+        .from('assessment_results')
+        .select(`
+          *,
+          candidate:candidate_id(
+            id,
+            profiles:id(name, email)
+          )
+        `)
+        .eq('assessment_id', assessmentId);
+      
+      if (error) throw error;
+      
+      return { success: true, data };
+    } catch (error: any) {
+      console.error(`Error fetching assessment results:`, error.message);
       return { success: false, error: error.message };
     }
   },

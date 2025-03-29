@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +22,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Region } from "@/types";
 import { AlertCircle, Eye, EyeOff } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import AuthLayout from '@/components/layout/AuthLayout';
 
 // Indian states array
 const indianStates = [
@@ -124,16 +124,16 @@ const Register = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Create a Candidate Account</CardTitle>
-          <CardDescription>
-            Enter your information to apply for our sales roles
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
+    <AuthLayout>
+      <div className="flex min-h-[calc(100vh-12rem)] items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl font-bold">Create a Candidate Account</CardTitle>
+            <CardDescription>
+              Enter your information to apply for our sales roles
+            </CardDescription>
+          </CardHeader>
+          <form onSubmit={handleSubmit}>
             {error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
@@ -298,7 +298,7 @@ const Register = () => {
           </CardFooter>
         </form>
       </Card>
-    </div>
+    </AuthLayout>
   );
 };
 
