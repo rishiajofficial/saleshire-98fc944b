@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +20,8 @@ import {
   User, 
   UserCog, 
   Shield,
+  Briefcase,
+  Building,
   Eye,
   EyeOff 
 } from "lucide-react";
@@ -81,7 +84,7 @@ const Login = () => {
     }
   };
 
-  const loginWithDemo = async (type: 'candidate' | 'manager' | 'admin') => {
+  const loginWithDemo = async (type: 'candidate' | 'manager' | 'admin' | 'hr' | 'director') => {
     setIsLoading(true);
     
     try {
@@ -89,15 +92,23 @@ const Login = () => {
       const demoCredentials = {
         candidate: {
           email: 'candidate@example.com',
-          password: 'password123'
+          password: 'candidate123'
         },
         manager: {
-          email: 'manager@manager.com',
-          password: 'manager'
+          email: 'manager@example.com',
+          password: 'manager123'
         },
         admin: {
-          email: 'admin@admin.com',
-          password: 'admin1'
+          email: 'admin@example.com',
+          password: 'admin123'
+        },
+        hr: {
+          email: 'hr@example.com',
+          password: 'hr123'
+        },
+        director: {
+          email: 'director@example.com',
+          password: 'director123'
         }
       };
       
@@ -213,7 +224,7 @@ const Login = () => {
                   </Button>
                 </div>
                 
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-2 mb-2">
                   <Button 
                     type="button" 
                     variant="outline" 
@@ -248,6 +259,31 @@ const Login = () => {
                     Admin
                   </Button>
                 </div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => loginWithDemo('hr')}
+                    disabled={isLoading}
+                  >
+                    <Briefcase size={14} className="mr-1" />
+                    HR
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => loginWithDemo('director')}
+                    disabled={isLoading}
+                  >
+                    <Building size={14} className="mr-1" />
+                    Director
+                  </Button>
+                </div>
               </div>
 
               <div className="text-center text-sm mt-4">
@@ -274,32 +310,50 @@ const Login = () => {
               <h4 className="font-medium flex items-center"><User size={16} className="mr-2" /> Candidate Account</h4>
               <div className="pl-6 space-y-1 text-sm">
                 <p><span className="font-semibold">Email:</span> candidate@example.com</p>
-                <p><span className="font-semibold">Password:</span> password123</p>
-                <p className="text-muted-foreground text-xs">Access to candidate features, training modules, and assessments.</p>
+                <p><span className="font-semibold">Password:</span> candidate123</p>
+                <p className="text-muted-foreground text-xs">Access to training modules, assessments, and application process.</p>
               </div>
             </div>
             
             <div className="space-y-2">
               <h4 className="font-medium flex items-center"><UserCog size={16} className="mr-2" /> Manager Account</h4>
               <div className="pl-6 space-y-1 text-sm">
-                <p><span className="font-semibold">Email:</span> manager@manager.com</p>
-                <p><span className="font-semibold">Password:</span> manager</p>
-                <p className="text-muted-foreground text-xs">Access to candidate management, assessments, and analytics.</p>
+                <p><span className="font-semibold">Email:</span> manager@example.com</p>
+                <p><span className="font-semibold">Password:</span> manager123</p>
+                <p className="text-muted-foreground text-xs">Access to candidate management, interviews, and region-based assignments.</p>
               </div>
             </div>
             
             <div className="space-y-2">
               <h4 className="font-medium flex items-center"><Shield size={16} className="mr-2" /> Admin Account</h4>
               <div className="pl-6 space-y-1 text-sm">
-                <p><span className="font-semibold">Email:</span> admin@admin.com</p>
-                <p><span className="font-semibold">Password:</span> admin1</p>
+                <p><span className="font-semibold">Email:</span> admin@example.com</p>
+                <p><span className="font-semibold">Password:</span> admin123</p>
                 <p className="text-muted-foreground text-xs">Full access to all features including user management and system settings.</p>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <h4 className="font-medium flex items-center"><Briefcase size={16} className="mr-2" /> HR Account</h4>
+              <div className="pl-6 space-y-1 text-sm">
+                <p><span className="font-semibold">Email:</span> hr@example.com</p>
+                <p><span className="font-semibold">Password:</span> hr123</p>
+                <p className="text-muted-foreground text-xs">Access to candidate screening and initial application reviews.</p>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <h4 className="font-medium flex items-center"><Building size={16} className="mr-2" /> Director Account</h4>
+              <div className="pl-6 space-y-1 text-sm">
+                <p><span className="font-semibold">Email:</span> director@example.com</p>
+                <p><span className="font-semibold">Password:</span> director123</p>
+                <p className="text-muted-foreground text-xs">Access to performance metrics, region oversight, and final hiring decisions.</p>
               </div>
             </div>
             
             <div className="flex items-center mt-4 bg-amber-50 p-3 rounded-md text-amber-800 text-sm">
               <AlertCircle size={16} className="mr-2 flex-shrink-0" />
-              <p>Note: In a production environment, manager accounts are created by admin users only.</p>
+              <p>Note: In a production environment, accounts are created by admin users or through the registration process.</p>
             </div>
           </div>
         </DialogContent>
