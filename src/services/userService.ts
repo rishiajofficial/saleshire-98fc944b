@@ -2,14 +2,14 @@
 import { supabase } from "@/integrations/supabase/client";
 import { BaseService, ServiceResponse } from "./baseService";
 
-export interface UserData {
+export type UserData = {
   id?: string;
   name: string;
   email: string;
   password?: string;
   role: 'admin' | 'manager' | 'candidate';
   region?: string;
-}
+};
 
 // User management service
 export const UserService = {

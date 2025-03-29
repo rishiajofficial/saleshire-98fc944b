@@ -2,13 +2,13 @@
 import { supabase } from "@/integrations/supabase/client";
 import { BaseService, ServiceResponse } from "./baseService";
 
-export interface ContentData {
+export type ContentData = {
   id?: string;
   title: string;
   description?: string;
   content?: string;
   [key: string]: any;
-}
+};
 
 // Content management service
 export const ContentService = {

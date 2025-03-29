@@ -1,11 +1,12 @@
 
 import { ServiceResponse } from './baseService';
-import { ContentData, ContentService } from './contentService';
-import { UserData, UserService } from './userService';
+import { ContentService } from './contentService';
+import { UserService } from './userService';
 
 // Re-export types for backward compatibility
 export type AdminServiceResponse = ServiceResponse;
-export { ContentData, UserData };
+export type { ContentData } from './contentService';
+export type { UserData } from './userService';
 
 // Admin service that combines all services for backward compatibility
 export const AdminService = {
