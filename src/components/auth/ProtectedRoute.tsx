@@ -48,19 +48,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
   
   console.log("User role:", profile.role);
-  console.log("Is role allowed:", allowedRoles.includes(profile.role));
+  console.log("Is role allowed:", allowedRoles.includes(profile.role as UserRole));
   
   // If profile is loaded and role is not allowed, redirect to appropriate dashboard
   if (!allowedRoles.includes(profile.role as UserRole)) {
     console.log("Redirecting to correct dashboard based on role:", profile.role);
     if (profile.role === 'admin') {
       return <Navigate to="/dashboard/admin" replace />;
-    } else if (profile.role === 'manager') {
+    } else if (profile.role === 'manager' || profile.role === 'hr' || profile.role === 'director') {
       return <Navigate to="/dashboard/manager" replace />;
-    } else if (profile.role === 'hr') {
-      return <Navigate to="/dashboard/manager" replace />; // HR users use the manager dashboard
-    } else if (profile.role === 'director') {
-      return <Navigate to="/dashboard/manager" replace />; // Directors use the manager dashboard
     } else {
       return <Navigate to="/dashboard/candidate" replace />;
     }

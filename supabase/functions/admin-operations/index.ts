@@ -167,20 +167,7 @@ async function updateUser(supabaseClient, adminId, userData) {
 
     if (authError) throw authError;
 
-    // First check if we need to modify the profiles table role validation
-    // This part is new - we're using SQL to alter the check constraint
-    if (userData.role === 'hr' || userData.role === 'director') {
-      // Get the existing check constraint definition
-      const { data: checkData, error: checkError } = await supabaseClient
-        .rpc('get_role_check_constraint');
-        
-      if (checkError) {
-        console.log("Error getting check constraint:", checkError.message);
-        // Continue anyway, we'll try to update the profile
-      }
-    }
-
-    // Update the profile data
+    // Update the profile data directly without checking constraint
     const { error: profileError } = await supabaseClient
       .from("profiles")
       .update({
@@ -225,8 +212,8 @@ async function updateUser(supabaseClient, adminId, userData) {
       }
     }
     
-    // If user is a manager, update region
-    if (userData.role === 'manager' || userData.role === 'hr' || userData.role === 'director') {
+    // If user is a manager, hr, or director, update region
+    if (['manager', 'hr', 'director'].includes(userData.role)) {
       // Check if manager record exists
       const { data: managerData, error: checkError } = await supabaseClient
         .from('managers')

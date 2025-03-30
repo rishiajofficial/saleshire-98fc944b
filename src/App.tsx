@@ -126,7 +126,7 @@ const App = () => (
               </ProtectedRoute>
             } />
             
-            {/* New Assessment and Training Module Detail Routes */}
+            {/* Assessment and Training Module Detail Routes */}
             <Route path="/assessments/:assessmentId" element={
               <ProtectedRoute allowedRoles={['admin', 'hr', 'director']}>
                 <AssessmentDetails />

@@ -1,195 +1,202 @@
 
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { ArrowLeft, Save, AlertCircle, Plus, Trash2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { ArrowLeft, BookOpen, Loader2, Plus, CheckCircle } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+
+// Form schema for assessment
+const assessmentSchema = z.object({
+  title: z.string().min(2, { message: "Title must be at least 2 characters." }),
+  description: z.string().optional(),
+  difficulty: z.string().optional(),
+  prevent_backtracking: z.boolean().default(false),
+  randomize_questions: z.boolean().default(false),
+  time_limit: z.string().refine(val => !val || !isNaN(parseInt(val)), {
+    message: "Time limit must be a number in minutes."
+  }).transform(val => val ? parseInt(val) : null).optional(),
+});
+
+type AssessmentFormValues = z.infer<typeof assessmentSchema>;
 
 const AssessmentDetails = () => {
-  const { assessmentId } = useParams<{ assessmentId: string }>();
-  const navigate = useNavigate();
+  const { assessmentId } = useParams();
   const { user } = useAuth();
-  const [isLoading, setIsLoading] = useState(true);
   const [assessment, setAssessment] = useState<any>(null);
   const [sections, setSections] = useState<any[]>([]);
-  const [newSection, setNewSection] = useState({ title: "", description: "" });
-  const [showNewSectionDialog, setShowNewSectionDialog] = useState(false);
-  const [results, setResults] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState("details");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [loadingError, setLoadingError] = useState<string | null>(null);
 
+  // Initialize form
+  const form = useForm<AssessmentFormValues>({
+    resolver: zodResolver(assessmentSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      difficulty: "",
+      prevent_backtracking: false,
+      randomize_questions: false,
+      time_limit: "",
+    },
+  });
+
+  // Load assessment data
   useEffect(() => {
-    if (assessmentId) {
-      loadAssessment();
-      loadSections();
-      loadResults();
+    const loadAssessment = async () => {
+      setLoading(true);
+      setLoadingError(null);
+      
+      try {
+        if (!assessmentId) {
+          setLoadingError("Assessment ID is missing");
+          return;
+        }
+        
+        // Fetch assessment
+        const { data: assessmentData, error: assessmentError } = await supabase
+          .from("assessments")
+          .select("*")
+          .eq("id", assessmentId)
+          .single();
+        
+        if (assessmentError) {
+          throw assessmentError;
+        }
+        
+        if (!assessmentData) {
+          setLoadingError("Assessment not found");
+          return;
+        }
+        
+        setAssessment(assessmentData);
+        
+        // Set form values
+        form.reset({
+          title: assessmentData.title || "",
+          description: assessmentData.description || "",
+          difficulty: assessmentData.difficulty || "",
+          prevent_backtracking: assessmentData.prevent_backtracking || false,
+          randomize_questions: assessmentData.randomize_questions || false,
+          time_limit: assessmentData.time_limit ? assessmentData.time_limit.toString() : "",
+        });
+        
+        // Fetch sections
+        const { data: sectionData, error: sectionError } = await supabase
+          .from("assessment_sections")
+          .select("*")
+          .eq("assessment_id", assessmentId)
+          .order("created_at", { ascending: true });
+        
+        if (sectionError) {
+          throw sectionError;
+        }
+        
+        setSections(sectionData || []);
+      } catch (error: any) {
+        console.error("Error loading assessment:", error.message);
+        setLoadingError(`Failed to load assessment: ${error.message}`);
+        toast.error("Failed to load assessment data");
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadAssessment();
+  }, [assessmentId, form]);
+
+  const onSubmit = async (values: AssessmentFormValues) => {
+    if (!user) {
+      toast.error("You must be logged in to update an assessment");
+      return;
     }
-  }, [assessmentId]);
-
-  const loadAssessment = async () => {
+    
+    setSaving(true);
+    
     try {
-      const { data, error } = await supabase
-        .from("assessments")
-        .select("*")
-        .eq("id", assessmentId)
-        .single();
-
-      if (error) throw error;
-      setAssessment(data);
-    } catch (error: any) {
-      console.error("Error loading assessment:", error.message);
-      toast.error("Failed to load assessment details");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadSections = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("assessment_sections")
-        .select(`
-          *,
-          questions:questions(*)
-        `)
-        .eq("assessment_id", assessmentId)
-        .order("created_at", { ascending: true });
-
-      if (error) throw error;
-      setSections(data || []);
-    } catch (error: any) {
-      console.error("Error loading sections:", error.message);
-      toast.error("Failed to load assessment sections");
-    }
-  };
-
-  const loadResults = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("assessment_results")
-        .select(`
-          *,
-          candidate:profiles!assessment_results_candidate_id_fkey(id, name, email)
-        `)
-        .eq("assessment_id", assessmentId)
-        .order("completed_at", { ascending: false });
-
-      if (error) throw error;
-      setResults(data || []);
-    } catch (error: any) {
-      console.error("Error loading results:", error.message);
-      toast.error("Failed to load assessment results");
-    }
-  };
-
-  const handleUpdateAssessment = async () => {
-    if (!assessment) return;
-
-    try {
-      setIsLoading(true);
+      // Update the assessment
+      const updateData = {
+        title: values.title,
+        description: values.description,
+        difficulty: values.difficulty,
+        prevent_backtracking: values.prevent_backtracking,
+        randomize_questions: values.randomize_questions,
+        time_limit: values.time_limit,
+      };
+      
       const { error } = await supabase
         .from("assessments")
-        .update({
-          title: assessment.title,
-          description: assessment.description,
-          difficulty: assessment.difficulty,
-          time_limit: assessment.time_limit,
-          randomize_questions: assessment.randomize_questions,
-          prevent_backtracking: assessment.prevent_backtracking
-        })
+        .update(updateData)
         .eq("id", assessmentId);
-
+      
       if (error) throw error;
+      
       toast.success("Assessment updated successfully");
     } catch (error: any) {
       console.error("Error updating assessment:", error.message);
-      toast.error("Failed to update assessment");
+      toast.error(`Failed to update assessment: ${error.message}`);
     } finally {
-      setIsLoading(false);
+      setSaving(false);
     }
   };
 
-  const handleCreateSection = async () => {
-    try {
-      if (!newSection.title) {
-        toast.error("Section title is required");
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("assessment_sections")
-        .insert({
-          assessment_id: assessmentId,
-          title: newSection.title,
-          description: newSection.description
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      
-      setSections([...sections, {...data, questions: []}]);
-      setNewSection({ title: "", description: "" });
-      setShowNewSectionDialog(false);
-      toast.success("Section added successfully");
-    } catch (error: any) {
-      console.error("Error creating section:", error.message);
-      toast.error("Failed to create section");
-    }
-  };
-
-  const handleDeleteSection = async (sectionId: string) => {
-    try {
-      const { error } = await supabase
-        .from("assessment_sections")
-        .delete()
-        .eq("id", sectionId);
-
-      if (error) throw error;
-      
-      setSections(sections.filter(section => section.id !== sectionId));
-      toast.success("Section deleted successfully");
-    } catch (error: any) {
-      console.error("Error deleting section:", error.message);
-      toast.error("Failed to delete section");
-    }
-  };
-
-  if (isLoading) {
+  if (loading) {
     return (
       <MainLayout>
-        <div className="flex items-center justify-center h-[50vh]">
-          <p className="text-lg text-muted-foreground">Loading assessment details...</p>
+        <div className="flex items-center justify-center h-[60vh]">
+          <div className="flex flex-col items-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-lg text-muted-foreground">Loading assessment details...</p>
+          </div>
         </div>
       </MainLayout>
     );
   }
 
-  if (!assessment) {
+  if (loadingError) {
     return (
       <MainLayout>
-        <div className="flex flex-col items-center justify-center h-[50vh]">
-          <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-          <h2 className="text-2xl font-bold mb-2">Assessment Not Found</h2>
-          <p className="text-muted-foreground mb-6">The assessment you're looking for doesn't exist or you don't have permission to view it.</p>
-          <Button asChild>
-            <Link to="/assessments">Go to Assessments</Link>
-          </Button>
+        <div className="flex items-center justify-center h-[60vh]">
+          <div className="flex flex-col items-center space-y-4 max-w-md text-center">
+            <div className="p-3 rounded-full bg-red-50">
+              <div className="rounded-full bg-red-100 p-2">
+                <BookOpen className="h-6 w-6 text-red-600" />
+              </div>
+            </div>
+            <h2 className="text-xl font-semibold">Assessment Not Found</h2>
+            <p className="text-muted-foreground">
+              {loadingError}
+            </p>
+            <Button asChild>
+              <Link to="/assessments">
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Assessments
+              </Link>
+            </Button>
+          </div>
         </div>
       </MainLayout>
     );
@@ -200,320 +207,243 @@ const AssessmentDetails = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">{assessment.title}</h1>
-            <p className="text-muted-foreground mt-1">
-              {assessment.description || "No description provided"}
+            <h1 className="text-3xl font-bold tracking-tight">Assessment Details</h1>
+            <p className="text-muted-foreground mt-2">
+              View and edit assessment information
             </p>
           </div>
-          <div className="flex space-x-2">
-            <Button variant="outline" asChild>
-              <Link to="/assessments">
-                <ArrowLeft className="h-4 w-4 mr-2" /> Back to Assessments
-              </Link>
-            </Button>
-            <Button onClick={handleUpdateAssessment} disabled={isLoading}>
-              <Save className="h-4 w-4 mr-2" /> Save Changes
-            </Button>
-          </div>
+          <Button asChild variant="outline">
+            <Link to="/assessments">
+              <ArrowLeft className="h-4 w-4 mr-2" /> Back to Assessments
+            </Link>
+          </Button>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="details">Assessment Details</TabsTrigger>
-            <TabsTrigger value="sections">Sections & Questions</TabsTrigger>
-            <TabsTrigger value="results">Results</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="details" className="space-y-4 py-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Assessment Information</CardTitle>
-                <CardDescription>
-                  Edit the basic information for this assessment
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="space-y-2">
-                    <label htmlFor="title" className="text-sm font-medium">Title</label>
-                    <Input 
-                      id="title" 
-                      value={assessment.title} 
-                      onChange={(e) => setAssessment({...assessment, title: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label htmlFor="description" className="text-sm font-medium">Description</label>
-                    <Textarea 
-                      id="description" 
-                      rows={4}
-                      value={assessment.description || ""} 
-                      onChange={(e) => setAssessment({...assessment, description: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label htmlFor="difficulty" className="text-sm font-medium">Difficulty</label>
-                      <select
-                        id="difficulty"
-                        className="w-full px-3 py-2 border rounded-md"
-                        value={assessment.difficulty || "medium"}
-                        onChange={(e) => setAssessment({...assessment, difficulty: e.target.value})}
-                      >
-                        <option value="easy">Easy</option>
-                        <option value="medium">Medium</option>
-                        <option value="hard">Hard</option>
-                      </select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label htmlFor="time_limit" className="text-sm font-medium">
-                        Time Limit (minutes, 0 for no limit)
-                      </label>
-                      <Input 
-                        id="time_limit" 
-                        type="number" 
-                        min="0"
-                        value={assessment.time_limit || 0} 
-                        onChange={(e) => setAssessment({
-                          ...assessment, 
-                          time_limit: parseInt(e.target.value) || 0
-                        })}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="randomize_questions"
-                        className="h-4 w-4"
-                        checked={!!assessment.randomize_questions}
-                        onChange={(e) => setAssessment({
-                          ...assessment, 
-                          randomize_questions: e.target.checked
-                        })}
-                      />
-                      <label htmlFor="randomize_questions" className="text-sm font-medium">
-                        Randomize Questions Order
-                      </label>
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="prevent_backtracking"
-                        className="h-4 w-4"
-                        checked={!!assessment.prevent_backtracking}
-                        onChange={(e) => setAssessment({
-                          ...assessment, 
-                          prevent_backtracking: e.target.checked
-                        })}
-                      />
-                      <label htmlFor="prevent_backtracking" className="text-sm font-medium">
-                        Prevent Going Back to Previous Questions
-                      </label>
-                    </div>
-                  </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Assessment Information</CardTitle>
+            <CardDescription>
+              Update assessment details and settings
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Title</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Assessment title" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Describe the assessment purpose and content" 
+                          className="min-h-[100px]"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <FormField
+                    control={form.control}
+                    name="difficulty"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Difficulty Level</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="e.g., Easy, Medium, Hard" 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="time_limit"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Time Limit (minutes)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="Leave empty for no time limit" 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <FormField
+                    control={form.control}
+                    name="prevent_backtracking"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">
+                            Prevent Backtracking
+                          </FormLabel>
+                          <p className="text-sm text-muted-foreground">
+                            Users cannot return to previous questions
+                          </p>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="randomize_questions"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">
+                            Randomize Questions
+                          </FormLabel>
+                          <p className="text-sm text-muted-foreground">
+                            Questions will appear in random order
+                          </p>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <Button type="submit" disabled={saving}>
+                  {saving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="mr-2 h-4 w-4" /> 
+                      Save Changes
+                    </>
+                  )}
+                </Button>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
 
-          <TabsContent value="sections" className="space-y-4 py-4">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold">Sections</h2>
-              <Button onClick={() => setShowNewSectionDialog(true)}>
-                <Plus className="h-4 w-4 mr-2" /> Add Section
-              </Button>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Assessment Sections</CardTitle>
+              <CardDescription>
+                Manage the sections of this assessment
+              </CardDescription>
             </div>
-
+            <Button asChild size="sm">
+              <Link to={`/assessments/sections/new?assessmentId=${assessmentId}`}>
+                <Plus className="h-4 w-4 mr-1" /> Add Section
+              </Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
             {sections.length === 0 ? (
-              <div className="bg-muted p-8 rounded-lg text-center">
-                <p className="text-lg font-medium mb-2">No Sections Yet</p>
-                <p className="text-muted-foreground mb-6">
-                  Add sections to organize your assessment questions
+              <div className="text-center py-8 border rounded-md">
+                <div className="flex justify-center">
+                  <BookOpen className="h-12 w-12 text-muted-foreground/30" />
+                </div>
+                <h3 className="mt-4 text-lg font-medium">No sections yet</h3>
+                <p className="mt-2 text-sm text-muted-foreground max-w-sm mx-auto">
+                  This assessment doesn't have any sections. Add sections to organize questions.
                 </p>
-                <Button onClick={() => setShowNewSectionDialog(true)}>
-                  <Plus className="h-4 w-4 mr-2" /> Add Your First Section
+                <Button asChild className="mt-4" variant="outline">
+                  <Link to={`/assessments/sections/new?assessmentId=${assessmentId}`}>
+                    <Plus className="h-4 w-4 mr-1" /> Add Your First Section
+                  </Link>
                 </Button>
               </div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {sections.map((section) => (
                   <Card key={section.id}>
-                    <CardHeader>
-                      <div className="flex justify-between items-center">
-                        <CardTitle>{section.title}</CardTitle>
-                        <Button 
-                          variant="destructive" 
-                          size="sm"
-                          onClick={() => handleDeleteSection(section.id)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-1" /> Delete
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg">{section.title}</CardTitle>
+                        <Button asChild variant="ghost" size="sm">
+                          <Link to={`/assessments/sections/${section.id}`}>
+                            Edit Section
+                          </Link>
                         </Button>
                       </div>
-                      {section.description && (
-                        <CardDescription>{section.description}</CardDescription>
-                      )}
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <h4 className="font-medium">Questions: {section.questions?.length || 0}</h4>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => navigate(`/assessments/sections/${section.id}`)}
-                          >
-                            Manage Questions
-                          </Button>
-                        </div>
-                        
-                        {section.questions?.length > 0 ? (
-                          <ul className="pl-6 list-disc text-muted-foreground space-y-1">
-                            {section.questions.slice(0, 3).map((question: any) => (
-                              <li key={question.id}>{question.text}</li>
-                            ))}
-                            {section.questions.length > 3 && (
-                              <li className="list-none italic">
-                                ...and {section.questions.length - 3} more questions
-                              </li>
-                            )}
-                          </ul>
-                        ) : (
-                          <p className="text-muted-foreground italic">No questions in this section yet</p>
-                        )}
-                      </div>
+                      {section.description ? (
+                        <p className="text-sm text-muted-foreground">{section.description}</p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground italic">No description provided</p>
+                      )}
                     </CardContent>
                   </Card>
                 ))}
               </div>
             )}
-          </TabsContent>
+          </CardContent>
+        </Card>
 
-          <TabsContent value="results" className="space-y-4 py-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Assessment Results</CardTitle>
-                <CardDescription>
-                  View candidate performance on this assessment
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {results.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">No results found for this assessment</p>
-                  </div>
-                ) : (
-                  <div className="rounded-md border">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-muted">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                            Candidate
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                            Score
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                            Completed
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                            Actions
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {results.map((result) => (
-                          <tr key={result.id}>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium">{result.candidate?.name}</div>
-                              <div className="text-sm text-muted-foreground">{result.candidate?.email}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              {result.completed ? (
-                                <div className="text-sm">{result.score}%</div>
-                              ) : (
-                                <div className="text-sm italic text-muted-foreground">Not completed</div>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              {result.completed_at ? (
-                                <div className="text-sm">
-                                  {new Date(result.completed_at).toLocaleDateString()}
-                                </div>
-                              ) : (
-                                <div className="text-sm italic text-muted-foreground">In progress</div>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => navigate(`/assessments/results/${result.id}`)}
-                              >
-                                View Details
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-
-        {/* New Section Dialog */}
-        <Dialog open={showNewSectionDialog} onOpenChange={setShowNewSectionDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Section</DialogTitle>
-              <DialogDescription>
-                Create a new section to organize questions in your assessment
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <label htmlFor="section-title" className="text-sm font-medium">
-                  Section Title *
-                </label>
-                <Input
-                  id="section-title"
-                  value={newSection.title}
-                  onChange={(e) => setNewSection({ ...newSection, title: e.target.value })}
-                  placeholder="e.g., Product Knowledge"
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="section-description" className="text-sm font-medium">
-                  Description (Optional)
-                </label>
-                <Textarea
-                  id="section-description"
-                  value={newSection.description}
-                  onChange={(e) => setNewSection({ ...newSection, description: e.target.value })}
-                  placeholder="Describe the purpose of this section"
-                  rows={3}
-                />
-              </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Assessment Results</CardTitle>
+              <CardDescription>
+                View the results of this assessment
+              </CardDescription>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowNewSectionDialog(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleCreateSection}>
-                Create Section
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            <Button asChild variant="outline" size="sm">
+              <Link to={`/assessments/results?assessmentId=${assessmentId}`}>
+                View All Results
+              </Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8">
+              <p className="text-sm text-muted-foreground">
+                View assessment results to see how candidates are performing.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </MainLayout>
   );
