@@ -26,6 +26,10 @@ import Profile from "./pages/common/Profile";
 import UserManagement from "./pages/admin/UserManagement";
 import ActivityLog from "./pages/admin/ActivityLog";
 import TrainingManagement from "./pages/admin/TrainingManagement";
+import AssessmentDetails from "./pages/admin/AssessmentDetails";
+import AssessmentResultDetails from "./pages/admin/AssessmentResultDetails";
+import AssessmentSectionDetails from "./pages/admin/AssessmentSectionDetails";
+import TrainingModuleDetails from "./pages/admin/TrainingModuleDetails";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
@@ -53,7 +57,7 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/dashboard/manager" element={
-              <ProtectedRoute allowedRoles={['manager']}>
+              <ProtectedRoute allowedRoles={['manager', 'hr', 'director']}>
                 <ManagerDashboard />
               </ProtectedRoute>
             } />
@@ -85,22 +89,22 @@ const App = () => (
             
             {/* Manager Routes */}
             <Route path="/candidates" element={
-              <ProtectedRoute allowedRoles={['manager', 'admin']}>
+              <ProtectedRoute allowedRoles={['manager', 'admin', 'hr', 'director']}>
                 <Candidates />
               </ProtectedRoute>
             } />
             <Route path="/candidates/:id" element={
-              <ProtectedRoute allowedRoles={['manager', 'admin']}>
+              <ProtectedRoute allowedRoles={['manager', 'admin', 'hr', 'director']}>
                 <CandidateDetail />
               </ProtectedRoute>
             } />
             <Route path="/assessments" element={
-              <ProtectedRoute allowedRoles={['manager', 'admin']}>
+              <ProtectedRoute allowedRoles={['manager', 'admin', 'hr', 'director']}>
                 <Assessments />
               </ProtectedRoute>
             } />
             <Route path="/analytics" element={
-              <ProtectedRoute allowedRoles={['manager', 'admin']}>
+              <ProtectedRoute allowedRoles={['manager', 'admin', 'hr', 'director']}>
                 <Analytics />
               </ProtectedRoute>
             } />
@@ -121,10 +125,32 @@ const App = () => (
                 <TrainingManagement />
               </ProtectedRoute>
             } />
+            
+            {/* New Assessment and Training Module Detail Routes */}
+            <Route path="/assessments/:assessmentId" element={
+              <ProtectedRoute allowedRoles={['admin', 'hr', 'director']}>
+                <AssessmentDetails />
+              </ProtectedRoute>
+            } />
+            <Route path="/assessments/results/:resultId" element={
+              <ProtectedRoute allowedRoles={['admin', 'hr', 'director']}>
+                <AssessmentResultDetails />
+              </ProtectedRoute>
+            } />
+            <Route path="/assessments/sections/:sectionId" element={
+              <ProtectedRoute allowedRoles={['admin', 'hr', 'director']}>
+                <AssessmentSectionDetails />
+              </ProtectedRoute>
+            } />
+            <Route path="/training-management/:moduleId" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <TrainingModuleDetails />
+              </ProtectedRoute>
+            } />
 
             {/* Common Routes */}
             <Route path="/profile" element={
-              <ProtectedRoute allowedRoles={['candidate', 'manager', 'admin']}>
+              <ProtectedRoute allowedRoles={['candidate', 'manager', 'admin', 'hr', 'director']}>
                 <Profile />
               </ProtectedRoute>
             } />
