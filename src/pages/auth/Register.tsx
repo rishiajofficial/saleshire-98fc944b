@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -112,11 +111,15 @@ const Register = () => {
         role: 'candidate',
         phone,
         location,
-        region
+        region,
+        // Initialize with default values
+        resume: null,
+        about_me_video: null,
+        sales_pitch_video: null
       };
 
       await signUp(email, password, userData);
-      navigate("/login");
+      navigate("/application");
     } catch (error: any) {
       setError(error.message || "Registration failed");
     } finally {
@@ -267,9 +270,9 @@ const Register = () => {
                   </Select>
                 </div>
 
-                <div className="bg-blue-50 p-3 rounded-md text-blue-700 text-sm mt-4">
-                  <p className="font-medium">Note:</p>
-                  <p>Only candidate accounts can be created through registration. Manager accounts are created by administrators.</p>
+                <div className="bg-blue-50 p-3 rounded-md text-blue-700 text-sm mb-3">
+                  <p className="font-medium">Important:</p>
+                  <p>After registering, you'll need to complete your application by uploading required documents and answering assessment questions.</p>
                 </div>
               </div>
             </CardContent>

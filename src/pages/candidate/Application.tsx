@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,9 +22,12 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Check, Upload, RefreshCw, Video } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const Application = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("personal");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -106,17 +109,45 @@ const Application = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateAssessment()) return;
+    if (!user) {
+      toast.error("You must be logged in to submit an application");
+      return;
+    }
 
     setIsSubmitting(true);
     
-    setTimeout(() => {
+    try {
+      const resumeUrl = `resume_${formData.resume?.name || "document.pdf"}`;
+      const aboutVideoUrl = `about_${formData.aboutVideo?.name || "video.mp4"}`;
+      const pitchVideoUrl = `pitch_${formData.pitchVideo?.name || "video.mp4"}`;
+      
+      const { error } = await supabase
+        .from('candidates')
+        .update({
+          resume: resumeUrl,
+          about_me_video: aboutVideoUrl,
+          sales_pitch_video: pitchVideoUrl,
+          phone: formData.phone,
+          location: formData.location,
+          status: 'submitted'
+        })
+        .eq('id', user.id);
+      
+      if (error) {
+        throw error;
+      }
+      
       toast.success("Application submitted successfully!");
-      setIsSubmitting(false);
       navigate("/dashboard/candidate");
-    }, 2000);
+    } catch (error: any) {
+      console.error("Error submitting application:", error);
+      toast.error(`Failed to submit application: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
