@@ -12,6 +12,7 @@ import ErrorMessage from "@/components/ui/error-message";
 import AssessmentForm, { AssessmentFormValues } from "@/components/assessments/AssessmentForm";
 import SectionsList from "@/components/assessments/SectionsList";
 import AssessmentResultsSummary from "@/components/assessments/AssessmentResultsSummary";
+import AssessmentStats from "@/components/assessments/AssessmentStats";
 
 const AssessmentDetails = () => {
   const { assessmentId } = useParams();
@@ -150,6 +151,9 @@ const AssessmentDetails = () => {
             />
           )}
         </Card>
+
+        {/* Add the new AssessmentStats component */}
+        <AssessmentStats assessmentId={assessmentId || ""} />
 
         <SectionsList 
           assessmentId={assessmentId || ""} 
