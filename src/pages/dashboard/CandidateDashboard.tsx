@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -80,7 +81,12 @@ const CandidateDashboard = () => {
           if (data) {
             console.log("Candidate data retrieved:", data);
             
-            const applicationSubmitted = data.resume !== null || data.about_me_video !== null || data.sales_pitch_video !== null;
+            // FIX: Check if all required application fields are completed
+            // An application is only considered submitted if resume, about_me_video, AND sales_pitch_video are all provided
+            const applicationSubmitted = 
+              data.resume !== null && 
+              data.about_me_video !== null && 
+              data.sales_pitch_video !== null;
             
             const stepStatus = {
               application: applicationSubmitted ? "completed" : "pending",

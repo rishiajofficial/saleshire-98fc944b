@@ -1,10 +1,7 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
 import {
   Card,
   CardContent,
@@ -14,511 +11,460 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Check, Upload, RefreshCw, Video } from "lucide-react";
-import MainLayout from "@/components/layout/MainLayout";
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/use-toast";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import MainLayout from "@/components/layout/MainLayout";
+import { Loader2, Upload, FileText, Video } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
+// Define schema for form validation
+const formSchema = z.object({
+  resume: z.string().min(1, "Resume is required"),
+  aboutMeVideo: z.string().min(1, "About me video is required"),
+  salesPitchVideo: z.string().min(1, "Sales pitch video is required"),
+});
 
 const Application = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [applicationData, setApplicationData] = useState({
+    resume: null,
+    aboutMeVideo: null,
+    salesPitchVideo: null,
+  });
+  const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("personal");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    location: "",
-    resume: null as File | null,
-    aboutVideo: null as File | null,
-    pitchVideo: null as File | null,
+
+  // Initialize form with react-hook-form
+  const form = useForm({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      resume: "",
+      aboutMeVideo: "",
+      salesPitchVideo: "",
+    },
   });
 
-  const [assessmentData, setAssessmentData] = useState({
-    q1: "",
-    q2: "",
-    q3: "",
-    q4: "",
-    q5: "",
-  });
+  useEffect(() => {
+    const fetchApplicationData = async () => {
+      if (!user) return;
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+      try {
+        const { data, error } = await supabase
+          .from("candidates")
+          .select("resume, about_me_video, sales_pitch_video")
+          .eq("id", user.id)
+          .single();
 
-  const handleAssessmentChange = (question: string, value: string) => {
-    setAssessmentData((prev) => ({ ...prev, [question]: value }));
-  };
+        if (error) {
+          console.error("Error fetching application data:", error);
+          return;
+        }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, fileType: 'resume' | 'aboutVideo' | 'pitchVideo') => {
-    if (e.target.files && e.target.files[0]) {
-      setFormData((prev) => ({ ...prev, [fileType]: e.target.files?.[0] || null }));
-      toast.success(`${fileType === 'resume' ? 'Resume' : fileType === 'aboutVideo' ? 'About Me video' : 'Sales Pitch video'} uploaded successfully`);
-    }
-  };
+        if (data) {
+          setApplicationData({
+            resume: data.resume,
+            aboutMeVideo: data.about_me_video,
+            salesPitchVideo: data.sales_pitch_video,
+          });
 
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-  };
+          // Set the values in the form
+          form.setValue("resume", data.resume || "");
+          form.setValue("aboutMeVideo", data.about_me_video || "");
+          form.setValue("salesPitchVideo", data.sales_pitch_video || "");
 
-  const validatePersonalInfo = () => {
-    if (!formData.name || !formData.email || !formData.phone || !formData.location) {
-      toast.error("Please fill in all personal information fields");
-      return false;
-    }
-    return true;
-  };
+          // Check if all required fields are filled to determine if application is submitted
+          if (data.resume && data.about_me_video && data.sales_pitch_video) {
+            setIsSubmitted(true);
+          }
+        }
+      } catch (error) {
+        console.error("Error in fetchApplicationData:", error);
+      }
+    };
 
-  const validateUploads = () => {
-    if (!formData.resume || !formData.aboutVideo || !formData.pitchVideo) {
-      toast.error("Please upload all required files");
-      return false;
-    }
-    return true;
-  };
+    fetchApplicationData();
+  }, [user, form]);
 
-  const validateAssessment = () => {
-    const allAnswered = Object.values(assessmentData).every(value => value);
-    if (!allAnswered) {
-      toast.error("Please answer all assessment questions");
-      return false;
-    }
-    return true;
-  };
-
-  const handleNext = () => {
-    if (activeTab === "personal" && validatePersonalInfo()) {
-      setActiveTab("uploads");
-    } else if (activeTab === "uploads" && validateUploads()) {
-      setActiveTab("assessment");
-    }
-  };
-
-  const handlePrevious = () => {
-    if (activeTab === "uploads") {
-      setActiveTab("personal");
-    } else if (activeTab === "assessment") {
-      setActiveTab("uploads");
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateAssessment()) return;
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!user) {
-      toast.error("You must be logged in to submit an application");
+      toast({
+        title: "Error",
+        description: "You must be logged in to submit an application.",
+        variant: "destructive",
+      });
       return;
     }
 
-    setIsSubmitting(true);
-    
+    setIsLoading(true);
+
     try {
-      const resumeUrl = `resume_${formData.resume?.name || "document.pdf"}`;
-      const aboutVideoUrl = `about_${formData.aboutVideo?.name || "video.mp4"}`;
-      const pitchVideoUrl = `pitch_${formData.pitchVideo?.name || "video.mp4"}`;
-      
       const { error } = await supabase
-        .from('candidates')
+        .from("candidates")
         .update({
-          resume: resumeUrl,
-          about_me_video: aboutVideoUrl,
-          sales_pitch_video: pitchVideoUrl,
-          phone: formData.phone,
-          location: formData.location,
-          status: 'submitted'
+          resume: values.resume,
+          about_me_video: values.aboutMeVideo,
+          sales_pitch_video: values.salesPitchVideo,
         })
-        .eq('id', user.id);
-      
-      if (error) {
-        throw error;
-      }
-      
-      toast.success("Application submitted successfully!");
+        .eq("id", user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Application submitted",
+        description: "Your application has been submitted successfully.",
+      });
+
+      setIsSubmitted(true);
       navigate("/dashboard/candidate");
     } catch (error: any) {
-      console.error("Error submitting application:", error);
-      toast.error(`Failed to submit application: ${error.message}`);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to submit application",
+        variant: "destructive",
+      });
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
+  };
+
+  // Simulating file upload handlers (in a real app, these would upload files to storage)
+  const handleResumeUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Simulate successful upload and get a URL
+    const mockResumeUrl = "https://example.com/resume.pdf";
+    form.setValue("resume", mockResumeUrl);
+    toast({
+      title: "Resume uploaded",
+      description: "Your resume has been uploaded successfully.",
+    });
+  };
+
+  const handleVideoUpload = (type: "aboutMe" | "salesPitch") => {
+    // Simulate successful upload and get a URL
+    const mockVideoUrl = `https://example.com/${type}.mp4`;
+    
+    if (type === "aboutMe") {
+      form.setValue("aboutMeVideo", mockVideoUrl);
+    } else {
+      form.setValue("salesPitchVideo", mockVideoUrl);
+    }
+    
+    toast({
+      title: "Video uploaded",
+      description: `Your ${type === "aboutMe" ? "about me" : "sales pitch"} video has been uploaded successfully.`,
+    });
+  };
+
+  // Mock function to simulate saving URLs from external sources
+  const saveExternalUrl = (type: "resume" | "aboutMeVideo" | "salesPitchVideo", url: string) => {
+    form.setValue(type, url);
+    toast({
+      title: "URL saved",
+      description: `Your ${type === "resume" ? "resume" : type === "aboutMeVideo" ? "about me video" : "sales pitch video"} URL has been saved.`,
+    });
   };
 
   return (
     <MainLayout>
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-10 text-center">
-          <h1 className="text-3xl font-bold tracking-tight">Sales Position Application</h1>
-          <p className="mt-2 text-muted-foreground">
-            Complete all sections to submit your application
-          </p>
-        </div>
+      <div className="container mx-auto py-8">
+        <h1 className="text-3xl font-bold mb-8">Application Form</h1>
 
-        <Card className="border-0 shadow-lg">
-          <CardHeader>
-            <div className="flex justify-between items-center mb-2">
-              <div className="space-y-1">
-                <CardTitle>Application Form</CardTitle>
-                <CardDescription>
-                  Please fill out all required information
-                </CardDescription>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className={`flex items-center justify-center h-8 w-8 rounded-full ${activeTab === "personal" || activeTab === "uploads" || activeTab === "assessment" ? "bg-primary text-white" : "bg-gray-200"}`}>
-                  <span>1</span>
-                </div>
-                <div className={`w-8 h-1 ${activeTab === "uploads" || activeTab === "assessment" ? "bg-primary" : "bg-gray-200"}`}></div>
-                <div className={`flex items-center justify-center h-8 w-8 rounded-full ${activeTab === "uploads" || activeTab === "assessment" ? "bg-primary text-white" : "bg-gray-200"}`}>
-                  <span>2</span>
-                </div>
-                <div className={`w-8 h-1 ${activeTab === "assessment" ? "bg-primary" : "bg-gray-200"}`}></div>
-                <div className={`flex items-center justify-center h-8 w-8 rounded-full ${activeTab === "assessment" ? "bg-primary text-white" : "bg-gray-200"}`}>
-                  <span>3</span>
-                </div>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Tabs value={activeTab} onValueChange={handleTabChange}>
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="personal">Personal Info</TabsTrigger>
-                <TabsTrigger value="uploads">Upload Files</TabsTrigger>
-                <TabsTrigger value="assessment">Assessment</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="personal" className="py-4 space-y-6">
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Full Name</Label>
-                      <Input
-                        id="name"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        placeholder="John Doe"
-                        className="h-10"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email Address</Label>
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        placeholder="you@example.com"
-                        className="h-10"
-                      />
-                    </div>
+        {isSubmitted ? (
+          <Alert className="mb-8">
+            <AlertTitle>Application Submitted</AlertTitle>
+            <AlertDescription>
+              Your application has been submitted and is being reviewed.
+              You'll be notified when there's an update on your application status.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Alert className="mb-8" variant="destructive">
+            <AlertTitle>Application Required</AlertTitle>
+            <AlertDescription>
+              Please complete your application to begin the hiring process.
+              All fields are required.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Resume Upload Section */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <FileText className="mr-2" />
+                    Resume
+                  </CardTitle>
+                  <CardDescription>
+                    Upload your resume or provide a link to it
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="resume"
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="flex flex-col space-y-2">
+                          <FormLabel>Resume URL</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="https://example.com/my-resume.pdf" 
+                              {...field} 
+                              disabled={isSubmitted}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Direct link to your resume (PDF preferred)
+                          </FormDescription>
+                          <FormMessage />
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="flex items-center">
+                    <div className="flex-grow border-t border-gray-200"></div>
+                    <span className="mx-4 text-sm text-gray-500">OR</span>
+                    <div className="flex-grow border-t border-gray-200"></div>
                   </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number</Label>
-                      <Input
-                        id="phone"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        placeholder="+1 (555) 123-4567"
-                        className="h-10"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="location">Location</Label>
-                      <Input
-                        id="location"
-                        name="location"
-                        value={formData.location}
-                        onChange={handleInputChange}
-                        placeholder="City, State"
-                        className="h-10"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="uploads" className="py-4 space-y-6">
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <Label>Resume/CV</Label>
-                    <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-                      <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <div className="space-y-2">
-                        <p className="text-sm text-muted-foreground">
-                          {formData.resume 
-                            ? `Selected file: ${formData.resume.name}` 
-                            : "Upload your resume in PDF format (Max 5MB)"}
-                        </p>
-                        <div>
-                          <Label
-                            htmlFor="resume-upload"
-                            className="relative inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary/90 cursor-pointer"
-                          >
-                            {formData.resume ? "Replace File" : "Select File"}
-                          </Label>
-                          <Input
-                            id="resume-upload"
-                            type="file"
-                            accept=".pdf,.doc,.docx"
-                            onChange={(e) => handleFileChange(e, 'resume')}
-                            className="sr-only"
+
+                  <div>
+                    <Label htmlFor="resumeUpload">Upload Resume</Label>
+                    <div className="mt-2">
+                      <div className="flex items-center justify-center w-full">
+                        <label
+                          htmlFor="resumeUpload"
+                          className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
+                        >
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            <Upload className="w-8 h-8 mb-2 text-gray-500" />
+                            <p className="mb-2 text-sm text-gray-500">
+                              <span className="font-semibold">Click to upload</span> or drag and drop
+                            </p>
+                            <p className="text-xs text-gray-500">PDF, DOCX (MAX. 5MB)</p>
+                          </div>
+                          <input 
+                            id="resumeUpload" 
+                            type="file" 
+                            className="hidden" 
+                            onChange={handleResumeUpload}
+                            disabled={isSubmitted}
                           />
-                        </div>
+                        </label>
                       </div>
                     </div>
                   </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label>About Me Video</Label>
-                      <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-                        <Video className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
-                        <div className="space-y-2">
-                          <p className="text-sm text-muted-foreground">
-                            {formData.aboutVideo 
-                              ? `Selected file: ${formData.aboutVideo.name}` 
-                              : "Upload a 1-2 minute self-introduction video"}
-                          </p>
-                          <div>
-                            <Label
-                              htmlFor="about-video-upload"
-                              className="relative inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary/90 cursor-pointer"
-                            >
-                              {formData.aboutVideo ? "Replace File" : "Select File"}
-                            </Label>
-                            <Input
-                              id="about-video-upload"
-                              type="file"
-                              accept="video/*"
-                              onChange={(e) => handleFileChange(e, 'aboutVideo')}
-                              className="sr-only"
+                </CardContent>
+              </Card>
+
+              {/* About Me Video Section */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Video className="mr-2" />
+                    About Me Video
+                  </CardTitle>
+                  <CardDescription>
+                    Share a video introducing yourself
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="aboutMeVideo"
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="flex flex-col space-y-2">
+                          <FormLabel>Video URL</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="https://example.com/about-me-video" 
+                              {...field} 
+                              disabled={isSubmitted}
                             />
-                          </div>
+                          </FormControl>
+                          <FormDescription>
+                            Link to your about me video (YouTube, Vimeo, etc.)
+                          </FormDescription>
+                          <FormMessage />
                         </div>
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="flex items-center">
+                    <div className="flex-grow border-t border-gray-200"></div>
+                    <span className="mx-4 text-sm text-gray-500">OR</span>
+                    <div className="flex-grow border-t border-gray-200"></div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="aboutMeUpload">Upload Video</Label>
+                    <div className="mt-2">
+                      <div className="flex items-center justify-center w-full">
+                        <label
+                          htmlFor="aboutMeUpload"
+                          className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
+                        >
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            <Upload className="w-8 h-8 mb-2 text-gray-500" />
+                            <p className="mb-2 text-sm text-gray-500">
+                              <span className="font-semibold">Click to upload</span> or drag and drop
+                            </p>
+                            <p className="text-xs text-gray-500">MP4, MOV, WEBM (MAX. 100MB)</p>
+                          </div>
+                          <input 
+                            id="aboutMeUpload" 
+                            type="file" 
+                            className="hidden" 
+                            onChange={() => handleVideoUpload("aboutMe")}
+                            disabled={isSubmitted}
+                          />
+                        </label>
                       </div>
                     </div>
-                    
-                    <div className="space-y-2">
-                      <Label>Sales Pitch Video</Label>
-                      <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-                        <Video className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
-                        <div className="space-y-2">
-                          <p className="text-sm text-muted-foreground">
-                            {formData.pitchVideo 
-                              ? `Selected file: ${formData.pitchVideo.name}` 
-                              : "Upload a 2-3 minute sales pitch for any product"}
-                          </p>
-                          <div>
-                            <Label
-                              htmlFor="pitch-video-upload"
-                              className="relative inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary/90 cursor-pointer"
-                            >
-                              {formData.pitchVideo ? "Replace File" : "Select File"}
-                            </Label>
-                            <Input
-                              id="pitch-video-upload"
-                              type="file"
-                              accept="video/*"
-                              onChange={(e) => handleFileChange(e, 'pitchVideo')}
-                              className="sr-only"
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Sales Pitch Video Section */}
+              <Card className="md:col-span-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Video className="mr-2" />
+                    Sales Pitch Video
+                  </CardTitle>
+                  <CardDescription>
+                    Record a short sales pitch demonstrating your skills
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="salesPitchVideo"
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="flex flex-col space-y-2">
+                          <FormLabel>Video URL</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="https://example.com/sales-pitch-video" 
+                              {...field} 
+                              disabled={isSubmitted}
                             />
-                          </div>
+                          </FormControl>
+                          <FormDescription>
+                            Link to your sales pitch video (YouTube, Vimeo, etc.)
+                          </FormDescription>
+                          <FormMessage />
                         </div>
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="flex items-center">
+                    <div className="flex-grow border-t border-gray-200"></div>
+                    <span className="mx-4 text-sm text-gray-500">OR</span>
+                    <div className="flex-grow border-t border-gray-200"></div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="salesPitchUpload">Upload Video</Label>
+                    <div className="mt-2">
+                      <div className="flex items-center justify-center w-full">
+                        <label
+                          htmlFor="salesPitchUpload"
+                          className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
+                        >
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            <Upload className="w-8 h-8 mb-2 text-gray-500" />
+                            <p className="mb-2 text-sm text-gray-500">
+                              <span className="font-semibold">Click to upload</span> or drag and drop
+                            </p>
+                            <p className="text-xs text-gray-500">MP4, MOV, WEBM (MAX. 100MB)</p>
+                          </div>
+                          <input 
+                            id="salesPitchUpload" 
+                            type="file" 
+                            className="hidden" 
+                            onChange={() => handleVideoUpload("salesPitch")}
+                            disabled={isSubmitted}
+                          />
+                        </label>
                       </div>
                     </div>
                   </div>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="assessment" className="py-4 space-y-6">
-                <div className="space-y-8">
-                  <div className="text-center mb-4">
-                    <h3 className="text-lg font-medium">Basic Sales Knowledge Assessment</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Please answer the following questions to the best of your ability
-                    </p>
-                  </div>
-                  
-                  <div className="space-y-6">
-                    <div className="space-y-3">
-                      <Label>1. What is the most important element of a successful sales pitch?</Label>
-                      <RadioGroup
-                        value={assessmentData.q1}
-                        onValueChange={(value) => handleAssessmentChange("q1", value)}
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="A" id="q1-a" />
-                          <Label htmlFor="q1-a" className="font-normal">Understanding customer needs</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="B" id="q1-b" />
-                          <Label htmlFor="q1-b" className="font-normal">Highlighting all product features</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="C" id="q1-c" />
-                          <Label htmlFor="q1-c" className="font-normal">Quick delivery of information</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="D" id="q1-d" />
-                          <Label htmlFor="q1-d" className="font-normal">Lowest possible pricing</Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <Label>2. When a customer raises an objection, what is the best first response?</Label>
-                      <RadioGroup
-                        value={assessmentData.q2}
-                        onValueChange={(value) => handleAssessmentChange("q2", value)}
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="A" id="q2-a" />
-                          <Label htmlFor="q2-a" className="font-normal">Immediately counter with benefits</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="B" id="q2-b" />
-                          <Label htmlFor="q2-b" className="font-normal">Listen and acknowledge their concern</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="C" id="q2-c" />
-                          <Label htmlFor="q2-c" className="font-normal">Offer a discount</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="D" id="q2-d" />
-                          <Label htmlFor="q2-d" className="font-normal">Move on to another product feature</Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <Label>3. What is a key element of building long-term relationships with retail partners?</Label>
-                      <RadioGroup
-                        value={assessmentData.q3}
-                        onValueChange={(value) => handleAssessmentChange("q3", value)}
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="A" id="q3-a" />
-                          <Label htmlFor="q3-a" className="font-normal">Only contacting them for new orders</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="B" id="q3-b" />
-                          <Label htmlFor="q3-b" className="font-normal">Consistent communication and follow-up</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="C" id="q3-c" />
-                          <Label htmlFor="q3-c" className="font-normal">Undercutting competitor pricing</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="D" id="q3-d" />
-                          <Label htmlFor="q3-d" className="font-normal">Offering exclusivity on all products</Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <Label>4. Which sales approach is most effective for high-value security products?</Label>
-                      <RadioGroup
-                        value={assessmentData.q4}
-                        onValueChange={(value) => handleAssessmentChange("q4", value)}
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="A" id="q4-a" />
-                          <Label htmlFor="q4-a" className="font-normal">High-pressure closing techniques</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="B" id="q4-b" />
-                          <Label htmlFor="q4-b" className="font-normal">Focusing primarily on price</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="C" id="q4-c" />
-                          <Label htmlFor="q4-c" className="font-normal">Consultative selling and needs assessment</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="D" id="q4-d" />
-                          <Label htmlFor="q4-d" className="font-normal">One-size-fits-all product presentations</Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <Label>5. What metric is most important when evaluating a salesperson's performance?</Label>
-                      <RadioGroup
-                        value={assessmentData.q5}
-                        onValueChange={(value) => handleAssessmentChange("q5", value)}
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="A" id="q5-a" />
-                          <Label htmlFor="q5-a" className="font-normal">Number of calls made</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="B" id="q5-b" />
-                          <Label htmlFor="q5-b" className="font-normal">Conversion rate and revenue generated</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="C" id="q5-c" />
-                          <Label htmlFor="q5-c" className="font-normal">Hours worked per week</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="D" id="q5-d" />
-                          <Label htmlFor="q5-d" className="font-normal">Geographic territory size</Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-          <CardFooter className="flex justify-between">
-            {activeTab !== "personal" && (
-              <Button 
-                type="button" 
-                variant="outline"
-                onClick={handlePrevious}
-              >
-                Previous
-              </Button>
-            )}
-            {activeTab !== "assessment" ? (
-              <Button 
-                type="button"
-                className="ml-auto"
-                onClick={handleNext}
-              >
-                Next
-              </Button>
-            ) : (
-              <Button 
-                type="submit"
-                className="ml-auto"
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <span className="flex items-center">
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                    Submitting
-                  </span>
-                ) : (
-                  <span className="flex items-center">
-                    <Check className="mr-2 h-4 w-4" />
-                    Submit Application
-                  </span>
-                )}
-              </Button>
-            )}
-          </CardFooter>
-        </Card>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="flex justify-end space-x-4">
+              {!isSubmitted ? (
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    "Submit Application"
+                  )}
+                </Button>
+              ) : (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline">Edit Application</Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Edit Application?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Your application has already been submitted and is being reviewed.
+                        Are you sure you want to edit it? This may reset your application process.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => setIsSubmitted(false)}>
+                        Continue
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+            </div>
+          </form>
+        </Form>
       </div>
     </MainLayout>
   );

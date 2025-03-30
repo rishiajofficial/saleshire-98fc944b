@@ -150,4 +150,26 @@ export function useRealTimeSubscription<T = any>(
   return { data };
 }
 
+// Add a new function to update application status
+export async function updateApplicationStatus(userId: string, applicationData: {
+  resume?: string | null;
+  about_me_video?: string | null;
+  sales_pitch_video?: string | null;
+}) {
+  try {
+    const { data, error } = await supabase
+      .from('candidates')
+      .update({
+        ...applicationData,
+      })
+      .eq('id', userId);
+    
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error: any) {
+    console.error("Error updating application status:", error);
+    return { data: null, error };
+  }
+}
+
 export default useDatabaseQuery;
