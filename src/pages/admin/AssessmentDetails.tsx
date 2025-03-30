@@ -36,12 +36,12 @@ const assessmentSchema = z.object({
   difficulty: z.string().optional(),
   prevent_backtracking: z.boolean().default(false),
   randomize_questions: z.boolean().default(false),
-  time_limit: z.string()
-    .refine(val => !val || !isNaN(Number(val)), {
+  time_limit: z.union([
+    z.string().refine(val => !val || !isNaN(Number(val)), {
       message: "Time limit must be a number in minutes."
-    })
-    .transform(val => val ? Number(val) : null)
-    .optional(),
+    }).transform(val => val ? Number(val) : null),
+    z.number().nullable()
+  ]).nullable().optional(),
 });
 
 type AssessmentFormValues = z.infer<typeof assessmentSchema>;
@@ -64,7 +64,7 @@ const AssessmentDetails = () => {
       difficulty: "",
       prevent_backtracking: false,
       randomize_questions: false,
-      time_limit: "",
+      time_limit: null,
     },
   });
 
@@ -105,7 +105,7 @@ const AssessmentDetails = () => {
           difficulty: assessmentData.difficulty || "",
           prevent_backtracking: assessmentData.prevent_backtracking || false,
           randomize_questions: assessmentData.randomize_questions || false,
-          time_limit: assessmentData.time_limit !== null ? String(assessmentData.time_limit) : "",
+          time_limit: assessmentData.time_limit !== null ? String(assessmentData.time_limit) : null,
         });
         
         // Fetch sections
@@ -292,7 +292,11 @@ const AssessmentDetails = () => {
                           <Input 
                             type="number" 
                             placeholder="Leave empty for no time limit" 
-                            {...field} 
+                            value={field.value === null ? "" : field.value}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              field.onChange(value === "" ? null : value);
+                            }}
                           />
                         </FormControl>
                         <FormMessage />
