@@ -35,9 +35,10 @@ const CandidateDashboard = () => {
     currentStep: 1,
     stepStatus: {
       application: "pending",
+      hrReview: "pending",
       training: "pending",
+      managerInterview: "pending",
       salesTask: "pending",
-      interview: "pending",
     },
     trainingProgress: 0,
     upcomingDeadline: "2023-10-15",
@@ -82,17 +83,18 @@ const CandidateDashboard = () => {
             // Map status to step statuses
             const stepStatus = {
               application: data.current_step >= 1 ? "completed" : "pending",
-              training: data.current_step >= 2 ? (data.current_step > 2 ? "completed" : "in_progress") : "pending",
-              salesTask: data.current_step >= 3 ? (data.current_step > 3 ? "completed" : "in_progress") : "pending",
-              interview: data.current_step >= 4 ? (data.current_step > 4 ? "completed" : "in_progress") : "pending",
+              hrReview: data.current_step >= 2 ? (data.current_step > 2 ? "completed" : "in_progress") : "pending",
+              training: data.current_step >= 3 ? (data.current_step > 3 ? "completed" : "in_progress") : "pending",
+              managerInterview: data.current_step >= 4 ? (data.current_step > 4 ? "completed" : "in_progress") : "pending",
+              salesTask: data.current_step >= 5 ? (data.current_step > 5 ? "completed" : "in_progress") : "pending",
             };
 
             // Calculate training progress based on step
             let trainingProgress = 0;
             switch (data.current_step) {
               case 1: trainingProgress = 0; break;
-              case 2: trainingProgress = 60; break;
-              case 3: trainingProgress = 100; break;
+              case 2: trainingProgress = 0; break;
+              case 3: trainingProgress = 60; break;
               case 4: trainingProgress = 100; break;
               case 5: trainingProgress = 100; break;
               default: trainingProgress = 0;
@@ -117,8 +119,21 @@ const CandidateDashboard = () => {
               });
               notifications.push({
                 id: 2,
-                message: "New training module available: Product Knowledge",
+                message: "HR interview scheduled for next week",
                 date: "1 day ago",
+                read: false,
+              });
+            } else if (data.current_step === 3) {
+              notifications.push({
+                id: 1,
+                message: "You've been approved for training",
+                date: "3 days ago",
+                read: true,
+              });
+              notifications.push({
+                id: 2,
+                message: "New training module available: Product Knowledge",
+                date: "2 days ago",
                 read: false,
               });
               notifications.push({
@@ -127,7 +142,7 @@ const CandidateDashboard = () => {
                 date: "5 hours ago",
                 read: false,
               });
-            } else if (data.current_step === 3) {
+            } else if (data.current_step === 4) {
               notifications.push({
                 id: 1,
                 message: "Congratulations! You've completed all training modules",
@@ -136,33 +151,20 @@ const CandidateDashboard = () => {
               });
               notifications.push({
                 id: 2,
-                message: "Sales task assigned: Visit 3 shops this week",
+                message: "Manager interview scheduled",
                 date: "2 days ago",
                 read: false,
               });
-            } else if (data.current_step === 4) {
+            } else if (data.current_step === 5) {
               notifications.push({
                 id: 1,
-                message: "Sales task completed successfully!",
+                message: "Manager interview completed successfully!",
                 date: "5 days ago",
                 read: true,
               });
               notifications.push({
                 id: 2,
-                message: "Interview scheduled with regional manager",
-                date: "1 day ago",
-                read: false,
-              });
-            } else if (data.current_step >= 5) {
-              notifications.push({
-                id: 1,
-                message: "Congratulations! You've been approved for the next step",
-                date: "2 days ago",
-                read: false,
-              });
-              notifications.push({
-                id: 2,
-                message: "Please complete your onboarding documents",
+                message: "Sales task assigned: Visit 3 shops this week",
                 date: "1 day ago",
                 read: false,
               });
@@ -219,12 +221,14 @@ const CandidateDashboard = () => {
     switch (step) {
       case "application":
         return 1;
-      case "training":
+      case "hrReview":
         return 2;
-      case "salesTask":
+      case "training":
         return 3;
-      case "interview":
+      case "managerInterview":
         return 4;
+      case "salesTask":
+        return 5;
       default:
         return 0;
     }
@@ -284,15 +288,15 @@ const CandidateDashboard = () => {
   const getCurrentStepName = () => {
     switch (candidateData.currentStep) {
       case 1:
-        return "Application Review";
+        return "Application and Assessment";
       case 2:
-        return "Training & Quizzes";
+        return "HR Review and Interview";
       case 3:
-        return "Sales Task";
+        return "Training";
       case 4:
-        return "Interview Preparation";
+        return "Manager Interview";
       case 5:
-        return "Final Approval";
+        return "Paid Project/Sales Task";
       default:
         return "Application";
     }
@@ -302,15 +306,15 @@ const CandidateDashboard = () => {
   const getCurrentStepDescription = () => {
     switch (candidateData.currentStep) {
       case 1:
-        return "Your application is being reviewed by our HR team.";
+        return "Complete your application and assessments to demonstrate your skills.";
       case 2:
-        return "Complete all training modules and pass the corresponding quizzes to move to the next step.";
+        return "Your application is being reviewed by HR. Prepare for an HR interview.";
       case 3:
-        return "Complete your assigned sales tasks to demonstrate your skills.";
+        return "Complete all training modules and pass the corresponding quizzes to move to the next step.";
       case 4:
-        return "Prepare for your upcoming interview with the hiring manager.";
+        return "Prepare for your upcoming interview with a regional manager.";
       case 5:
-        return "You've completed all steps and your application is in final approval.";
+        return "Complete your assigned sales tasks to demonstrate your skills in a real-world scenario.";
       default:
         return "Complete your application to begin the hiring process.";
     }
@@ -322,31 +326,31 @@ const CandidateDashboard = () => {
       case 1:
         return (
           <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-            <Clock className="mr-1 h-3 w-3" /> Application Under Review
+            <Clock className="mr-1 h-3 w-3" /> Application Phase
           </Badge>
         );
       case 2:
         return (
           <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-            <Clock className="mr-1 h-3 w-3" /> In Training Phase
+            <Clock className="mr-1 h-3 w-3" /> HR Review Phase
           </Badge>
         );
       case 3:
         return (
           <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-            <Clock className="mr-1 h-3 w-3" /> Sales Task Phase
+            <Clock className="mr-1 h-3 w-3" /> Training Phase
           </Badge>
         );
       case 4:
         return (
           <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-            <Clock className="mr-1 h-3 w-3" /> Interview Phase
+            <Clock className="mr-1 h-3 w-3" /> Manager Interview Phase
           </Badge>
         );
       case 5:
         return (
-          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-            <CheckCircle2 className="mr-1 h-3 w-3" /> Final Approval
+          <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+            <Clock className="mr-1 h-3 w-3" /> Sales Task Phase
           </Badge>
         );
       default:
@@ -385,12 +389,12 @@ const CandidateDashboard = () => {
                     <div className="w-full absolute top-4">
                       <div className="h-1 bg-secondary w-full"></div>
                     </div>
-                    {["application", "training", "salesTask", "interview"].map(
+                    {["application", "hrReview", "training", "managerInterview", "salesTask"].map(
                       (step, index) => (
                         <div
                           key={index}
                           className="relative flex flex-col items-center text-center z-10"
-                          style={{ width: "25%" }}
+                          style={{ width: "20%" }}
                         >
                           <div
                             className={`flex items-center justify-center h-8 w-8 rounded-full text-sm ${
@@ -408,14 +412,16 @@ const CandidateDashboard = () => {
                             )}
                           </div>
                           <div className="mt-2 max-w-[120px]">
-                            <p className="text-sm font-medium mb-1">
+                            <p className="text-xs font-medium mb-1">
                               {step === "application"
                                 ? "Application"
+                                : step === "hrReview"
+                                ? "HR Review"
                                 : step === "training"
                                 ? "Training"
-                                : step === "salesTask"
-                                ? "Sales Task"
-                                : "Interview"}
+                                : step === "managerInterview"
+                                ? "Manager Interview"
+                                : "Sales Task"}
                             </p>
                             <div className="text-xs">
                               {getStepStatusBadge(candidateData.stepStatus[step as keyof typeof candidateData.stepStatus])}
@@ -440,7 +446,7 @@ const CandidateDashboard = () => {
                       </div>
                       <Progress value={Math.min(candidateData.currentStep * 20, 100)} className="h-2" />
                     </div>
-                    {candidateData.currentStep === 2 && (
+                    {candidateData.currentStep === 3 && (
                       <Button size="sm" asChild>
                         <Link to="/training">
                           Continue Training <ArrowRight className="ml-2 h-4 w-4" />
