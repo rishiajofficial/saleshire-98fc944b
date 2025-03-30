@@ -105,7 +105,7 @@ const AssessmentDetails = () => {
           difficulty: assessmentData.difficulty || "",
           prevent_backtracking: assessmentData.prevent_backtracking || false,
           randomize_questions: assessmentData.randomize_questions || false,
-          time_limit: assessmentData.time_limit !== null ? String(assessmentData.time_limit) : null,
+          time_limit: assessmentData.time_limit !== null ? assessmentData.time_limit : null,
         });
         
         // Fetch sections
@@ -295,7 +295,7 @@ const AssessmentDetails = () => {
                             value={field.value === null ? "" : field.value}
                             onChange={(e) => {
                               const value = e.target.value;
-                              field.onChange(value === "" ? null : value);
+                              field.onChange(value === "" ? null : Number(value) || null);
                             }}
                           />
                         </FormControl>
