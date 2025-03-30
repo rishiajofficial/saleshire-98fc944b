@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -36,10 +37,10 @@ const assessmentSchema = z.object({
   prevent_backtracking: z.boolean().default(false),
   randomize_questions: z.boolean().default(false),
   time_limit: z.string()
-    .refine(val => !val || !isNaN(parseInt(val)), {
+    .refine(val => !val || !isNaN(Number(val)), {
       message: "Time limit must be a number in minutes."
     })
-    .transform(val => val ? parseInt(val) : null)
+    .transform(val => val ? Number(val) : null)
     .optional(),
 });
 
@@ -104,7 +105,7 @@ const AssessmentDetails = () => {
           difficulty: assessmentData.difficulty || "",
           prevent_backtracking: assessmentData.prevent_backtracking || false,
           randomize_questions: assessmentData.randomize_questions || false,
-          time_limit: assessmentData.time_limit ? String(assessmentData.time_limit) : "",
+          time_limit: assessmentData.time_limit !== null ? String(assessmentData.time_limit) : "",
         });
         
         // Fetch sections
