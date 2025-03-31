@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Database } from '@/integrations/supabase/types';
+import { PostgrestFilterBuilder } from '@supabase/supabase-js';
 
 // Define valid table names as a literal union type
 export type TableName = 'activity_logs' | 'assessment_results' | 'assessment_sections' | 
@@ -44,8 +45,8 @@ export function useDatabaseQuery<T = any>(
         return;
       }
       
-      // Type assertion to fix the deep type instantiation error
-      let query = supabase.from(tableName as any);
+      // Create the base query - cast to any for now to resolve TS errors with query chaining
+      let query: any = supabase.from(tableName);
       
       // Handle joins if provided
       if (options.join && options.join.length > 0) {
