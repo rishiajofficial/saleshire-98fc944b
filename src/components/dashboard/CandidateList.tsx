@@ -48,6 +48,7 @@ const CandidateList: React.FC<CandidateListProps> = ({
 
   // Format date for display
   const formatDate = (dateString: string) => {
+    if (!dateString) return "N/A";
     const date = new Date(dateString);
     return date.toLocaleDateString();
   };
@@ -62,11 +63,13 @@ const CandidateList: React.FC<CandidateListProps> = ({
           </Badge>
         );
       case "screening":
+      case "hr_review":
         return (
           <Badge className="bg-yellow-100 text-yellow-800">
             <Clock className="mr-1 h-3 w-3" /> Screening
           </Badge>
         );
+      case "hr_approved":
       case "training":
         return (
           <Badge className="bg-purple-100 text-purple-800">
@@ -79,6 +82,7 @@ const CandidateList: React.FC<CandidateListProps> = ({
             Sales Task
           </Badge>
         );
+      case "final_interview":
       case "interview":
         return (
           <Badge className="bg-green-100 text-green-800">
@@ -202,7 +206,7 @@ const CandidateList: React.FC<CandidateListProps> = ({
                               <div className="space-y-1 text-sm">
                                 <div className="flex justify-between">
                                   <span className="text-muted-foreground">Step:</span>
-                                  <span>Step {candidate.current_step} of 4</span>
+                                  <span>Step {candidate.current_step} of 5</span>
                                 </div>
                                 <div className="flex justify-between">
                                   <span className="text-muted-foreground">Test Score:</span>

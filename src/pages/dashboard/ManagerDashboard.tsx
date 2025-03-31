@@ -33,7 +33,8 @@ const ManagerDashboard = () => {
             status,
             current_step,
             updated_at,
-            profiles:id(name, email)
+            profiles:id(name, email),
+            assessment_results(score, completed, completed_at)
           `)
           .in('status', ['applied', 'hr_review', 'hr_approved', 'training', 'final_interview'])
           .order('updated_at', { ascending: false });
