@@ -303,7 +303,10 @@ const CandidateDetail = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label>Status</Label>
-                <Select value={applicationStatus} onValueChange={setApplicationStatus}>
+                <Select 
+                  value={applicationStatus} 
+                  onValueChange={(value: string) => setApplicationStatus(value)}
+                >
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
@@ -344,7 +347,10 @@ const CandidateDetail = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label>Action</Label>
-                <Select value={interviewAction} onValueChange={setInterviewAction}>
+                <Select 
+                  value={interviewAction} 
+                  onValueChange={(value: 'create' | 'update' | 'cancel') => setInterviewAction(value)}
+                >
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Select action" />
                   </SelectTrigger>
@@ -393,7 +399,10 @@ const CandidateDetail = () => {
               </div>
               <div>
                 <Label>Status</Label>
-                <Select value={interviewStatus} onValueChange={setInterviewStatus}>
+                <Select 
+                  value={interviewStatus} 
+                  onValueChange={(value: 'scheduled' | 'confirmed' | 'completed' | 'cancelled') => setInterviewStatus(value)}
+                >
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>

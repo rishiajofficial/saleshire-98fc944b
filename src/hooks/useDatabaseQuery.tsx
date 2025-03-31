@@ -4,7 +4,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Database } from '@/integrations/supabase/types';
-import { PostgrestFilterBuilder } from '@supabase/supabase-js';
 
 // Define valid table names as a literal union type
 export type TableName = 'activity_logs' | 'assessment_results' | 'assessment_sections' | 
