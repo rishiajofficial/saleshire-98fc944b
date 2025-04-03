@@ -1,18 +1,20 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
   ArrowRight, 
-  CheckCircle, 
-  Award, 
-  Briefcase, 
-  BookOpen, 
-  Play,
-  User,
-  BarChart3,
-  Target,
   Zap,
-  Users
+  Rocket,
+  Lightbulb,
+  BrainCircuit,
+  Target,
+  BarChart3,
+  DatabaseZap,
+  MessageSquareMore,
+  SquareCode,
+  Users,
+  CheckCircle
 } from "lucide-react";
 import { 
   Carousel,
@@ -22,10 +24,14 @@ import {
   CarouselNext,
 } from "@/components/ui/carousel";
 import { useAuth } from "@/contexts/AuthContext";
+import { motion } from "@/components/ui/motion";
+import { Progress } from "@/components/ui/progress";
 
 const Index = () => {
   const sectionsRef = useRef<(HTMLElement | null)[]>([]);
-  const [activeTestimonial, setActiveTestimonial] = useState(0);
+  const [activeDemo, setActiveDemo] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const [isHovering, setIsHovering] = useState(false);
   const { user, profile } = useAuth();
   const navigate = useNavigate();
 
@@ -34,6 +40,7 @@ const Index = () => {
     navigate(path);
   };
 
+  // Animation on scroll
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -57,32 +64,72 @@ const Index = () => {
     };
   }, []);
 
+  // Progress bar animation
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setProgress((prevProgress) => {
+        const newProgress = prevProgress + 1;
+        if (newProgress >= 100) {
+          clearInterval(timer);
+          return 100;
+        }
+        return newProgress;
+      });
+    }, 50);
+
+    return () => clearInterval(timer);
+  }, []);
+
   const addToRefs = (el: HTMLElement | null, index: number) => {
     if (el && !sectionsRef.current.includes(el)) {
       sectionsRef.current[index] = el;
     }
   };
 
+  const aiFeatures = [
+    {
+      title: "AI-Powered Candidate Matching",
+      description: "Our algorithms analyze candidate profiles against job requirements, identifying the best matches based on skills, experience, and cultural fit.",
+      icon: <BrainCircuit className="h-12 w-12 text-purple-500" />,
+      color: "bg-gradient-to-br from-purple-100 to-purple-50"
+    },
+    {
+      title: "Smart Skill Assessment",
+      description: "Automatically evaluate candidates' skills through tailored assessments that adapt to their responses in real-time.",
+      icon: <SquareCode className="h-12 w-12 text-indigo-500" />,
+      color: "bg-gradient-to-br from-indigo-100 to-indigo-50"
+    },
+    {
+      title: "Interview Intelligence",
+      description: "Generate personalized interview questions and analyze responses to provide data-driven hiring recommendations.",
+      icon: <MessageSquareMore className="h-12 w-12 text-blue-500" />,
+      color: "bg-gradient-to-br from-blue-100 to-blue-50"
+    },
+    {
+      title: "Predictive Performance Analytics",
+      description: "Forecast candidate success potential based on historical data and performance patterns from your top performers.",
+      icon: <DatabaseZap className="h-12 w-12 text-emerald-500" />,
+      color: "bg-gradient-to-br from-emerald-100 to-emerald-50"
+    }
+  ];
+
   const features = [
     {
       title: "Structured Hiring Journey",
-      description:
-        "Guide candidates through a defined 4-step hiring process that evaluates skills at each stage.",
-      icon: <Award className="h-12 w-12 text-primary" />,
+      description: "Guide candidates through a defined 4-step hiring process that evaluates skills at each stage.",
+      icon: <Rocket className="h-12 w-12 text-primary" />,
       color: "bg-gradient-to-br from-violet-100 to-violet-50"
     },
     {
       title: "Comprehensive Training",
-      description:
-        "Deliver product knowledge, sales techniques, and relationship-building strategies through engaging modules.",
-      icon: <BookOpen className="h-12 w-12 text-primary" />,
+      description: "Deliver product knowledge, sales techniques, and relationship-building strategies through engaging modules.",
+      icon: <Lightbulb className="h-12 w-12 text-primary" />,
       color: "bg-gradient-to-br from-blue-100 to-blue-50"
     },
     {
       title: "Performance Evaluation",
-      description:
-        "Assess real-world performance through practical sales tasks with outcome-based rewards.",
-      icon: <Briefcase className="h-12 w-12 text-primary" />,
+      description: "Assess real-world performance through practical sales tasks with outcome-based rewards.",
+      icon: <Target className="h-12 w-12 text-primary" />,
       color: "bg-gradient-to-br from-emerald-100 to-emerald-50"
     }
   ];
@@ -91,59 +138,34 @@ const Index = () => {
     {
       number: "01",
       title: "Application & Screening",
-      description:
-        "Collect basic information, video pitches, and assess baseline knowledge through MCQ tests.",
+      description: "Collect basic information, video pitches, and assess baseline knowledge through AI-powered analysis.",
       isPrimary: true,
-      image: "/step-1.jpg",
-      icon: <User className="h-6 w-6" />
+      image: "/images/step-1.webp",
+      icon: <Users className="h-6 w-6" />
     },
     {
       number: "02",
       title: "Training & Quizzes",
-      description:
-        "Provide comprehensive training modules followed by knowledge verification quizzes.",
+      description: "Provide intelligent training modules that adapt to individual learning patterns.",
       isPrimary: false,
-      image: "/step-2.jpg",
-      icon: <BookOpen className="h-6 w-6" />
+      image: "/images/step-2.webp",
+      icon: <Lightbulb className="h-6 w-6" />
     },
     {
       number: "03",
       title: "Live Sales Task",
-      description:
-        "Evaluate real-world performance with outcome-based commission structure.",
+      description: "Evaluate real-world performance with AI-assisted feedback and coaching.",
       isPrimary: false,
-      image: "/step-3.jpg",
+      image: "/images/step-3.webp",
       icon: <Target className="h-6 w-6" />
     },
     {
       number: "04",
       title: "Final Interview & Hiring",
-      description:
-        "Conduct final assessment and make hiring decisions based on overall performance.",
+      description: "Data-driven decisions based on comprehensive performance analytics.",
       isPrimary: false,
-      image: "/step-4.jpg",
+      image: "/images/step-4.webp",
       icon: <Users className="h-6 w-6" />
-    }
-  ];
-
-  const testimonials = [
-    {
-      quote: "The structured hiring process helped us identify top sales talent with 40% higher retention rates compared to our traditional methods.",
-      name: "Rajesh Sharma",
-      title: "Head of Sales, Tech Solutions Ltd",
-      image: "https://randomuser.me/api/portraits/men/32.jpg"
-    },
-    {
-      quote: "HireSmart's approach to skills assessment through real sales tasks has transformed how we evaluate candidates and reduced our time-to-hire by 30%.",
-      name: "Priya Patel",
-      title: "HR Director, Global Retail Inc",
-      image: "https://randomuser.me/api/portraits/women/44.jpg"
-    },
-    {
-      quote: "The comprehensive training modules ensure our new hires are productive from day one. Our onboarding time dropped from weeks to just days.",
-      name: "Amit Verma",
-      title: "Sales Manager, IndiaGrowth Ltd",
-      image: "https://randomuser.me/api/portraits/men/62.jpg"
     }
   ];
 
@@ -151,6 +173,24 @@ const Index = () => {
     { value: "45%", label: "Higher retention rates", icon: <Users className="h-5 w-5 text-indigo-600" /> },
     { value: "3.2x", label: "ROI on hiring investment", icon: <BarChart3 className="h-5 w-5 text-indigo-600" /> },
     { value: "62%", label: "Faster time-to-productivity", icon: <Zap className="h-5 w-5 text-indigo-600" /> }
+  ];
+
+  const demoScreens = [
+    {
+      title: "AI-Powered Candidate Dashboard",
+      description: "Real-time performance tracking with AI-generated recommendations and personalized growth paths.",
+      image: "/images/demo-dashboard.webp"
+    },
+    {
+      title: "Smart Assessment Engine",
+      description: "Adaptive questioning that adjusts difficulty based on candidate responses and provides instant feedback.",
+      image: "/images/demo-assessment.webp"
+    },
+    {
+      title: "Performance Analytics",
+      description: "Comprehensive metrics and predictive insights help identify top performers early in the process.",
+      image: "/images/demo-analytics.webp"
+    }
   ];
 
   const renderAuthButtons = () => {
@@ -196,22 +236,22 @@ const Index = () => {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <section className="relative py-20 md:py-28 overflow-hidden bg-gradient-to-b from-blue-50 via-indigo-50 to-white">
+      <section className="relative py-20 md:py-28 overflow-hidden bg-gradient-to-b from-indigo-50 via-purple-50 to-white">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-0 w-full h-full bg-white opacity-50"></div>
-          <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-purple-100 filter blur-3xl opacity-50"></div>
-          <div className="absolute top-1/2 -left-24 w-80 h-80 rounded-full bg-blue-100 filter blur-3xl opacity-40"></div>
+          <div className="absolute top-0 left-0 w-full h-full bg-white opacity-30"></div>
+          <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-purple-200 filter blur-3xl opacity-60"></div>
+          <div className="absolute top-1/2 -left-24 w-80 h-80 rounded-full bg-indigo-200 filter blur-3xl opacity-50"></div>
         </div>
         
         <div className="container px-4 sm:px-6 lg:px-8 mx-auto relative">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl mb-6 animate-fade-in">
-              <span className="block">Transform Your Sales</span>
-              <span className="block text-gradient bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Recruitment Process</span>
+              <span className="block">Revolutionize Your</span>
+              <span className="block text-gradient bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Sales Talent Acquisition</span>
             </h1>
             <p className="mt-6 text-xl text-muted-foreground max-w-3xl mx-auto animate-fade-in" style={{ animationDelay: "0.1s" }}>
-              A comprehensive platform for recruiting, training, and evaluating sales talent through a structured, 
-              data-driven approach that identifies top performers.
+              An AI-powered platform that transforms how you recruit, train, and evaluate sales talent 
+              with data-driven insights and adaptive learning.
             </p>
             <div className="mt-10">
               {renderAuthButtons()}
@@ -239,23 +279,28 @@ const Index = () => {
           <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="rounded-2xl overflow-hidden shadow-2xl">
               <div className="relative aspect-video">
-                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 flex items-center justify-center z-10">
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/40 to-purple-500/40 flex items-center justify-center z-10">
                   <div className="text-center p-6">
                     <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto shadow-lg hover:scale-110 transition-transform cursor-pointer">
                       <div className="w-16 h-16 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full flex items-center justify-center">
-                        <Play className="w-8 h-8 text-white ml-1" />
+                        <ArrowRight className="w-8 h-8 text-white" />
                       </div>
                     </div>
                     <h3 className="mt-6 text-xl font-semibold text-white drop-shadow-md">
-                      Watch how it works
+                      See the AI in action
                     </h3>
                   </div>
                 </div>
                 <div className="absolute inset-0">
                   <img 
-                    src="/sales-team.jpg" 
+                    src="/images/sales-team.webp" 
                     alt="Sales team in action" 
                     className="w-full h-full object-cover brightness-75"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = "https://images.unsplash.com/photo-1557426272-fc759fdf7a8d?ixlib=rb-4.0.3";
+                      target.onerror = null;
+                    }}
                   />
                 </div>
               </div>
@@ -270,6 +315,9 @@ const Index = () => {
       >
         <div className="container px-4 sm:px-6 lg:px-8 mx-auto">
           <div className="max-w-3xl mx-auto text-center mb-16">
+            <span className="inline-block px-3 py-1 text-sm font-medium text-indigo-800 bg-indigo-100 rounded-full mb-4">
+              The Future of Sales Hiring
+            </span>
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl mb-4">
               Comprehensive Sales Hiring Platform
             </h2>
@@ -282,7 +330,7 @@ const Index = () => {
             {features.map((feature, index) => (
               <div 
                 key={index} 
-                className={`rounded-xl p-8 transition-all duration-300 hover:shadow-xl ${feature.color} hover:-translate-y-1`}
+                className={`rounded-xl p-8 transition-all duration-300 hover:shadow-xl ${feature.color} hover:-translate-y-1 cursor-pointer`}
               >
                 <div className="mb-4">{feature.icon}</div>
                 <h3 className="text-xl font-semibold mb-3">{feature.title}</h3>
@@ -295,10 +343,59 @@ const Index = () => {
 
       <section 
         ref={(el) => addToRefs(el, 1)} 
-        className="py-24 bg-gradient-to-br from-indigo-50 to-white section-fade-in"
+        className="py-24 section-fade-in bg-gradient-to-br from-indigo-50 to-white"
       >
         <div className="container px-4 sm:px-6 lg:px-8 mx-auto">
           <div className="max-w-3xl mx-auto text-center mb-16">
+            <span className="inline-block px-3 py-1 text-sm font-medium text-purple-800 bg-purple-100 rounded-full mb-4">
+              AI-Powered Features
+            </span>
+            <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl mb-4">
+              Smart Technology, Smarter Hiring
+            </h2>
+            <p className="text-xl text-muted-foreground">
+              Our artificial intelligence enhances every aspect of the recruitment process.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {aiFeatures.map((feature, index) => (
+              <div
+                key={index}
+                className="rounded-xl border border-gray-200 transition-all duration-300 hover:shadow-xl overflow-hidden"
+              >
+                <div className={`p-6 ${feature.color}`}>
+                  <div className="mb-4">{feature.icon}</div>
+                  <h3 className="text-xl font-semibold mb-3">{feature.title}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {feature.description}
+                  </p>
+                </div>
+
+                <div className="p-4 border-t border-gray-200">
+                  <div
+                    className="cursor-pointer text-indigo-600 hover:text-indigo-800 transition-all text-sm font-medium flex items-center"
+                    onMouseEnter={() => setIsHovering(true)}
+                    onMouseLeave={() => setIsHovering(false)}
+                  >
+                    Learn more <ArrowRight className={`ml-1 h-4 w-4 transition-transform ${isHovering ? 'translate-x-1' : ''}`} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section 
+        ref={(el) => addToRefs(el, 2)} 
+        className="py-24 section-fade-in bg-white"
+      >
+        <div className="container px-4 sm:px-6 lg:px-8 mx-auto">
+          <div className="max-w-3xl mx-auto text-center mb-16">
+            <span className="inline-block px-3 py-1 text-sm font-medium text-indigo-800 bg-indigo-100 rounded-full mb-4">
+              Interactive Platform
+            </span>
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl mb-4">
               A Data-Driven Hiring Process
             </h2>
@@ -333,6 +430,11 @@ const Index = () => {
                     src={step.image}
                     alt={`Step ${index + 1}`} 
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = `https://images.unsplash.com/photo-156010291${index + 1}555-e07d5${index + 1}c4d4a?auto=format&fit=crop&w=800&q=60`;
+                      target.onerror = null;
+                    }}
                   />
                 </div>
                 <div className="p-6">
@@ -347,76 +449,95 @@ const Index = () => {
         </div>
       </section>
 
-      <section 
-        ref={(el) => addToRefs(el, 2)} 
-        className="py-24 bg-white section-fade-in"
+      <section
+        ref={(el) => addToRefs(el, 3)}
+        className="py-24 section-fade-in bg-gradient-to-br from-purple-50 to-white"
       >
         <div className="container px-4 sm:px-6 lg:px-8 mx-auto">
           <div className="max-w-3xl mx-auto text-center mb-16">
+            <span className="inline-block px-3 py-1 text-sm font-medium text-purple-800 bg-purple-100 rounded-full mb-4">
+              Interactive Demo
+            </span>
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl mb-4">
-              What Our Clients Say
+              See Our Platform in Action
             </h2>
             <p className="text-xl text-muted-foreground">
-              Hear from businesses that have transformed their sales hiring process
+              Experience how our AI-powered tools transform the hiring process
             </p>
           </div>
 
-          <div className="max-w-5xl mx-auto">
-            <Carousel
-              opts={{
-                align: "center",
-                loop: true,
-              }}
-              className="w-full"
-            >
-              <CarouselContent>
-                {testimonials.map((testimonial, index) => (
-                  <CarouselItem key={index} className="md:basis-1/1">
-                    <div className="p-4">
-                      <div className="bg-gradient-to-br from-white to-indigo-50 rounded-xl p-8 shadow-lg">
-                        <div className="flex flex-col md:flex-row gap-8 items-center">
-                          <div className="w-24 h-24 rounded-full overflow-hidden flex-shrink-0 border-4 border-white shadow-md">
-                            <img 
-                              src={testimonial.image} 
-                              alt={testimonial.name} 
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <div className="mb-4">
-                              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M9.33333 14.6667C9.33333 13.2 10.2 12 11.6 12H12.8C13.4667 12 14 11.4667 14 10.8V9.2C14 8.53333 13.4667 8 12.8 8H11.6C7.93333 8 5 10.9333 5 14.6667V22.8C5 24.1333 6.06667 25.2 7.4 25.2H11.6C12.9333 25.2 14 24.1333 14 22.8V18.6C14 17.2667 12.9333 16.2 11.6 16.2H9.33333V14.6667ZM22.6667 14.6667C22.6667 13.2 23.5333 12 24.9333 12H26.1333C26.8 12 27.3333 11.4667 27.3333 10.8V9.2C27.3333 8.53333 26.8 8 26.1333 8H24.9333C21.2667 8 18.3333 10.9333 18.3333 14.6667V22.8C18.3333 24.1333 19.4 25.2 20.7333 25.2H24.9333C26.2667 25.2 27.3333 24.1333 27.3333 22.8V18.6C27.3333 17.2667 26.2667 16.2 24.9333 16.2H22.6667V14.6667Z" fill="#8B5CF6"/>
-                              </svg>
-                            </div>
-                            <blockquote className="text-lg italic text-gray-700 mb-6">
-                              {testimonial.quote}
-                            </blockquote>
-                            <div>
-                              <h4 className="font-semibold text-gray-900">{testimonial.name}</h4>
-                              <p className="text-indigo-600">{testimonial.title}</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            <div className="lg:col-span-2 space-y-6">
+              {demoScreens.map((demo, index) => (
+                <div
+                  key={index}
+                  className={`p-6 rounded-xl cursor-pointer transition-all ${
+                    activeDemo === index
+                      ? "bg-white shadow-lg border-2 border-indigo-500"
+                      : "bg-white/50 hover:bg-white border border-gray-200"
+                  }`}
+                  onClick={() => setActiveDemo(index)}
+                >
+                  <h3 className={`text-lg font-semibold mb-2 ${
+                    activeDemo === index ? "text-indigo-600" : "text-gray-800"
+                  }`}>
+                    {demo.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {demo.description}
+                  </p>
+                </div>
+              ))}
+            </div>
+            
+            <div className="lg:col-span-3 bg-white p-4 rounded-xl shadow-xl border border-gray-200">
+              <div className="relative aspect-[4/3] overflow-hidden rounded-lg">
+                <div className="absolute inset-x-0 top-0 h-8 bg-gradient-to-r from-indigo-600 to-purple-500 rounded-t-lg flex items-center px-4">
+                  <div className="flex space-x-2">
+                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  </div>
+                  <div className="ml-4 text-xs text-white font-medium">
+                    {demoScreens[activeDemo].title}
+                  </div>
+                </div>
+                <div className="mt-8 p-4">
+                  <img
+                    src={demoScreens[activeDemo].image}
+                    alt={demoScreens[activeDemo].title}
+                    className="w-full h-full object-cover rounded-md"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = `https://images.unsplash.com/photo-15560${activeDemo + 1}0120998-a94e0eb934c0?auto=format&fit=crop&w=800&q=60`;
+                      target.onerror = null;
+                    }}
+                  />
+                </div>
+                <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/60 to-transparent">
+                  <div className="w-full space-y-2">
+                    <div className="flex justify-between text-white text-xs">
+                      <span>Processing data</span>
+                      <span>{progress}%</span>
                     </div>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <div className="flex justify-center mt-8">
-                <CarouselPrevious className="relative static transform-none translate-y-0 mr-2" />
-                <CarouselNext className="relative static transform-none translate-y-0 ml-2" />
+                    <Progress value={progress} className="h-1" />
+                  </div>
+                </div>
               </div>
-            </Carousel>
+            </div>
           </div>
         </div>
       </section>
 
       <section 
-        ref={(el) => addToRefs(el, 3)} 
-        className="py-24 bg-gradient-to-br from-indigo-50 to-white section-fade-in"
+        ref={(el) => addToRefs(el, 4)} 
+        className="py-24 section-fade-in bg-white"
       >
         <div className="container px-4 sm:px-6 lg:px-8 mx-auto">
           <div className="max-w-3xl mx-auto text-center mb-16">
+            <span className="inline-block px-3 py-1 text-sm font-medium text-indigo-800 bg-indigo-100 rounded-full mb-4">
+              Business Impact
+            </span>
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl mb-4">
               Benefits for Your Business
             </h2>
@@ -427,14 +548,16 @@ const Index = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="rounded-xl p-8 transition-all duration-300 hover:shadow-xl bg-white border border-indigo-100">
-              <h3 className="text-xl font-semibold mb-6 text-indigo-600">For Hiring Managers</h3>
+              <h3 className="text-xl font-semibold mb-6 text-indigo-600 flex items-center">
+                <Rocket className="h-5 w-5 mr-2" /> For Hiring Managers
+              </h3>
               <ul className="space-y-4">
                 {[
-                  "Streamlined candidate assessment process",
-                  "Standardized evaluation criteria",
-                  "Reduced time-to-hire",
-                  "Data-driven hiring decisions",
-                  "Enhanced quality of hire"
+                  "AI-powered candidate matching reduces screening time by 60%",
+                  "Data-driven insights eliminate hiring biases",
+                  "Predictive analytics forecast candidate success with 85% accuracy",
+                  "Standardized evaluation criteria ensure consistent assessment",
+                  "Intelligent interviewing tools generate personalized questions"
                 ].map((item, index) => (
                   <li key={index} className="flex items-start">
                     <div className="p-1 bg-indigo-100 rounded-full mr-3 flex-shrink-0">
@@ -447,14 +570,16 @@ const Index = () => {
             </div>
 
             <div className="rounded-xl p-8 transition-all duration-300 hover:shadow-xl bg-white border border-indigo-100">
-              <h3 className="text-xl font-semibold mb-6 text-indigo-600">For Candidates</h3>
+              <h3 className="text-xl font-semibold mb-6 text-indigo-600 flex items-center">
+                <Users className="h-5 w-5 mr-2" /> For Candidates
+              </h3>
               <ul className="space-y-4">
                 {[
-                  "Clear expectations at each stage",
-                  "Valuable training and feedback",
-                  "Practical sales experience",
-                  "Opportunity to earn during assessment",
-                  "Transparent evaluation process"
+                  "Personalized learning paths adapt to individual strengths",
+                  "AI-generated feedback provides actionable improvement steps",
+                  "Interactive assessments that engage rather than evaluate",
+                  "Real-time progress tracking with performance insights",
+                  "Skills-based evaluation ensures fair opportunity"
                 ].map((item, index) => (
                   <li key={index} className="flex items-start">
                     <div className="p-1 bg-indigo-100 rounded-full mr-3 flex-shrink-0">
@@ -470,7 +595,7 @@ const Index = () => {
       </section>
 
       <section 
-        ref={(el) => addToRefs(el, 4)} 
+        ref={(el) => addToRefs(el, 5)} 
         className="py-20 section-fade-in bg-gradient-to-r from-indigo-600 to-purple-600 text-white"
       >
         <div className="container px-4 sm:px-6 lg:px-8 mx-auto">
@@ -479,14 +604,14 @@ const Index = () => {
               Ready to Transform Your Sales Hiring?
             </h2>
             <p className="text-xl text-white/80 mb-8">
-              Start finding better sales talent with our comprehensive platform.
+              Join the next generation of smart recruitment platforms.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <Button asChild size="lg" variant="secondary" className="rounded-md px-8 py-6 text-lg bg-white text-indigo-600 hover:bg-gray-100 shadow-lg hover:shadow-xl transition-all">
-                <Link to="/register">Apply Now</Link>
+                <Link to="/register">Get Started Free</Link>
               </Button>
               <Button asChild size="lg" variant="outline" className="rounded-md px-8 py-6 text-lg border-white text-white hover:bg-white/10">
-                <Link to="/login">Sign In</Link>
+                <Link to="/login">Schedule a Demo</Link>
               </Button>
             </div>
           </div>
