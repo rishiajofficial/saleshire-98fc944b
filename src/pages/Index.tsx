@@ -6,6 +6,7 @@ import AIFeaturesSection from "../components/landing/AIFeaturesSection";
 import HiringProcessSection from "../components/landing/HiringProcessSection";
 import DemoSection from "../components/landing/DemoSection";
 import BusinessImpactSection from "../components/landing/BusinessImpactSection";
+import TestimonialsSection from "../components/landing/TestimonialsSection";
 import CtaSection from "../components/landing/CtaSection";
 import StylesSection from "../components/landing/StylesSection";
 
@@ -50,6 +51,7 @@ const Index = () => {
       <HiringProcessSection addToRefs={addToRefs} />
       <DemoSection addToRefs={addToRefs} />
       <BusinessImpactSection addToRefs={addToRefs} />
+      <TestimonialsSection addToRefs={addToRefs} />
       <CtaSection addToRefs={addToRefs} />
       <StylesSection />
     </div>

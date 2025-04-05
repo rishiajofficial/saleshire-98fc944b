@@ -1,10 +1,8 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { ArrowRight, BrainCircuit, SquareCode, MessageSquareMore, DatabaseZap } from "lucide-react";
 
 const AIFeaturesSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | null, index: number) => void }) => {
-  const [isHovering, setIsHovering] = useState(false);
-  
   const aiFeatures = [
     {
       title: "AI-Powered Candidate Matching",
@@ -46,7 +44,7 @@ const AIFeaturesSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | null, 
             Smart Technology, Smarter Hiring
           </h2>
           <p className="text-xl text-muted-foreground">
-            Our artificial intelligence enhances every aspect of the recruitment process.
+            Our advanced AI enhances every aspect of your recruitment process, from candidate matching to performance prediction.
           </p>
         </div>
 
@@ -54,10 +52,10 @@ const AIFeaturesSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | null, 
           {aiFeatures.map((feature, index) => (
             <div
               key={index}
-              className="rounded-xl border border-gray-200 transition-all duration-300 hover:shadow-xl overflow-hidden"
+              className="rounded-xl border border-gray-200 transition-all duration-300 hover:shadow-xl overflow-hidden group"
             >
-              <div className={`p-6 ${feature.color}`}>
-                <div className="mb-4">{feature.icon}</div>
+              <div className={`p-6 ${feature.color} group-hover:bg-white transition-all duration-300`}>
+                <div className="mb-4 transform group-hover:scale-110 transition-all duration-300">{feature.icon}</div>
                 <h3 className="text-xl font-semibold mb-3">{feature.title}</h3>
                 <p className="text-sm text-muted-foreground">
                   {feature.description}
@@ -67,10 +65,8 @@ const AIFeaturesSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | null, 
               <div className="p-4 border-t border-gray-200">
                 <div
                   className="cursor-pointer text-indigo-600 hover:text-indigo-800 transition-all text-sm font-medium flex items-center"
-                  onMouseEnter={() => setIsHovering(true)}
-                  onMouseLeave={() => setIsHovering(false)}
                 >
-                  Learn more <ArrowRight className={`ml-1 h-4 w-4 transition-transform ${isHovering ? 'translate-x-1' : ''}`} />
+                  Learn more <ArrowRight className="ml-1 h-4 w-4 transition-transform transform group-hover:translate-x-1" />
                 </div>
               </div>
             </div>

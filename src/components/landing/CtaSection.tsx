@@ -2,6 +2,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { ArrowRight } from "lucide-react";
 
 const CtaSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | null, index: number) => void }) => {
   return (
@@ -15,16 +16,19 @@ const CtaSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | null, index: 
             Ready to Transform Your Sales Hiring?
           </h2>
           <p className="text-xl text-white/80 mb-8">
-            Join the next generation of smart recruitment platforms.
+            Join the next generation of smart recruitment platforms and start hiring top sales talent today.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Button asChild size="lg" variant="secondary" className="rounded-md px-8 py-6 text-lg bg-white text-indigo-600 hover:bg-gray-100 shadow-lg hover:shadow-xl transition-all">
-              <Link to="/register">Get Started Free</Link>
+              <Link to="/register">Get Started Free <ArrowRight className="ml-2 h-5 w-5" /></Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="rounded-md px-8 py-6 text-lg border-white text-white hover:bg-white/10">
               <Link to="/login">Schedule a Demo</Link>
             </Button>
           </div>
+          <p className="mt-8 text-white/70 text-sm">
+            No credit card required • Free 14-day trial • Cancel anytime
+          </p>
         </div>
       </div>
     </section>

@@ -20,23 +20,23 @@ const DemoSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | null, index:
     }, 50);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [activeDemo]); // Reset progress when active demo changes
 
   const demoScreens = [
     {
       title: "AI-Powered Candidate Dashboard",
       description: "Real-time performance tracking with AI-generated recommendations and personalized growth paths.",
-      image: "/images/demo-dashboard.webp"
+      image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1470&q=80"
     },
     {
       title: "Smart Assessment Engine",
       description: "Adaptive questioning that adjusts difficulty based on candidate responses and provides instant feedback.",
-      image: "/images/demo-assessment.webp"
+      image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1470&q=80"
     },
     {
       title: "Performance Analytics",
       description: "Comprehensive metrics and predictive insights help identify top performers early in the process.",
-      image: "/images/demo-analytics.webp"
+      image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1470&q=80"
     }
   ];
 
@@ -54,7 +54,7 @@ const DemoSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | null, index:
             See Our Platform in Action
           </h2>
           <p className="text-xl text-muted-foreground">
-            Experience how our AI-powered tools transform the hiring process
+            Experience how our AI-powered tools transform the hiring process from start to finish
           </p>
         </div>
 
@@ -65,10 +65,13 @@ const DemoSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | null, index:
                 key={index}
                 className={`p-6 rounded-xl cursor-pointer transition-all ${
                   activeDemo === index
-                    ? "bg-white shadow-lg border-2 border-indigo-500"
+                    ? "bg-white shadow-lg border-2 border-indigo-500 transform scale-105"
                     : "bg-white/50 hover:bg-white border border-gray-200"
                 }`}
-                onClick={() => setActiveDemo(index)}
+                onClick={() => {
+                  setActiveDemo(index);
+                  setProgress(0); // Reset progress when switching
+                }}
               >
                 <h3 className={`text-lg font-semibold mb-2 ${
                   activeDemo === index ? "text-indigo-600" : "text-gray-800"
@@ -98,18 +101,17 @@ const DemoSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | null, index:
                 <img
                   src={demoScreens[activeDemo].image}
                   alt={demoScreens[activeDemo].title}
-                  className="w-full h-full object-cover rounded-md"
+                  className="w-full h-full object-cover rounded-md shadow-md"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     target.src = `https://images.unsplash.com/photo-15560${activeDemo + 1}0120998-a94e0eb934c0?auto=format&fit=crop&w=800&q=60`;
-                    target.onerror = null;
                   }}
                 />
               </div>
               <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/60 to-transparent">
                 <div className="w-full space-y-2">
                   <div className="flex justify-between text-white text-xs">
-                    <span>Processing data</span>
+                    <span>Processing candidate data</span>
                     <span>{progress}%</span>
                   </div>
                   <Progress value={progress} className="h-1" />

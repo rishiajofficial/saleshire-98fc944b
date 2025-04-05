@@ -19,7 +19,7 @@ const StylesSection = () => {
       .section-fade-in {
         opacity: 0;
         transform: translateY(20px);
-        transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        transition: opacity 0.8s ease-out, transform 0.8s ease-out;
       }
       
       .section-fade-in.visible {
@@ -43,6 +43,16 @@ const StylesSection = () => {
       @keyframes slideUp {
         from { opacity: 0; transform: translateY(40px); }
         to { opacity: 1; transform: translateY(0); }
+      }
+
+      @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+      }
+      
+      .hover-pulse:hover {
+        animation: pulse 2s infinite;
       }
       `}
     </style>

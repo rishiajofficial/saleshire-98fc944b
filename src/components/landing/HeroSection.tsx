@@ -41,7 +41,7 @@ const HeroSection = () => {
           className="rounded-md px-8 py-6 text-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all"
           onClick={handleNavigation('/register')}
         >
-          Apply Now <ArrowRight className="ml-2 h-5 w-5" />
+          Try For Free <ArrowRight className="ml-2 h-5 w-5" />
         </Button>
         <Button 
           variant="outline" 
@@ -72,12 +72,12 @@ const HeroSection = () => {
       <div className="container px-4 sm:px-6 lg:px-8 mx-auto relative">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl mb-6 animate-fade-in">
-            <span className="block">Revolutionize Your</span>
-            <span className="block text-gradient bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Sales Talent Acquisition</span>
+            <span className="block">AI-Powered</span>
+            <span className="block text-gradient bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Sales Talent Platform</span>
           </h1>
           <p className="mt-6 text-xl text-muted-foreground max-w-3xl mx-auto animate-fade-in" style={{ animationDelay: "0.1s" }}>
-            An AI-powered platform that transforms how you recruit, train, and evaluate sales talent 
-            with data-driven insights and adaptive learning.
+            Revolutionize your sales recruitment process with our AI-driven platform that helps you 
+            identify, train, and retain top sales performers with unprecedented accuracy.
           </p>
           <div className="mt-10">
             {renderAuthButtons()}
@@ -113,22 +113,19 @@ const HeroSection = () => {
                     </div>
                   </div>
                   <h3 className="mt-6 text-xl font-semibold text-white drop-shadow-md">
-                    See the AI in action
+                    See the platform in action
                   </h3>
                 </div>
               </div>
-              <div className="absolute inset-0">
-                <img 
-                  src="/images/sales-team.webp" 
-                  alt="Sales team in action" 
-                  className="w-full h-full object-cover brightness-75"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = "https://images.unsplash.com/photo-1557426272-fc759fdf7a8d?ixlib=rb-4.0.3";
-                    target.onerror = null;
-                  }}
-                />
-              </div>
+              <img 
+                src="https://images.unsplash.com/photo-1557426272-fc759fdf7a8d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80" 
+                alt="Sales team in action" 
+                className="w-full h-full object-cover brightness-75"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = "https://images.unsplash.com/photo-1557426272-fc759fdf7a8d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80";
+                }}
+              />
             </div>
           </div>
         </div>

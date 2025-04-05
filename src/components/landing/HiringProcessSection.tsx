@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Users, Lightbulb, Target } from "lucide-react";
+import { Users, Lightbulb, Target, Star } from "lucide-react";
 
 const HiringProcessSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | null, index: number) => void }) => {
   const steps = [
@@ -9,7 +9,7 @@ const HiringProcessSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | nul
       title: "Application & Screening",
       description: "Collect basic information, video pitches, and assess baseline knowledge through AI-powered analysis.",
       isPrimary: true,
-      image: "/images/step-1.webp",
+      image: "https://images.unsplash.com/photo-1560264418-c4445382edbc?auto=format&fit=crop&w=800&q=80",
       icon: <Users className="h-6 w-6" />
     },
     {
@@ -17,7 +17,7 @@ const HiringProcessSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | nul
       title: "Training & Quizzes",
       description: "Provide intelligent training modules that adapt to individual learning patterns.",
       isPrimary: false,
-      image: "/images/step-2.webp",
+      image: "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=800&q=80",
       icon: <Lightbulb className="h-6 w-6" />
     },
     {
@@ -25,7 +25,7 @@ const HiringProcessSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | nul
       title: "Live Sales Task",
       description: "Evaluate real-world performance with AI-assisted feedback and coaching.",
       isPrimary: false,
-      image: "/images/step-3.webp",
+      image: "https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=800&q=80",
       icon: <Target className="h-6 w-6" />
     },
     {
@@ -33,8 +33,8 @@ const HiringProcessSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | nul
       title: "Final Interview & Hiring",
       description: "Data-driven decisions based on comprehensive performance analytics.",
       isPrimary: false,
-      image: "/images/step-4.webp",
-      icon: <Users className="h-6 w-6" />
+      image: "https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=800&q=80",
+      icon: <Star className="h-6 w-6" />
     }
   ];
 
@@ -52,7 +52,7 @@ const HiringProcessSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | nul
             A Data-Driven Hiring Process
           </h2>
           <p className="text-xl text-muted-foreground">
-            Our four-step approach evaluates candidates on both knowledge and practical skills.
+            Our four-step approach evaluates candidates on both knowledge and practical skills through an engaging journey.
           </p>
         </div>
 
@@ -80,12 +80,11 @@ const HiringProcessSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | nul
                 </div>
                 <img 
                   src={step.image}
-                  alt={`Step ${index + 1}`} 
+                  alt={`Step ${index + 1}: ${step.title}`} 
                   className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     target.src = `https://images.unsplash.com/photo-156010291${index + 1}555-e07d5${index + 1}c4d4a?auto=format&fit=crop&w=800&q=60`;
-                    target.onerror = null;
                   }}
                 />
               </div>
