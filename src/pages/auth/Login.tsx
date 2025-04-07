@@ -145,6 +145,13 @@ const Login = () => {
       setTimeout(async () => {
         try {
           await signIn(credentials.email, credentials.password);
+          
+          // Add specific redirection for HR and Director roles
+          if (role === 'hr') {
+            navigate('/dashboard/hr');
+          } else if (role === 'director') {
+            navigate('/dashboard/director');
+          }
         } catch (error: any) {
           console.error(`Demo login error (${role}):`, error);
           throw error;

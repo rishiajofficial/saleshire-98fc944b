@@ -105,16 +105,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Log the error but don't throw, we'll try an alternative approach
         console.error('Error fetching profile with direct query:', error.message);
         
-        // Try with RPC (server function) to bypass RLS if needed
+        // Try with direct call to custom function using RPC
         const { data: rpcData, error: rpcError } = await supabase
-          .rpc('get_my_profile')
-          .eq('user_id', userId);
+          .rpc('is_admin', { user_id: userId });
         
         if (rpcError) {
-          throw new Error(`Profile fetch failed: ${error.message}, RPC fetch failed: ${rpcError.message}`);
+          console.error('RPC call failed:', rpcError.message);
+          throw new Error(`Profile fetch failed: ${error.message}`);
         }
         
-        data = rpcData;
+        // If user is admin, we'll create a simple profile object
+        if (rpcData === true) {
+          data = {
+            id: userId,
+            role: 'admin',
+            email: user?.email || 'admin@example.com',
+            name: 'Administrator',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+        }
       }
 
       if (data) {

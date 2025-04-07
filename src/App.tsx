@@ -57,7 +57,18 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/dashboard/manager" element={
-              <ProtectedRoute allowedRoles={['manager', 'hr', 'director']}>
+              <ProtectedRoute allowedRoles={['manager']}>
+                <ManagerDashboard />
+              </ProtectedRoute>
+            } />
+            {/* New routes for HR and Director dashboards */}
+            <Route path="/dashboard/hr" element={
+              <ProtectedRoute allowedRoles={['hr']}>
+                <ManagerDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/director" element={
+              <ProtectedRoute allowedRoles={['director']}>
                 <ManagerDashboard />
               </ProtectedRoute>
             } />
