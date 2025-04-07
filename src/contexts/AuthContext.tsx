@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,13 +25,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const navigate = useNavigate();
   const location = useLocation();
 
-  // This flag helps prevent redirect loops
   const [initialAuthCheckComplete, setInitialAuthCheckComplete] = useState<boolean>(false);
   
   useEffect(() => {
     console.log("Auth Provider initialized");
     
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
         console.log('Auth state changed:', event);
@@ -42,7 +39,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (event === 'SIGNED_IN') {
           console.log('User signed in:', currentSession?.user?.id);
           if (currentSession?.user) {
-            // Special case for admin@example.com
             if (currentSession.user.email === 'admin@example.com') {
               setProfile({
                 id: currentSession.user.id,
@@ -56,7 +52,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               return;
             }
             
-            // Defer profile fetching to avoid potential auth deadlocks
             setTimeout(() => {
               fetchProfile(currentSession.user.id);
             }, 0);
@@ -64,7 +59,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else if (event === 'SIGNED_OUT') {
           setProfile(null);
           console.log('User signed out');
-          // Only redirect to login if not already there and not on public pages
           if (location.pathname !== '/login' && 
               location.pathname !== '/register' && 
               location.pathname !== '/forgot-password' && 
@@ -76,14 +70,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    // Get the current session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       console.log('Current session:', currentSession?.user?.id);
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       
       if (currentSession?.user) {
-        // Special case for admin@example.com
         if (currentSession.user.email === 'admin@example.com') {
           setProfile({
             id: currentSession.user.id,
@@ -102,7 +94,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         setIsLoading(false);
         setInitialAuthCheckComplete(true);
-        // Only redirect to login if on protected pages
         if (location.pathname !== '/login' && 
             location.pathname !== '/register' && 
             location.pathname !== '/forgot-password' && 
@@ -118,42 +109,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [navigate, location.pathname]);
 
-  // Fetch user profile data from Supabase
   const fetchProfile = async (userId: string) => {
     try {
       console.log('Fetching profile for user:', userId);
       
-      // First try with our custom function to bypass RLS
-      const { data, error } = await supabase
-        .rpc('get_my_profile', { user_id: userId });
+      const { data: directData, error: directError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
       
-      if (error) {
-        console.error('Error fetching profile with RPC:', error.message);
+      if (directError) {
+        console.error('Error with direct query:', directError.message);
         
-        // Fall back to direct query (might work with the right policies)
-        const { data: directData, error: directError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single();
-          
-        if (directError) {
-          console.error('Error with fallback direct query:', directError.message);
-          throw new Error(`Profile fetch failed: ${directError.message}`);
-        }
-        
-        if (directData) {
-          setProfile(directData);
-        }
-      } else if (data && data.length > 0) {
-        // get_my_profile returns a table
-        setProfile(data[0]);
-      } else {
-        // Admin special case check
-        const { data: adminCheck } = await supabase
+        const { data: isAdminData, error: isAdminError } = await supabase
           .rpc('is_admin', { user_id: userId });
           
-        if (adminCheck === true) {
+        if (!isAdminError && isAdminData === true) {
           setProfile({
             id: userId,
             role: 'admin',
@@ -163,11 +135,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             updated_at: new Date().toISOString()
           });
         } else {
-          console.error('No profile data found');
+          console.error('No profile data found and not admin');
         }
+      } else if (directData) {
+        setProfile(directData);
       }
       
-      // Now fetch additional data separately if needed
       await fetchAdditionalProfileData(userId);
       
     } catch (error: any) {
@@ -177,8 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setInitialAuthCheckComplete(true);
     }
   };
-  
-  // Fetch additional profile data based on role
+
   const fetchAdditionalProfileData = async (userId: string) => {
     if (!profile) return;
     
@@ -209,13 +181,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Sign in function
   const signIn = async (email: string, password: string) => {
     try {
       console.log('Signing in with:', email);
       setIsLoading(true);
       
-      // Special case for admin@example.com
       if (email.toLowerCase() === 'admin@example.com') {
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
@@ -243,7 +213,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
       
-      // Proceed with standard sign in
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -258,7 +227,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('Sign in successful for user:', data.user.id);
         toast.success('Successfully signed in');
         
-        // Get the profile to determine redirection
         try {
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
@@ -268,14 +236,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           if (profileError) {
             console.error('Error fetching profile for redirect:', profileError.message);
-            // Default redirect if profile can't be fetched
             navigate('/dashboard/candidate');
             return;
           }
           
           console.log('User role:', profileData?.role);
           
-          // Redirect based on role
           if (profileData?.role === 'admin') {
             navigate('/dashboard/admin');
           } else if (profileData?.role === 'manager') {
@@ -289,7 +255,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         } catch (err) {
           console.error('Error during role-based redirect:', err);
-          navigate('/dashboard/candidate'); // Fallback redirect
+          navigate('/dashboard/candidate');
         }
       }
     } catch (error: any) {
@@ -301,7 +267,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Sign up function
   const signUp = async (email: string, password: string, userData: any) => {
     try {
       setIsLoading(true);
@@ -329,7 +294,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Sign out function
   const signOut = async () => {
     try {
       setIsLoading(true);
@@ -349,7 +313,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Update profile data
   const updateProfile = async (data: any) => {
     try {
       const { error } = await supabase
