@@ -19,6 +19,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   console.log("ProtectedRoute - Current profile:", profile);
   console.log("ProtectedRoute - Allowed roles:", allowedRoles);
   
+  // Special case for admin route and admin user
+  const isAdminRoute = location.pathname === '/dashboard/admin';
+  const isAdminEmail = user?.email === 'admin@example.com';
+  
   // Save current path for redirect after login
   useEffect(() => {
     if (!user && !isLoading) {
@@ -34,9 +38,24 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     </div>;
   }
   
+  // Special case for admin@example.com - always allow access to admin dashboard
+  if (isAdminRoute && isAdminEmail) {
+    return <>{children}</>;
+  }
+  
   // If not logged in, redirect to login
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+  
+  // Special admin case - if not using the special admin route logic above
+  if (user.email === 'admin@example.com' && !profile) {
+    // For admin users, we'll proceed even without a profile
+    if (isAdminRoute) {
+      return <>{children}</>;
+    } else {
+      return <Navigate to="/dashboard/admin" replace />;
+    }
   }
   
   // Check if profile is loaded

@@ -93,14 +93,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchProfile = async (userId: string) => {
     try {
       console.log('Fetching profile for user:', userId);
-      const { data, error } = await supabase
+      
+      // First try with direct query (will work with our new security definer functions)
+      let { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
       
       if (error) {
-        throw error;
+        // Log the error but don't throw, we'll try an alternative approach
+        console.error('Error fetching profile with direct query:', error.message);
+        
+        // Try with RPC (server function) to bypass RLS if needed
+        const { data: rpcData, error: rpcError } = await supabase
+          .rpc('get_my_profile')
+          .eq('user_id', userId);
+        
+        if (rpcError) {
+          throw new Error(`Profile fetch failed: ${error.message}, RPC fetch failed: ${rpcError.message}`);
+        }
+        
+        data = rpcData;
       }
 
       if (data) {
@@ -129,6 +143,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setProfile(prev => ({ ...prev, managerData }));
           }
         }
+      } else {
+        throw new Error('Profile not found');
       }
     } catch (error: any) {
       console.error('Error fetching profile:', error.message);
@@ -159,29 +175,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('Sign in successful for user:', data.user.id);
         toast.success('Successfully signed in');
         
-        // Get the profile to determine redirection
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', data.user.id)
-          .single();
-        
-        if (profileError) {
-          console.error('Error fetching profile for redirect:', profileError.message);
-          // Default redirect if profile can't be fetched
-          navigate('/dashboard/candidate');
+        // For admin accounts, we'll directly redirect
+        if (email.toLowerCase() === 'admin@example.com') {
+          navigate('/dashboard/admin');
           return;
         }
         
-        console.log('User role:', profileData?.role);
-        
-        // Redirect based on role
-        if (profileData?.role === 'admin') {
-          navigate('/dashboard/admin');
-        } else if (profileData?.role === 'manager') {
-          navigate('/dashboard/manager');
-        } else {
-          navigate('/dashboard/candidate');
+        // Get the profile to determine redirection
+        try {
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', data.user.id)
+            .single();
+          
+          if (profileError) {
+            console.error('Error fetching profile for redirect:', profileError.message);
+            // Default redirect if profile can't be fetched
+            navigate('/dashboard/candidate');
+            return;
+          }
+          
+          console.log('User role:', profileData?.role);
+          
+          // Redirect based on role
+          if (profileData?.role === 'admin') {
+            navigate('/dashboard/admin');
+          } else if (profileData?.role === 'manager') {
+            navigate('/dashboard/manager');
+          } else if (profileData?.role === 'hr' || profileData?.role === 'director') {
+            navigate('/dashboard/manager');  // HR and Director use the manager dashboard
+          } else {
+            navigate('/dashboard/candidate');
+          }
+        } catch (err) {
+          console.error('Error during role-based redirect:', err);
+          navigate('/dashboard/candidate'); // Fallback redirect
         }
       }
     } catch (error: any) {
