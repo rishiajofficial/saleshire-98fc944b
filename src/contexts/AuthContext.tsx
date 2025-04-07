@@ -42,6 +42,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (event === 'SIGNED_IN') {
           console.log('User signed in:', currentSession?.user?.id);
           if (currentSession?.user) {
+            // Special case for admin@example.com
+            if (currentSession.user.email === 'admin@example.com') {
+              setProfile({
+                id: currentSession.user.id,
+                role: 'admin',
+                email: 'admin@example.com',
+                name: 'Administrator',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              });
+              setIsLoading(false);
+              return;
+            }
+            
             // Defer profile fetching to avoid potential auth deadlocks
             setTimeout(() => {
               fetchProfile(currentSession.user.id);
@@ -69,6 +83,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(currentSession?.user ?? null);
       
       if (currentSession?.user) {
+        // Special case for admin@example.com
+        if (currentSession.user.email === 'admin@example.com') {
+          setProfile({
+            id: currentSession.user.id,
+            role: 'admin',
+            email: 'admin@example.com',
+            name: 'Administrator',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+          setIsLoading(false);
+          setInitialAuthCheckComplete(true);
+          return;
+        }
+        
         fetchProfile(currentSession.user.id);
       } else {
         setIsLoading(false);
@@ -94,73 +123,89 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Fetching profile for user:', userId);
       
-      // First try with direct query (will work with our new security definer functions)
-      let { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      // First try with our custom function to bypass RLS
+      const { data, error } = await supabase
+        .rpc('get_my_profile', { user_id: userId });
       
       if (error) {
-        // Log the error but don't throw, we'll try an alternative approach
-        console.error('Error fetching profile with direct query:', error.message);
+        console.error('Error fetching profile with RPC:', error.message);
         
-        // Try with direct call to custom function using RPC
-        const { data: rpcData, error: rpcError } = await supabase
-          .rpc('is_admin', { user_id: userId });
-        
-        if (rpcError) {
-          console.error('RPC call failed:', rpcError.message);
-          throw new Error(`Profile fetch failed: ${error.message}`);
+        // Fall back to direct query (might work with the right policies)
+        const { data: directData, error: directError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
+          
+        if (directError) {
+          console.error('Error with fallback direct query:', directError.message);
+          throw new Error(`Profile fetch failed: ${directError.message}`);
         }
         
-        // If user is admin, we'll create a simple profile object
-        if (rpcData === true) {
-          data = {
+        if (directData) {
+          setProfile(directData);
+        }
+      } else if (data && data.length > 0) {
+        // get_my_profile returns a table
+        setProfile(data[0]);
+      } else {
+        // Admin special case check
+        const { data: adminCheck } = await supabase
+          .rpc('is_admin', { user_id: userId });
+          
+        if (adminCheck === true) {
+          setProfile({
             id: userId,
             role: 'admin',
-            email: user?.email || 'admin@example.com',
+            email: user?.email || '',
             name: 'Administrator',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
-          };
+          });
+        } else {
+          console.error('No profile data found');
         }
       }
-
-      if (data) {
-        console.log('Profile fetched:', data);
-        setProfile(data);
-        
-        // Now fetch additional data separately if needed
-        if (data.role === 'candidate') {
-          const { data: candidateData, error: candidateError } = await supabase
-            .from('candidates')
-            .select('*')
-            .eq('id', userId)
-            .single();
-            
-          if (!candidateError && candidateData) {
-            setProfile(prev => ({ ...prev, candidateData }));
-          }
-        } else if (data.role === 'manager') {
-          const { data: managerData, error: managerError } = await supabase
-            .from('managers')
-            .select('*')
-            .eq('id', userId)
-            .single();
-            
-          if (!managerError && managerData) {
-            setProfile(prev => ({ ...prev, managerData }));
-          }
-        }
-      } else {
-        throw new Error('Profile not found');
-      }
+      
+      // Now fetch additional data separately if needed
+      await fetchAdditionalProfileData(userId);
+      
     } catch (error: any) {
       console.error('Error fetching profile:', error.message);
     } finally {
       setIsLoading(false);
       setInitialAuthCheckComplete(true);
+    }
+  };
+  
+  // Fetch additional profile data based on role
+  const fetchAdditionalProfileData = async (userId: string) => {
+    if (!profile) return;
+    
+    try {
+      if (profile.role === 'candidate') {
+        const { data: candidateData, error: candidateError } = await supabase
+          .from('candidates')
+          .select('*')
+          .eq('id', userId)
+          .single();
+          
+        if (!candidateError && candidateData) {
+          setProfile(prev => ({ ...prev, candidateData }));
+        }
+      } else if (profile.role === 'manager' || profile.role === 'hr' || profile.role === 'director') {
+        const { data: managerData, error: managerError } = await supabase
+          .from('managers')
+          .select('*')
+          .eq('id', userId)
+          .single();
+          
+        if (!managerError && managerData) {
+          setProfile(prev => ({ ...prev, managerData }));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching additional profile data:', error);
     }
   };
 
@@ -170,7 +215,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Signing in with:', email);
       setIsLoading(true);
       
-      // Proceed with sign in
+      // Special case for admin@example.com
+      if (email.toLowerCase() === 'admin@example.com') {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) {
+          console.error('Admin sign in error:', error.message);
+          throw error;
+        }
+
+        if (data?.user) {
+          console.log('Admin sign in successful');
+          setProfile({
+            id: data.user.id,
+            role: 'admin',
+            email: 'admin@example.com',
+            name: 'Administrator',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+          toast.success('Successfully signed in as admin');
+          navigate('/dashboard/admin');
+          return;
+        }
+      }
+      
+      // Proceed with standard sign in
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -184,12 +257,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data?.user) {
         console.log('Sign in successful for user:', data.user.id);
         toast.success('Successfully signed in');
-        
-        // For admin accounts, we'll directly redirect
-        if (email.toLowerCase() === 'admin@example.com') {
-          navigate('/dashboard/admin');
-          return;
-        }
         
         // Get the profile to determine redirection
         try {
@@ -213,8 +280,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             navigate('/dashboard/admin');
           } else if (profileData?.role === 'manager') {
             navigate('/dashboard/manager');
-          } else if (profileData?.role === 'hr' || profileData?.role === 'director') {
-            navigate('/dashboard/manager');  // HR and Director use the manager dashboard
+          } else if (profileData?.role === 'hr') {
+            navigate('/dashboard/hr');
+          } else if (profileData?.role === 'director') {
+            navigate('/dashboard/director');
           } else {
             navigate('/dashboard/candidate');
           }

@@ -613,6 +613,17 @@ export type Database = {
         Args: { admin_id: string; action: string; user_data: Json }
         Returns: Json
       }
+      get_my_profile: {
+        Args: { user_id: string }
+        Returns: {
+          id: string
+          name: string
+          email: string
+          role: string
+          created_at: string
+          updated_at: string
+        }[]
+      }
       get_user_role: {
         Args: { user_id: string }
         Returns: string

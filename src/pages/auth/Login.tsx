@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import {
@@ -48,15 +47,12 @@ const Login = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // If user is already logged in and we're on the login page, redirect
     if (user && location.pathname === '/login') {
-      // Check for intended path in session storage
       const intendedPath = sessionStorage.getItem('intendedPath');
       if (intendedPath) {
         sessionStorage.removeItem('intendedPath');
         navigate(intendedPath);
       } else {
-        // Default redirect based on user role if available or redirect back
         if (location.state?.from) {
           navigate(location.state.from);
         } else {
@@ -90,7 +86,6 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      // Demo credentials - these match the users you've created in Supabase
       const demoCredentials = {
         candidate1: {
           email: 'candidate1@example.com',
@@ -137,21 +132,12 @@ const Login = () => {
       const credentials = demoCredentials[role];
       console.log(`Attempting demo login as ${role} with email: ${credentials.email}`);
       
-      // Set the email and password fields for visual feedback
       setEmail(credentials.email);
       setPassword(credentials.password);
       
-      // Wait a moment for the UI to update before submitting
       setTimeout(async () => {
         try {
           await signIn(credentials.email, credentials.password);
-          
-          // Add specific redirection for HR and Director roles
-          if (role === 'hr') {
-            navigate('/dashboard/hr');
-          } else if (role === 'director') {
-            navigate('/dashboard/director');
-          }
         } catch (error: any) {
           console.error(`Demo login error (${role}):`, error);
           throw error;
