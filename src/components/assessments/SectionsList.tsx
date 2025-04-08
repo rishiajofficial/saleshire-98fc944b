@@ -1,7 +1,6 @@
-
 import React from "react";
 import { Link } from "react-router-dom";
-import { BookOpen, Plus } from "lucide-react";
+import { BookOpen, Plus, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -62,7 +61,7 @@ const SectionsList: React.FC<SectionsListProps> = ({ assessmentId, sections }) =
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg">{section.title}</CardTitle>
                     <Button asChild variant="ghost" size="sm">
-                      <Link to={`/assessments/sections/${section.id}`}>
+                      <Link to={`/assessments/${assessmentId}/sections/${section.id}`}>
                         Edit Section
                       </Link>
                     </Button>
@@ -75,6 +74,13 @@ const SectionsList: React.FC<SectionsListProps> = ({ assessmentId, sections }) =
                     <p className="text-sm text-muted-foreground italic">No description provided</p>
                   )}
                 </CardContent>
+                <div className="flex justify-end">
+                  <Button asChild variant="outline" size="sm">
+                    <Link to={`/assessments/${assessmentId}/sections/${section.id}`}>
+                      <Edit className="h-4 w-4 mr-2" /> Edit Questions
+                    </Link>
+                  </Button>
+                </div>
               </Card>
             ))}
           </div>
