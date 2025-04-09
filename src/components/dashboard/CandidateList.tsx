@@ -26,17 +26,43 @@ import {
   ArrowRight,
   Clock,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CandidateListProps {
-  candidates: any[];
-  isLoading: boolean;
+  candidates?: any[];
+  isLoading?: boolean;
+  limit?: number;
 }
 
 const CandidateList: React.FC<CandidateListProps> = ({
-  candidates,
-  isLoading,
+  candidates: propCandidates,
+  isLoading: propIsLoading,
+  limit = 5
 }) => {
   const [expandedCandidate, setExpandedCandidate] = useState<number | null>(null);
+
+  // Fetch candidates if not provided as props
+  const { data: fetchedCandidates, isLoading: queryIsLoading } = useQuery({
+    queryKey: ['candidates', limit],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('candidates')
+        .select(`
+          id, 
+          status, 
+          current_step, 
+          updated_at, 
+          profiles(name, email),
+          assessment_results(score)
+        `)
+        .limit(limit);
+        
+      if (error) throw error;
+      return data;
+    },
+    enabled: !propCandidates, // Only run if candidates not provided as props
+  });
 
   const toggleExpand = (id: number) => {
     if (expandedCandidate === id) {
@@ -45,6 +71,10 @@ const CandidateList: React.FC<CandidateListProps> = ({
       setExpandedCandidate(id);
     }
   };
+
+  // Use props or fetched data
+  const candidates = propCandidates || fetchedCandidates || [];
+  const isLoading = propIsLoading || queryIsLoading;
 
   // Format date for display
   const formatDate = (dateString: string) => {
@@ -157,7 +187,7 @@ const CandidateList: React.FC<CandidateListProps> = ({
                   </TableCell>
                 </TableRow>
               ) : candidates && candidates.length > 0 ? (
-                candidates.slice(0, 5).map((candidate: any, index: number) => (
+                candidates.map((candidate: any, index: number) => (
                   <React.Fragment key={candidate.id}>
                     <TableRow>
                       <TableCell>
