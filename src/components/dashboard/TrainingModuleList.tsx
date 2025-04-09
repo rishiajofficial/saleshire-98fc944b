@@ -44,19 +44,33 @@ const TrainingModuleList: React.FC<TrainingModuleListProps> = ({ currentStep }) 
     }
   });
 
-  // Fetch candidate progress data
-  const { data: progressData, isLoading: isLoadingProgress, refetch: refetchProgress } = useQuery({
-    queryKey: ['candidate-progress', user?.id],
+  // Fetch candidate progress data - assessment results
+  const { data: quizResults, isLoading: isLoadingQuizResults } = useQuery({
+    queryKey: ['candidate-quiz-results', user?.id],
     queryFn: async () => {
       if (!user?.id) throw new Error("User not authenticated");
       
       const { data, error } = await supabase
         .from('assessment_results')
         .select('*')
-        .eq('candidate_id', user.id);
+        .eq('candidate_id', user.id)
+        .eq('completed', true);
         
       if (error) throw error;
       return data || [];
+    },
+    enabled: !!user
+  });
+
+  // Fetch videos watched data
+  const { data: videosWatched, isLoading: isLoadingVideosWatched } = useQuery({
+    queryKey: ['videos-watched', user?.id],
+    queryFn: async () => {
+      if (!user?.id) throw new Error("User not authenticated");
+      
+      // This would be a real endpoint to fetch which videos the user has watched
+      // For now, we'll mock this by checking the quiz completion status
+      return [];
     },
     enabled: !!user
   });
@@ -65,14 +79,9 @@ const TrainingModuleList: React.FC<TrainingModuleListProps> = ({ currentStep }) 
     try {
       setModuleBeingStarted(moduleId);
       
-      // Mark this module as started in the database
-      // In a real app, we would update a user_progress table
-      
-      // For demo purposes, we'll just show a toast and navigate
+      // In a real implementation, we would track that the user started this module
+      // For now, just show a toast and navigate via the Link component
       toast.success("Module started! You can now watch the videos and take the quiz.");
-      
-      // Navigate to the training page for this module
-      // This will happen through the Link component's onClick
     } catch (error) {
       console.error("Error starting module:", error);
       toast.error("Failed to start module. Please try again.");
@@ -81,84 +90,82 @@ const TrainingModuleList: React.FC<TrainingModuleListProps> = ({ currentStep }) 
     }
   };
 
-  // Calculate progress based on real data
+  // Calculate progress based on real quiz data
   const getModuleProgress = (moduleId: string) => {
-    if (!moduleId || !progressData) return 0;
+    if (!moduleId || !modules || !quizResults) return 0;
     
-    // In a real app, we would calculate this based on the number of videos watched
-    // and quizzes completed for this specific module
+    const module = modules.find(m => m.id === moduleId);
+    if (!module) return 0;
     
-    // For now, we'll use simplified logic based on assessment results and current step
-    const moduleAssessments = progressData.filter((result: any) => 
-      result.assessment_id === moduleId || 
-      (modules?.find(m => m.id === moduleId)?.quiz_id === result.assessment_id)
+    // Check if the quiz for this module has been completed
+    const quizCompleted = quizResults.some(result => 
+      result.assessment_id === module.quiz_id && result.completed
     );
     
-    if (moduleAssessments.length > 0) {
-      // If there's a completed assessment for this module
-      const completed = moduleAssessments.some((result: any) => result.completed);
-      return completed ? 100 : 70;
+    if (quizCompleted) {
+      return 100;
     }
     
-    // Fall back to step-based logic for demo
-    if (moduleId === modules?.[0]?.id) {
-      return currentStep >= 3 ? 100 : (currentStep >= 2 ? 60 : 0);
-    } else if (moduleId === modules?.[1]?.id) {
-      return currentStep >= 4 ? 100 : (currentStep >= 3 ? 70 : 0);
-    } else if (moduleId === modules?.[2]?.id) {
-      return currentStep >= 5 ? 100 : (currentStep >= 4 ? 50 : 0);
+    // If not completed, calculate based on videos watched or accessibility
+    // This would use the videosWatched data in a real implementation
+    
+    // For now, use step-based logic as a fallback
+    if (moduleId === modules[0]?.id) {
+      return currentStep >= 3 ? 50 : 0;
+    } else if (moduleId === modules[1]?.id) {
+      return currentStep >= 4 ? 50 : 0;
+    } else if (moduleId === modules[2]?.id) {
+      return currentStep >= 5 ? 50 : 0;
     }
     
     return 0;
   };
 
   const getModuleStatus = (moduleId: string, index: number) => {
+    if (!modules) return "locked";
+    
     const progress = getModuleProgress(moduleId);
     
     if (progress === 100) {
       return "completed";
     } else if (progress > 0) {
       return "in_progress";
-    } else {
-      // Check if this module should be locked based on previous modules
-      if (index > 0 && getModuleProgress(modules?.[index-1]?.id || "") < 80) {
+    } 
+    
+    // Check if this module should be locked based on previous modules
+    if (index > 0) {
+      const prevModuleId = modules[index-1]?.id;
+      const prevModuleProgress = getModuleProgress(prevModuleId);
+      
+      if (prevModuleProgress < 100) {
         return "locked";
       }
-      
-      // Check if user has correct step to access this module
-      if (index === 0 && currentStep < 2) {
-        return "locked";
-      } else if (index === 1 && currentStep < 3) {
-        return "locked";
-      } else if (index === 2 && currentStep < 4) {
-        return "locked";
-      }
-      
-      return "available";
     }
+    
+    // Check if user has correct step to access this module
+    if (index === 0 && currentStep < 2) {
+      return "locked";
+    } else if (index === 1 && currentStep < 3) {
+      return "locked";
+    } else if (index === 2 && currentStep < 4) {
+      return "locked";
+    }
+    
+    return "available";
   };
 
   const getModuleQuizScore = (moduleId: string) => {
-    if (!moduleId || !progressData) return null;
+    if (!moduleId || !quizResults || !modules) return null;
     
-    const moduleQuizId = modules?.find(m => m.id === moduleId)?.quiz_id;
+    const module = modules.find(m => m.id === moduleId);
+    if (!module || !module.quiz_id) return null;
     
-    if (moduleQuizId) {
-      const quizResult = progressData.find((result: any) => 
-        result.assessment_id === moduleQuizId && result.completed
-      );
-      
-      if (quizResult?.score) {
-        return `${Math.round(quizResult.score)}%`;
-      }
-    }
+    const quizResult = quizResults.find(result => 
+      result.assessment_id === module.quiz_id && result.completed
+    );
     
-    // Fall back to mock data for demo
-    const progress = getModuleProgress(moduleId);
-    if (progress >= 80) {
-      if (moduleId === modules?.[0]?.id) return "85%";
-      if (moduleId === modules?.[1]?.id) return "78%";
-      if (moduleId === modules?.[2]?.id) return "92%";
+    if (quizResult?.score !== undefined) {
+      return `${Math.round(Number(quizResult.score))}%`;
     }
     
     return null;
@@ -195,7 +202,7 @@ const TrainingModuleList: React.FC<TrainingModuleListProps> = ({ currentStep }) 
     }
   };
 
-  if (isLoadingModules || isLoadingProgress) {
+  if (isLoadingModules || isLoadingQuizResults || isLoadingVideosWatched) {
     return (
       <Card>
         <CardHeader>
@@ -236,7 +243,8 @@ const TrainingModuleList: React.FC<TrainingModuleListProps> = ({ currentStep }) 
     progress: getModuleProgress(module.id),
     status: getModuleStatus(module.id, index),
     quizScore: getModuleQuizScore(module.id),
-    path: `/training?module=${module.module || module.id}`
+    path: `/training?module=${module.module || module.id}`,
+    quizPath: `/training/quiz/${module.module || module.id}`
   }));
 
   return (
@@ -302,7 +310,7 @@ const TrainingModuleList: React.FC<TrainingModuleListProps> = ({ currentStep }) 
                           className="h-9"
                           asChild
                         >
-                          <Link to={`/training/quiz/${modules[index]?.module || modules[index]?.id}`}>
+                          <Link to={module.quizPath}>
                             <FileText className="mr-1 h-4 w-4" />
                             {module.status === "completed" ? "Retake Quiz" : "Take Quiz"}
                           </Link>

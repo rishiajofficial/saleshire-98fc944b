@@ -10,7 +10,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -68,7 +67,7 @@ const TrainingQuiz = () => {
     enabled: !!module?.quiz_id
   });
 
-  // Fetch quiz questions
+  // Fetch quiz sections
   const { data: quizSections, isLoading: isLoadingQuizSections } = useQuery({
     queryKey: ['quiz-sections', quiz?.id],
     queryFn: async () => {
@@ -85,9 +84,9 @@ const TrainingQuiz = () => {
     enabled: !!quiz?.id
   });
 
-  // Fetch questions
+  // Fetch questions - handle the type safety properly
   const { data: allQuestions, isLoading: isLoadingQuestions } = useQuery({
-    queryKey: ['quiz-questions', quizSections?.map(s => s.id).join(',')],
+    queryKey: ['quiz-questions', quizSections?.length > 0 ? quizSections.map(s => s.id).join(',') : ''],
     queryFn: async () => {
       if (!quizSections || quizSections.length === 0) throw new Error("No sections available");
       
@@ -113,6 +112,34 @@ const TrainingQuiz = () => {
       setQuizStartTime(new Date());
     }
   }, [questions, quizStartTime]);
+
+  // Check if the user has already taken this quiz
+  const { data: existingResult, isLoading: isLoadingResult } = useQuery({
+    queryKey: ['quiz-result', user?.id, module?.quiz_id],
+    queryFn: async () => {
+      if (!user?.id || !module?.quiz_id) throw new Error("User or quiz ID not available");
+      
+      const { data, error } = await supabase
+        .from('assessment_results')
+        .select('*')
+        .eq('candidate_id', user.id)
+        .eq('assessment_id', module.quiz_id)
+        .eq('completed', true)
+        .maybeSingle();
+        
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!(user?.id && module?.quiz_id)
+  });
+
+  // Check if there's an existing result and update the state
+  useEffect(() => {
+    if (existingResult && !quizCompleted) {
+      setQuizCompleted(true);
+      setScore(existingResult.score);
+    }
+  }, [existingResult]);
 
   const handleAnswerSelect = (questionIndex: number, optionIndex: number) => {
     setAnswers({
@@ -189,10 +216,15 @@ const TrainingQuiz = () => {
       
       // Update candidate step if passed
       if (finalScore >= 70) {
+        let nextStep = 3; // Default
+        if (module.module === 'product') nextStep = 3;
+        else if (module.module === 'sales') nextStep = 4;
+        else if (module.module === 'customer-service') nextStep = 5;
+        
         const { error: updateError } = await supabase
           .from('candidates')
           .update({
-            current_step: Math.min(module.module === 'product' ? 3 : module.module === 'sales' ? 4 : 5, 5)
+            current_step: Math.max(nextStep, (user && 'candidateData' in user) ? user.candidateData?.current_step || 3 : 3)
           })
           .eq('id', user.id);
           
@@ -210,7 +242,7 @@ const TrainingQuiz = () => {
     }
   };
 
-  const isLoading = isLoadingModule || isLoadingQuiz || isLoadingQuizSections || isLoadingQuestions;
+  const isLoading = isLoadingModule || isLoadingQuiz || isLoadingQuizSections || isLoadingQuestions || isLoadingResult;
 
   if (isLoading) {
     return (
@@ -375,7 +407,7 @@ const TrainingQuiz = () => {
                   onValueChange={(value) => handleAnswerSelect(currentQuestionIndex, parseInt(value))}
                 >
                   <div className="space-y-3">
-                    {currentQuestion.options.map((option: string, idx: number) => (
+                    {Array.isArray(currentQuestion.options) && currentQuestion.options.map((option: string, idx: number) => (
                       <div key={idx} className="flex items-center space-x-2 border p-3 rounded-md">
                         <RadioGroupItem value={idx.toString()} id={`option-${idx}`} />
                         <Label htmlFor={`option-${idx}`} className="flex-1 cursor-pointer font-normal">
