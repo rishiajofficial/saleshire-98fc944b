@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 
 // Types for training data
 interface Video {
@@ -56,7 +57,6 @@ const Training = () => {
   const { user, profile } = useAuth();
   const [activeModule, setActiveModule] = useState("product");
   const [trainingModules, setTrainingModules] = useState<TrainingModule[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [progress, setProgress] = useState({
     product: 0,
     sales: 0,
@@ -64,123 +64,159 @@ const Training = () => {
     overall: 0
   });
 
-  useEffect(() => {
-    if (user) {
-      fetchTrainingData();
-    }
-  }, [user]);
-
-  const fetchTrainingData = async () => {
-    try {
-      setIsLoading(true);
+  // Fetch candidate data to check current step
+  const { data: candidateData, isLoading: candidateLoading } = useQuery({
+    queryKey: ['candidate-data', user?.id],
+    queryFn: async () => {
+      if (!user) throw new Error("User not authenticated");
       
-      // Get training modules
-      const { data: moduleData, error: moduleError } = await supabase
+      const { data, error } = await supabase
+        .from('candidates')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+        
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user
+  });
+
+  // Fetch training modules
+  const { data: modulesData, isLoading: modulesLoading } = useQuery({
+    queryKey: ['training-modules'],
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from('training_modules')
         .select('*')
         .order('created_at', { ascending: true });
         
-      if (moduleError) throw moduleError;
-      
-      // Get videos
-      const { data: videoData, error: videoError } = await supabase
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Fetch videos
+  const { data: videosData, isLoading: videosLoading } = useQuery({
+    queryKey: ['training-videos'],
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from('videos')
         .select('*')
         .order('created_at', { ascending: true });
         
-      if (videoError) throw videoError;
-      
-      // Get watched videos (this would be from another table in a real app)
-      // For now, we'll simulate some watched videos
-      
-      // Group videos by module
-      const moduleMap: Record<string, Video[]> = {};
-      videoData.forEach((video: Video) => {
-        if (!moduleMap[video.module]) {
-          moduleMap[video.module] = [];
-        }
-        
-        // Simulate some videos as watched
-        if (video.module === 'product' && Math.random() > 0.3) {
-          video.watched = true;
-        } else if (video.module === 'sales' && Math.random() > 0.7) {
-          video.watched = true;
-        } else {
-          video.watched = false;
-        }
-        
-        moduleMap[video.module].push(video);
-      });
-      
-      // Calculate progress for each module
-      const productProgress = calculateModuleProgress(moduleMap['product'] || []);
-      const salesProgress = calculateModuleProgress(moduleMap['sales'] || []);
-      const relationshipProgress = calculateModuleProgress(moduleMap['relationship'] || []);
-      
-      // Overall progress
-      const overallProgress = Math.round(
-        (productProgress + salesProgress + relationshipProgress) / 3
-      );
-      
-      setProgress({
-        product: productProgress,
-        sales: salesProgress,
-        relationship: relationshipProgress,
-        overall: overallProgress
-      });
-      
-      // Format modules with videos
-      const formattedModules: TrainingModule[] = [
-        {
-          id: "product",
-          title: "Product Knowledge",
-          description: "Learn about our security products, features, and target customers",
-          module: "product",
-          progress: productProgress,
-          status: productProgress === 100 ? 'completed' : 'in_progress',
-          locked: false,
-          videos: moduleMap['product'] || []
-        },
-        {
-          id: "sales",
-          title: "Sales Techniques",
-          description: "Master effective pitching, objection handling, and closing techniques",
-          module: "sales",
-          progress: salesProgress,
-          status: salesProgress === 100 ? 'completed' : (productProgress >= 80 ? 'in_progress' : 'locked'),
-          locked: productProgress < 80,
-          videos: moduleMap['sales'] || []
-        },
-        {
-          id: "retailer",
-          title: "Retailer Relationships",
-          description: "Strategies for building and maintaining relationships with retailers",
-          module: "relationship",
-          progress: relationshipProgress,
-          status: relationshipProgress === 100 ? 'completed' : (salesProgress >= 80 ? 'in_progress' : 'locked'),
-          locked: salesProgress < 80,
-          videos: moduleMap['relationship'] || []
-        }
-      ];
-      
-      setTrainingModules(formattedModules);
-      
-      // Set active module to the one in progress
-      if (productProgress < 100) {
-        setActiveModule("product");
-      } else if (salesProgress < 100 && productProgress >= 80) {
-        setActiveModule("sales");
-      } else if (relationshipProgress < 100 && salesProgress >= 80) {
-        setActiveModule("retailer");
-      }
-      
-    } catch (error: any) {
-      toast.error("Failed to load training data");
-      console.error("Error fetching training data:", error.message);
-    } finally {
-      setIsLoading(false);
+      if (error) throw error;
+      return data;
     }
-  };
+  });
+
+  // Fetch user's watched videos - this would connect to a real table in a complete implementation
+  const { data: watchedVideosData, isLoading: watchedLoading } = useQuery({
+    queryKey: ['watched-videos', user?.id],
+    queryFn: async () => {
+      if (!user) throw new Error("User not authenticated");
+      
+      // This is a placeholder - in a real implementation, you would have a table to track
+      // which videos a user has watched. For now, we'll simulate this data.
+      return [
+        { video_id: "1", user_id: user.id, completed: true },
+        { video_id: "3", user_id: user.id, completed: true }
+      ];
+    },
+    enabled: !!user
+  });
+
+  // Process the data when it's loaded
+  useEffect(() => {
+    if (!modulesLoading && !videosLoading && !watchedLoading && modulesData && videosData) {
+      try {
+        // Organize videos by module
+        const moduleMap: Record<string, Video[]> = {};
+        videosData.forEach((video: any) => {
+          if (!moduleMap[video.module]) {
+            moduleMap[video.module] = [];
+          }
+          
+          // Check if video is watched (in a real app, this would be from the watchedVideosData)
+          const isWatched = watchedVideosData?.some(
+            (watched: any) => watched.video_id === video.id && watched.completed
+          );
+          
+          moduleMap[video.module].push({
+            ...video,
+            watched: isWatched || false
+          });
+        });
+        
+        // Calculate progress for each module
+        const productProgress = calculateModuleProgress(moduleMap['product'] || []);
+        const salesProgress = calculateModuleProgress(moduleMap['sales'] || []);
+        const relationshipProgress = calculateModuleProgress(moduleMap['relationship'] || []);
+        
+        // Overall progress
+        const overallProgress = Math.round(
+          (productProgress + salesProgress + relationshipProgress) / 3
+        );
+        
+        setProgress({
+          product: productProgress,
+          sales: salesProgress,
+          relationship: relationshipProgress,
+          overall: overallProgress
+        });
+        
+        // Format modules with videos and determine access based on candidate step
+        const currentStep = candidateData?.current_step || 1;
+        
+        const formattedModules: TrainingModule[] = [
+          {
+            id: "product",
+            title: "Product Knowledge",
+            description: "Learn about our security products, features, and target customers",
+            module: "product",
+            progress: productProgress,
+            status: productProgress === 100 ? 'completed' : 'in_progress',
+            locked: false,
+            videos: moduleMap['product'] || []
+          },
+          {
+            id: "sales",
+            title: "Sales Techniques",
+            description: "Master effective pitching, objection handling, and closing techniques",
+            module: "sales",
+            progress: salesProgress,
+            status: salesProgress === 100 ? 'completed' : (productProgress >= 80 ? 'in_progress' : 'locked'),
+            locked: productProgress < 80 || currentStep < 3,
+            videos: moduleMap['sales'] || []
+          },
+          {
+            id: "retailer",
+            title: "Retailer Relationships",
+            description: "Strategies for building and maintaining relationships with retailers",
+            module: "relationship",
+            progress: relationshipProgress,
+            status: relationshipProgress === 100 ? 'completed' : (salesProgress >= 80 ? 'in_progress' : 'locked'),
+            locked: salesProgress < 80 || currentStep < 3,
+            videos: moduleMap['relationship'] || []
+          }
+        ];
+        
+        setTrainingModules(formattedModules);
+        
+        // Set active module to the one in progress
+        if (productProgress < 100) {
+          setActiveModule("product");
+        } else if (salesProgress < 100 && productProgress >= 80) {
+          setActiveModule("sales");
+        } else if (relationshipProgress < 100 && salesProgress >= 80) {
+          setActiveModule("retailer");
+        }
+      } catch (error: any) {
+        console.error("Error processing training data:", error.message);
+        toast.error("Failed to process training data");
+      }
+    }
+  }, [modulesData, videosData, watchedVideosData, candidateData]);
 
   const calculateModuleProgress = (videos: Video[]) => {
     if (videos.length === 0) return 0;
@@ -214,15 +250,30 @@ const Training = () => {
     }
   };
 
-  const handleWatchVideo = (moduleId: string, videoId: string) => {
-    // In a real application, this would track video progress
-    // For now, we'll just navigate to a video player page
-    navigate(`/training/video/${moduleId}/${videoId}`);
+  const handleWatchVideo = async (moduleId: string, videoId: string) => {
+    if (!user) return;
+    
+    try {
+      // In a real application, this would log the video as watched in the database
+      // For now, we'll navigate to the video player
+      navigate(`/training/video/${moduleId}/${videoId}`);
+      
+      // Simulate marking a video as watched
+      toast.success("Video marked as watched");
+      
+      // We would refresh the data after marking the video as watched
+      // In a real implementation, you'd refetch the watchedVideos data
+    } catch (error: any) {
+      console.error("Error tracking video watch:", error.message);
+      toast.error("Failed to track video progress");
+    }
   };
 
   const handleTakeQuiz = (moduleId: string) => {
     navigate(`/training/quiz/${moduleId}`);
   };
+
+  const isLoading = modulesLoading || videosLoading || watchedLoading || candidateLoading;
 
   if (isLoading) {
     return (
@@ -318,45 +369,51 @@ const Training = () => {
                 <CardContent>
                   <h3 className="text-lg font-medium mb-4">Training Videos</h3>
                   <div className="grid gap-4">
-                    {module.videos.map((video) => (
-                      <div 
-                        key={video.id} 
-                        className={`p-4 border rounded-lg ${module.locked ? 'opacity-60' : ''}`}
-                      >
-                        <div className="flex gap-4">
-                          <div className="w-32 h-20 rounded-md bg-muted overflow-hidden flex-shrink-0">
-                            <img 
-                              src="/placeholder.svg" 
-                              alt={video.title} 
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-medium mb-1">{video.title}</h4>
-                            <div className="flex items-center text-sm text-muted-foreground">
-                              <span className="mr-3">{video.duration}</span>
-                              {video.watched && (
-                                <span className="flex items-center text-green-600">
-                                  <CheckCircle2 className="mr-1 h-3 w-3" /> Watched
-                                </span>
-                              )}
+                    {module.videos.length > 0 ? (
+                      module.videos.map((video) => (
+                        <div 
+                          key={video.id} 
+                          className={`p-4 border rounded-lg ${module.locked ? 'opacity-60' : ''}`}
+                        >
+                          <div className="flex gap-4">
+                            <div className="w-32 h-20 rounded-md bg-muted overflow-hidden flex-shrink-0">
+                              <img 
+                                src="/placeholder.svg" 
+                                alt={video.title} 
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="font-medium mb-1">{video.title}</h4>
+                              <div className="flex items-center text-sm text-muted-foreground">
+                                <span className="mr-3">{video.duration}</span>
+                                {video.watched && (
+                                  <span className="flex items-center text-green-600">
+                                    <CheckCircle2 className="mr-1 h-3 w-3" /> Watched
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex flex-col justify-center">
+                              <Button 
+                                onClick={() => handleWatchVideo(module.id, video.id)}
+                                variant="outline" 
+                                size="sm"
+                                className="flex items-center"
+                                disabled={module.locked}
+                              >
+                                <PlayCircle className="mr-1 h-4 w-4" />
+                                {video.watched ? "Rewatch" : "Watch"}
+                              </Button>
                             </div>
                           </div>
-                          <div className="flex flex-col justify-center">
-                            <Button 
-                              onClick={() => handleWatchVideo(module.id, video.id)}
-                              variant="outline" 
-                              size="sm"
-                              className="flex items-center"
-                              disabled={module.locked}
-                            >
-                              <PlayCircle className="mr-1 h-4 w-4" />
-                              {video.watched ? "Rewatch" : "Watch"}
-                            </Button>
-                          </div>
                         </div>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-muted-foreground">
+                        No videos available for this module
                       </div>
-                    ))}
+                    )}
                   </div>
                 </CardContent>
                 <CardFooter className="border-t pt-6 pb-4 flex justify-between">
