@@ -31,6 +31,24 @@ const TrainingQuiz = () => {
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [score, setScore] = useState<number | null>(null);
 
+  // Fetch candidate data to get current_step
+  const { data: candidateData } = useQuery({
+    queryKey: ['candidate-data', user?.id],
+    queryFn: async () => {
+      if (!user?.id) throw new Error("No user ID available");
+      
+      const { data, error } = await supabase
+        .from('candidates')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+        
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id
+  });
+
   // Fetch module data
   const { data: module, isLoading: isLoadingModule } = useQuery({
     queryKey: ['training-module', moduleId],
@@ -221,10 +239,11 @@ const TrainingQuiz = () => {
         else if (module.module === 'sales') nextStep = 4;
         else if (module.module === 'customer-service') nextStep = 5;
         
+        // Use candidateData from the query instead of accessing user.candidateData
         const { error: updateError } = await supabase
           .from('candidates')
           .update({
-            current_step: Math.max(nextStep, (user && 'candidateData' in user) ? user.candidateData?.current_step || 3 : 3)
+            current_step: Math.max(nextStep, candidateData?.current_step || 3)
           })
           .eq('id', user.id);
           
