@@ -52,6 +52,7 @@ const Register = () => {
   const { signUp, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [rawPhone, setRawPhone] = useState("");
 
   useEffect(() => {
     // If user is already logged in and we're on the register page, redirect
@@ -80,8 +81,11 @@ const Register = () => {
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formattedPhone = formatPhoneNumber(e.target.value);
-    setPhone(formattedPhone);
+    // Only allow digits, max 10
+    let cleaned = e.target.value.replace(/\D/g, "");
+    if (cleaned.length > 10) cleaned = cleaned.slice(0, 10);
+    setRawPhone(cleaned);
+    setPhone(cleaned.length > 0 ? `+91 ${cleaned}` : "");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -119,7 +123,8 @@ const Register = () => {
       };
 
       await signUp(email, password, userData);
-      navigate("/application");
+      // On signup, redirect to job openings, not application
+      navigate("/job-openings");
     } catch (error: any) {
       setError(error.message || "Registration failed");
     } finally {
@@ -214,10 +219,20 @@ const Register = () => {
                   <Label htmlFor="phone">Phone Number</Label>
                   <Input
                     id="phone"
-                    placeholder="+91 98765 43210"
-                    value={phone}
+                    type="tel"
+                    maxLength={14}
+                    pattern="[0-9]{10}"
+                    placeholder="9876543210"
+                    value={rawPhone}
                     onChange={handlePhoneChange}
+                    required
+                    inputMode="numeric"
                   />
+                  {rawPhone.length > 0 && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      India (+91): +91 {rawPhone}
+                    </div>
+                  )}
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">

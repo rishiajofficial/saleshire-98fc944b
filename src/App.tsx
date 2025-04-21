@@ -33,6 +33,7 @@ import AssessmentResultDetails from "./pages/admin/AssessmentResultDetails";
 import AssessmentSectionDetails from "./pages/admin/AssessmentSectionDetails";
 import TrainingModuleDetails from "./pages/admin/TrainingModuleDetails";
 import QuestionDetails from "./pages/admin/QuestionDetails";
+import JobOpenings from "./pages/candidate/JobOpenings";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
@@ -188,6 +189,11 @@ const App = () => (
             } />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="/job-openings" element={
+              <ProtectedRoute allowedRoles={['candidate']}>
+                <JobOpenings />
+              </ProtectedRoute>
+            } />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

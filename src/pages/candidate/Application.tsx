@@ -42,12 +42,17 @@ import MainLayout from "@/components/layout/MainLayout";
 import { Loader2, Upload, FileText, Video } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-// Define schema for form validation
 const formSchema = z.object({
   resume: z.string().min(1, "Resume is required"),
   aboutMeVideo: z.string().min(1, "About me video is required"),
   salesPitchVideo: z.string().min(1, "Sales pitch video is required"),
 });
+
+const steps = [
+  { id: 1, label: "Profile Info" },
+  { id: 2, label: "Uploads" },
+  { id: 3, label: "Assessment" },
+];
 
 const Application = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -62,7 +67,9 @@ const Application = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Initialize form with react-hook-form
+  const [currentStep, setCurrentStep] = useState(1);
+  const [jobDetails, setJobDetails] = useState<{ id: string, title: string } | null>(null);
+
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -76,15 +83,13 @@ const Application = () => {
   const [uploadingAboutVideo, setUploadingAboutVideo] = useState(false);
   const [uploadingSalesVideo, setUploadingSalesVideo] = useState(false);
 
-  // Helper function to upload a file and get its public URL
   const uploadFileAndGetUrl = async (file: File, path: string): Promise<string | null> => {
     try {
-      // 1. Upload the file
       const { error: uploadError } = await supabase.storage
-        .from('candidateartifacts') // Use your actual bucket name
+        .from('candidateartifacts')
         .upload(path, file, {
           cacheControl: '3600',
-          upsert: true, // Overwrite if exists for simplicity
+          upsert: true,
         });
 
       if (uploadError) {
@@ -92,9 +97,8 @@ const Application = () => {
         throw new Error(`Failed to upload file: ${uploadError.message}`);
       }
 
-      // 2. Get the public URL
       const { data } = supabase.storage
-        .from('candidateartifacts') // Use your actual bucket name
+        .from('candidateartifacts')
         .getPublicUrl(path);
 
       if (!data?.publicUrl) {
@@ -114,7 +118,6 @@ const Application = () => {
     }
   };
 
-  // Actual file upload handler for Resume
   const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0 || !user) {
       return;
@@ -129,20 +132,18 @@ const Application = () => {
     setUploadingResume(false);
 
     if (publicUrl) {
-      form.setValue("resume", publicUrl); // Set REAL URL in form
+      form.setValue("resume", publicUrl);
       toast({
         title: "Resume uploaded",
         description: "Your resume has been uploaded successfully.",
       });
     } else {
-      // Reset input if upload failed
-      e.target.value = ""; 
+      e.target.value = "";
     }
   };
 
-  // Actual file upload handler for Videos
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: "aboutMe" | "salesPitch") => {
-     if (!e.target.files || e.target.files.length === 0 || !user) {
+    if (!e.target.files || e.target.files.length === 0 || !user) {
       return;
     }
     const file = e.target.files[0];
@@ -157,22 +158,39 @@ const Application = () => {
     setUploading(false);
 
     if (publicUrl) {
-      form.setValue(fieldName, publicUrl); // Set REAL URL in form
+      form.setValue(fieldName, publicUrl);
       toast({
         title: "Video uploaded",
         description: `Your ${type === "aboutMe" ? "about me" : "sales pitch"} video has been uploaded successfully.`,
       });
     } else {
-       e.target.value = "";
+      e.target.value = "";
     }
   };
+
+  useEffect(() => {
+    const selectedJob = localStorage.getItem("selectedJob");
+    if (!selectedJob) {
+      navigate("/job-openings");
+      return;
+    }
+
+    const mockJobs = [
+      { id: "job-a", title: "Sales Executive" },
+      { id: "job-b", title: "Business Development Associate" },
+      { id: "job-c", title: "Field Sales Representative" },
+    ];
+
+    const found = mockJobs.find(j => j.id === selectedJob);
+    if (found) setJobDetails(found);
+  }, [navigate]);
 
   useEffect(() => {
     console.log("[Application.tsx] Running useEffect to fetch application data...");
     const fetchApplicationData = async () => {
       if (!user) {
-          console.log("[Application.tsx] useEffect - No user, returning.");
-         return;
+        console.log("[Application.tsx] useEffect - No user, returning.");
+        return;
       }
       console.log("[Application.tsx] useEffect - User found, fetching data for:", user.id);
 
@@ -195,14 +213,12 @@ const Application = () => {
             salesPitchVideo: data.sales_pitch_video,
           });
 
-          // Set the values in the form
           form.setValue("resume", data.resume || "");
           form.setValue("aboutMeVideo", data.about_me_video || "");
           form.setValue("salesPitchVideo", data.sales_pitch_video || "");
 
           setCandidateStatus(data.status);
 
-          // Check if all required fields are filled to determine if application is submitted
           if (data.resume && data.about_me_video && data.sales_pitch_video) {
             setIsSubmitted(true);
           }
@@ -257,7 +273,6 @@ const Application = () => {
     }
   };
 
-  // Mock function to simulate saving URLs from external sources
   const saveExternalUrl = (type: "resume" | "aboutMeVideo" | "salesPitchVideo", url: string) => {
     form.setValue(type, url);
     toast({
@@ -266,17 +281,303 @@ const Application = () => {
     });
   };
 
-  // Determine which alert to show
   const showApplicationRequiredAlert = 
-    candidateStatus && // Status must be loaded
-    ["applied", "screening"].includes(candidateStatus.toLowerCase()); // Only show if status is initial
-  
-  const showApplicationSubmittedAlert = isSubmitted; // Show only if form fields were submitted
+    candidateStatus && 
+    ["applied", "screening"].includes(candidateStatus.toLowerCase());
+
+  const showApplicationSubmittedAlert = isSubmitted;
+
+  const handleNext = () => setCurrentStep((step) => Math.min(step + 1, steps.length));
+  const handleBack = () => setCurrentStep((step) => Math.max(step - 1, 1));
+
+  useEffect(() => {
+    if(isSubmitted) {
+      localStorage.removeItem("selectedJob");
+    }
+  }, [isSubmitted]);
 
   return (
     <MainLayout>
-      <div className="container mx-auto py-8">
-        <h1 className="text-3xl font-bold mb-8">Application Form</h1>
+      <div className="container mx-auto py-8 max-w-2xl">
+        <h1 className="text-3xl font-bold mb-2">My Application</h1>
+        {jobDetails && (
+          <div className="bg-blue-50 px-4 py-2 rounded mb-8">
+            <div className="font-semibold">
+              Job Applied:&nbsp; <span className="text-blue-800">{jobDetails.title}</span>
+            </div>
+            <div className="text-xs text-gray-600">Application Steps: Profile &rarr; Uploads &rarr; Assessment</div>
+          </div>
+        )}
+
+        <div className="flex gap-4 mb-8">
+          {steps.map(s => (
+            <div key={s.id} className={`flex-1 flex flex-col items-center`}>
+              <div className={`rounded-full w-8 h-8 flex items-center justify-center mb-1
+                ${currentStep === s.id ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}
+              `}>{s.id}</div>
+              <span className={`text-xs ${currentStep === s.id ? 'font-bold text-blue-700' : 'text-gray-500'}`}>{s.label}</span>
+            </div>
+          ))}
+        </div>
+
+        {currentStep === 1 && (
+          <div className="mb-8">
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold mb-3">Profile Information</h2>
+              <ul className="grid gap-2 text-base">
+                <li><b>Name:</b> {user?.user_metadata?.name || "-"}</li>
+                <li><b>Email:</b> {user?.email}</li>
+                <li><b>Phone:</b> {user?.user_metadata?.phone || "-"}</li>
+                <li><b>Location:</b> {user?.user_metadata?.location || "-"}</li>
+                <li><b>Region:</b> {user?.user_metadata?.region || "-"}</li>
+              </ul>
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={handleNext}>Next</Button>
+            </div>
+          </div>
+        )}
+
+        {currentStep === 2 && (
+          <>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(() => setCurrentStep(3))} className="space-y-8">
+                <div className="grid grid-cols-1 gap-8">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center">
+                        <FileText className="mr-2" />
+                        Resume
+                      </CardTitle>
+                      <CardDescription>
+                        Upload your resume or provide a link to it
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="resume"
+                        render={({ field }) => (
+                          <FormItem>
+                            <div className="flex flex-col space-y-2">
+                              <FormLabel>Resume URL</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="https://example.com/my-resume.pdf" 
+                                  {...field} 
+                                  disabled={isSubmitted}
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Direct link to your resume (PDF preferred)
+                              </FormDescription>
+                              <FormMessage />
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="flex items-center">
+                        <div className="flex-grow border-t border-gray-200"></div>
+                        <span className="mx-4 text-sm text-gray-500">OR</span>
+                        <div className="flex-grow border-t border-gray-200"></div>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="resumeUpload">Upload Resume</Label>
+                        <div className="mt-2">
+                          <div className="flex items-center justify-center w-full">
+                            <label
+                              htmlFor="resumeUpload"
+                              className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
+                            >
+                              <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                <Upload className="w-8 h-8 mb-2 text-gray-500" />
+                                <p className="mb-2 text-sm text-gray-500">
+                                  <span className="font-semibold">Click to upload</span> or drag and drop
+                                </p>
+                                <p className="text-xs text-gray-500">PDF, DOCX (MAX. 5MB)</p>
+                              </div>
+                              <input 
+                                id="resumeUpload" 
+                                type="file" 
+                                className="hidden" 
+                                onChange={handleResumeUpload}
+                                disabled={isSubmitted}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center">
+                        <Video className="mr-2" />
+                        About Me Video
+                      </CardTitle>
+                      <CardDescription>
+                        Share a video introducing yourself
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="aboutMeVideo"
+                        render={({ field }) => (
+                          <FormItem>
+                            <div className="flex flex-col space-y-2">
+                              <FormLabel>Video URL</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="https://example.com/about-me-video" 
+                                  {...field} 
+                                  disabled={isSubmitted}
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Link to your about me video (YouTube, Vimeo, etc.)
+                              </FormDescription>
+                              <FormMessage />
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="flex items-center">
+                        <div className="flex-grow border-t border-gray-200"></div>
+                        <span className="mx-4 text-sm text-gray-500">OR</span>
+                        <div className="flex-grow border-t border-gray-200"></div>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="aboutMeUpload">Upload Video</Label>
+                        <div className="mt-2">
+                          <div className="flex items-center justify-center w-full">
+                            <label
+                              htmlFor="aboutMeUpload"
+                              className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
+                            >
+                              <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                <Upload className="w-8 h-8 mb-2 text-gray-500" />
+                                <p className="mb-2 text-sm text-gray-500">
+                                  <span className="font-semibold">Click to upload</span> or drag and drop
+                                </p>
+                                <p className="text-xs text-gray-500">MP4, MOV, WEBM (MAX. 100MB)</p>
+                              </div>
+                              <input 
+                                id="aboutMeUpload" 
+                                type="file" 
+                                className="hidden" 
+                                onChange={(e) => handleVideoUpload(e, "aboutMe")}
+                                disabled={isSubmitted}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="md:col-span-2">
+                    <CardHeader>
+                      <CardTitle className="flex items-center">
+                        <Video className="mr-2" />
+                        Sales Pitch Video
+                      </CardTitle>
+                      <CardDescription>
+                        Record a short sales pitch demonstrating your skills
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="salesPitchVideo"
+                        render={({ field }) => (
+                          <FormItem>
+                            <div className="flex flex-col space-y-2">
+                              <FormLabel>Video URL</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="https://example.com/sales-pitch-video" 
+                                  {...field} 
+                                  disabled={isSubmitted}
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Link to your sales pitch video (YouTube, Vimeo, etc.)
+                              </FormDescription>
+                              <FormMessage />
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="flex items-center">
+                        <div className="flex-grow border-t border-gray-200"></div>
+                        <span className="mx-4 text-sm text-gray-500">OR</span>
+                        <div className="flex-grow border-t border-gray-200"></div>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="salesPitchUpload">Upload Video</Label>
+                        <div className="mt-2">
+                          <div className="flex items-center justify-center w-full">
+                            <label
+                              htmlFor="salesPitchUpload"
+                              className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
+                            >
+                              <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                <Upload className="w-8 h-8 mb-2 text-gray-500" />
+                                <p className="mb-2 text-sm text-gray-500">
+                                  <span className="font-semibold">Click to upload</span> or drag and drop
+                                </p>
+                                <p className="text-xs text-gray-500">MP4, MOV, WEBM (MAX. 100MB)</p>
+                              </div>
+                              <input 
+                                id="salesPitchUpload" 
+                                type="file" 
+                                className="hidden" 
+                                onChange={(e) => handleVideoUpload(e, "salesPitch")}
+                                disabled={isSubmitted}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="flex justify-between mt-4">
+                  <Button type="button" variant="outline" onClick={handleBack}>Back</Button>
+                  <Button type="submit">Next</Button>
+                </div>
+              </form>
+            </Form>
+          </>
+        )}
+
+        {currentStep === 3 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-3">Assessment</h2>
+            <div className="bg-gray-100 rounded p-4 mb-2">
+              <div className="text-gray-700">
+                This is where the assessment for <strong>{jobDetails?.title}</strong> would appear.
+                <br/>
+                (Assessment integration will be handled as per backend mapping.)
+              </div>
+            </div>
+            <div className="flex justify-between mt-8">
+              <Button onClick={handleBack} variant="outline">Back</Button>
+              <Button onClick={() => setIsSubmitted(true)} disabled={isLoading}>
+                {isLoading ? "Submitting..." : "Finish Application"}
+              </Button>
+            </div>
+          </div>
+        )}
 
         {showApplicationSubmittedAlert ? (
           <Alert className="mb-8">
@@ -294,259 +595,7 @@ const Application = () => {
               All fields are required.
             </AlertDescription>
           </Alert>
-        ) : null} {/* No alert if submitted=false AND status is past initial stages */}
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Resume Upload Section */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <FileText className="mr-2" />
-                    Resume
-                  </CardTitle>
-                  <CardDescription>
-                    Upload your resume or provide a link to it
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="resume"
-                    render={({ field }) => (
-                      <FormItem>
-                        <div className="flex flex-col space-y-2">
-                          <FormLabel>Resume URL</FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="https://example.com/my-resume.pdf" 
-                              {...field} 
-                              disabled={isSubmitted}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Direct link to your resume (PDF preferred)
-                          </FormDescription>
-                          <FormMessage />
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="flex items-center">
-                    <div className="flex-grow border-t border-gray-200"></div>
-                    <span className="mx-4 text-sm text-gray-500">OR</span>
-                    <div className="flex-grow border-t border-gray-200"></div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="resumeUpload">Upload Resume</Label>
-                    <div className="mt-2">
-                      <div className="flex items-center justify-center w-full">
-                        <label
-                          htmlFor="resumeUpload"
-                          className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
-                        >
-                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                            <Upload className="w-8 h-8 mb-2 text-gray-500" />
-                            <p className="mb-2 text-sm text-gray-500">
-                              <span className="font-semibold">Click to upload</span> or drag and drop
-                            </p>
-                            <p className="text-xs text-gray-500">PDF, DOCX (MAX. 5MB)</p>
-                          </div>
-                          <input 
-                            id="resumeUpload" 
-                            type="file" 
-                            className="hidden" 
-                            onChange={handleResumeUpload}
-                            disabled={isSubmitted}
-                          />
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* About Me Video Section */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Video className="mr-2" />
-                    About Me Video
-                  </CardTitle>
-                  <CardDescription>
-                    Share a video introducing yourself
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="aboutMeVideo"
-                    render={({ field }) => (
-                      <FormItem>
-                        <div className="flex flex-col space-y-2">
-                          <FormLabel>Video URL</FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="https://example.com/about-me-video" 
-                              {...field} 
-                              disabled={isSubmitted}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Link to your about me video (YouTube, Vimeo, etc.)
-                          </FormDescription>
-                          <FormMessage />
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="flex items-center">
-                    <div className="flex-grow border-t border-gray-200"></div>
-                    <span className="mx-4 text-sm text-gray-500">OR</span>
-                    <div className="flex-grow border-t border-gray-200"></div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="aboutMeUpload">Upload Video</Label>
-                    <div className="mt-2">
-                      <div className="flex items-center justify-center w-full">
-                        <label
-                          htmlFor="aboutMeUpload"
-                          className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
-                        >
-                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                            <Upload className="w-8 h-8 mb-2 text-gray-500" />
-                            <p className="mb-2 text-sm text-gray-500">
-                              <span className="font-semibold">Click to upload</span> or drag and drop
-                            </p>
-                            <p className="text-xs text-gray-500">MP4, MOV, WEBM (MAX. 100MB)</p>
-                          </div>
-                          <input 
-                            id="aboutMeUpload" 
-                            type="file" 
-                            className="hidden" 
-                            onChange={(e) => handleVideoUpload(e, "aboutMe")}
-                            disabled={isSubmitted}
-                          />
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Sales Pitch Video Section */}
-              <Card className="md:col-span-2">
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Video className="mr-2" />
-                    Sales Pitch Video
-                  </CardTitle>
-                  <CardDescription>
-                    Record a short sales pitch demonstrating your skills
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="salesPitchVideo"
-                    render={({ field }) => (
-                      <FormItem>
-                        <div className="flex flex-col space-y-2">
-                          <FormLabel>Video URL</FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="https://example.com/sales-pitch-video" 
-                              {...field} 
-                              disabled={isSubmitted}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Link to your sales pitch video (YouTube, Vimeo, etc.)
-                          </FormDescription>
-                          <FormMessage />
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="flex items-center">
-                    <div className="flex-grow border-t border-gray-200"></div>
-                    <span className="mx-4 text-sm text-gray-500">OR</span>
-                    <div className="flex-grow border-t border-gray-200"></div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="salesPitchUpload">Upload Video</Label>
-                    <div className="mt-2">
-                      <div className="flex items-center justify-center w-full">
-                        <label
-                          htmlFor="salesPitchUpload"
-                          className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
-                        >
-                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                            <Upload className="w-8 h-8 mb-2 text-gray-500" />
-                            <p className="mb-2 text-sm text-gray-500">
-                              <span className="font-semibold">Click to upload</span> or drag and drop
-                            </p>
-                            <p className="text-xs text-gray-500">MP4, MOV, WEBM (MAX. 100MB)</p>
-                          </div>
-                          <input 
-                            id="salesPitchUpload" 
-                            type="file" 
-                            className="hidden" 
-                            onChange={(e) => handleVideoUpload(e, "salesPitch")}
-                            disabled={isSubmitted}
-                          />
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="flex justify-end space-x-4">
-              {!isSubmitted ? (
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    "Submit Application"
-                  )}
-                </Button>
-              ) : (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="outline">Edit Application</Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Edit Application?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Your application has already been submitted and is being reviewed.
-                        Are you sure you want to edit it? This may reset your application process.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => setIsSubmitted(false)}>
-                        Continue
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
-            </div>
-          </form>
-        </Form>
+        ) : null}
       </div>
     </MainLayout>
   );
