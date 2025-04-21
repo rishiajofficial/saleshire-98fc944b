@@ -78,23 +78,27 @@ const Candidates = () => {
   } = useQuery<CandidateWithProfile[]>({
     queryKey: ['candidates'],
     queryFn: async (): Promise<CandidateWithProfile[]> => {
+      // Fix the query to properly join profiles data
       const { data, error } = await supabase
         .from('candidates')
         .select(`
           *,
-          profile:profiles(name, email)
+          profile:profiles!candidates_id_fkey(name, email)
         `)
         .order('updated_at', { ascending: false });
+      
       if (error) {
         toast.error("Failed to fetch candidates: " + error.message);
         throw new Error(error.message);
       }
-      return data || [];
+      
+      // Cast to the correct type
+      return (data || []) as CandidateWithProfile[];
     },
     enabled: !!user,
   });
 
-  // Modified to ensure we're creating both profile and candidate records properly
+  // Fixed mutation to properly create profiles and candidates
   const createCandidateMutation = useMutation({
     mutationFn: async (formData: {
       name: string;
@@ -103,35 +107,37 @@ const Candidates = () => {
       location: string;
       status: string;
     }) => {
-      // First, we need to create a user profile
+      // Generate a new UUID for the user
+      const userId = crypto.randomUUID();
+
+      // Create a profile with the id provided
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .insert([{
+        .insert({
+          id: userId,
           name: formData.name,
           email: formData.email,
           role: 'candidate'
-        }])
+        })
         .select();
 
       if (profileError) throw new Error(`Profile creation failed: ${profileError.message}`);
       if (!profileData || profileData.length === 0) throw new Error('Failed to create profile');
 
-      const profileId = profileData[0].id;
-
-      // Then create the candidate record linked to the profile
-      const { data: createdCandidate, error: candidateError } = await supabase
+      // Then create the candidate record with the same id
+      const { data: candidateData, error: candidateError } = await supabase
         .from('candidates')
-        .insert([{
-          id: profileId,
+        .insert({
+          id: userId,
           phone: formData.phone,
           location: formData.location,
           status: formData.status,
-        }])
+        })
         .select();
 
       if (candidateError) throw new Error(`Candidate creation failed: ${candidateError.message}`);
 
-      return { profile: profileData[0], candidate: createdCandidate?.[0] };
+      return { profile: profileData[0], candidate: candidateData?.[0] };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['candidates'] });
