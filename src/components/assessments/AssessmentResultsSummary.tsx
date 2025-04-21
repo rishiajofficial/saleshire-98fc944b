@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -26,7 +27,7 @@ interface AssessmentResult {
   score: number;
   completed: boolean;
   completed_at: string | null;
-  profiles?: { name?: string | null } | null;
+  candidate_name?: string;
 }
 
 interface AssessmentResultsSummaryProps {
@@ -65,7 +66,17 @@ const AssessmentResultsSummary: React.FC<AssessmentResultsSummaryProps> = ({ ass
           
         if (dbError) throw dbError;
         
-        setResults(data || []);
+        // Transform the data to match our interface by extracting the nested candidate name
+        const transformedResults = data?.map(result => ({
+          id: result.id,
+          candidate_id: result.candidate_id,
+          score: result.score,
+          completed: result.completed,
+          completed_at: result.completed_at,
+          candidate_name: result.candidates?.profiles?.name
+        })) || [];
+        
+        setResults(transformedResults);
       } catch (err: any) {
         console.error("Error fetching assessment results:", err);
         setError("Failed to load results. " + err.message);
@@ -110,7 +121,7 @@ const AssessmentResultsSummary: React.FC<AssessmentResultsSummaryProps> = ({ ass
             <TableBody>
               {results.map((result) => (
                 <TableRow key={result.id}>
-                  <TableCell>{result.candidates?.profiles?.name || result.candidate_id}</TableCell>
+                  <TableCell>{result.candidate_name || result.candidate_id}</TableCell>
                   <TableCell>{result.completed ? 'Completed' : 'In Progress'}</TableCell>
                   <TableCell>{result.completed ? result.score : 'N/A'}</TableCell>
                   <TableCell>

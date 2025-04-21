@@ -35,6 +35,7 @@ import { toast } from "sonner";
 import MainLayout from "@/components/layout/MainLayout";
 import useDatabaseQuery from "@/hooks/useDatabaseQuery";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const AdminDashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -83,15 +84,11 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchAssessments = async () => {
       setIsLoadingAssessments(true);
-      const { data, error } = await (window as any).supabase
-        ? (window as any).supabase
-            .from('assessments')
-            .select('*')
-            .order('created_at', { ascending: false })
-        : await supabase
-            .from('assessments')
-            .select('*')
-            .order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('assessments')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
       if (error) {
         toast.error("Failed to fetch assessments: " + error.message);
         setAssessments([]);

@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import ReactPlayer from 'react-player/youtube'; // Import specifically for YouTube or general if needed
+import ReactPlayer from 'react-player/youtube'; // Import specifically for YouTube
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -83,7 +84,7 @@ const VideoPlayer = () => {
 
   // --- ReactPlayer Callbacks (Simplified) ---
 
-  const handleReady = (player: ReactPlayer) => {
+  const handleReady = () => {
     console.log('Player ready');
   };
 
