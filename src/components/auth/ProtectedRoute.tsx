@@ -18,16 +18,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   
   console.log("ProtectedRoute - Current profile:", profile);
   console.log("ProtectedRoute - Allowed roles:", allowedRoles);
-  console.log("ProtectedRoute - User email:", user?.email);
-  
-  // Special case for admin route and admin user
-  const isAdminRoute = location.pathname.startsWith('/dashboard/admin');
-  const isHrRoute = location.pathname.startsWith('/dashboard/hr');
-  const isDirectorRoute = location.pathname.startsWith('/dashboard/director');
-  const isManagerRoute = location.pathname.startsWith('/dashboard/manager');
-  
-  // Check if it's the admin email
-  const isAdminEmail = user?.email === 'admin@example.com';
   
   // Save current path for redirect after login
   useEffect(() => {
@@ -44,19 +34,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     </div>;
   }
   
-  // Special case for admin@example.com - always allow access to admin dashboard
-  if (isAdminEmail) {
-    // If admin is trying to access admin dashboard, allow it
-    if (isAdminRoute) {
-      return <>{children}</>;
-    }
-    // If admin is on another route, redirect to admin dashboard
-    return <Navigate to="/dashboard/admin" replace />;
-  }
-  
   // If not logged in, redirect to login
   if (!user) {
-    console.log("User not logged in, redirecting to login");
     return <Navigate to="/login" replace />;
   }
   
@@ -74,15 +53,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // If profile is loaded and role is not allowed, redirect to appropriate dashboard
   if (!allowedRoles.includes(profile.role as UserRole)) {
     console.log("Redirecting to correct dashboard based on role:", profile.role);
-    
     if (profile.role === 'admin') {
       return <Navigate to="/dashboard/admin" replace />;
     } else if (profile.role === 'manager') {
       return <Navigate to="/dashboard/manager" replace />;
-    } else if (profile.role === 'hr') {
-      return <Navigate to="/dashboard/hr" replace />;
     } else if (profile.role === 'director') {
       return <Navigate to="/dashboard/director" replace />;
+    } else if (profile.role === 'hr') {
+      return <Navigate to="/dashboard/hr" replace />;
     } else {
       return <Navigate to="/dashboard/candidate" replace />;
     }
