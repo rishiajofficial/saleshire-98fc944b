@@ -11,7 +11,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import Loading from "@/components/ui/loading";
 import ErrorMessage from "@/components/ui/error-message";
 import AssessmentForm, { AssessmentFormValues } from "@/components/assessments/AssessmentForm";
-// Remove other imports related to sections, stats or summary
 import AdminQuestionList from "@/components/assessments/AdminQuestionList";
 
 const AssessmentDetails = () => {
@@ -53,14 +52,11 @@ const AssessmentDetails = () => {
 
         setAssessment(assessmentData);
 
-        // Set form values
+        // Set form values - removing time_limit, prevent_backtracking, and randomize_questions
         setFormData({
           title: assessmentData.title || "",
           description: assessmentData.description || "",
           difficulty: assessmentData.difficulty || "",
-          prevent_backtracking: assessmentData.prevent_backtracking || false,
-          randomize_questions: assessmentData.randomize_questions || false,
-          time_limit: assessmentData.time_limit !== null ? assessmentData.time_limit : null,
         });
       } catch (error: any) {
         console.error("Error loading assessment:", error.message);
@@ -96,8 +92,8 @@ const AssessmentDetails = () => {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="container mx-auto px-4 py-8 max-w-5xl">
+        <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Assessment Details</h1>
             <p className="text-muted-foreground mt-2">
@@ -111,7 +107,7 @@ const AssessmentDetails = () => {
           </Button>
         </div>
 
-        <Card>
+        <Card className="p-6 mb-8">
           {loading ? (
             <Loading />
           ) : loadingError ? (
@@ -127,8 +123,8 @@ const AssessmentDetails = () => {
           )}
         </Card>
 
-        {/* Flat question management for admin */}
-        <Card className="mt-6">
+        {/* Questions management */}
+        <Card className="mb-8">
           <AdminQuestionList assessmentId={assessmentId || ""} />
         </Card>
       </div>

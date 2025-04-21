@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -172,7 +173,7 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
 
   const saveEdit = async () => {
     if (!editState || !editingId || !sectionId) return;
-    const { text, options, scores, correct_answer, time_limit } = editState;
+    const { text, options, scores, correct_answer } = editState;
     
     try {
       const { error } = await supabase
@@ -182,7 +183,7 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
           options,
           scores,
           correct_answer,
-          time_limit: time_limit ?? null,
+          section_id: sectionId
         })
         .eq("id", editingId);
         
@@ -280,7 +281,7 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
       return;
     }
     
-    const { text, options, scores, correct_answer, time_limit } = addState;
+    const { text, options, scores, correct_answer } = addState;
     
     try {
       const { error } = await supabase.from("questions").insert({
@@ -288,8 +289,7 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
         text,
         options,
         scores,
-        correct_answer,
-        time_limit: time_limit ?? null,
+        correct_answer
       });
       
       if (error) throw error;

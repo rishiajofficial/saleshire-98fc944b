@@ -7,6 +7,7 @@ export type ContentData = {
   title: string;
   description?: string;
   content?: string;
+  difficulty?: string;
   [key: string]: any;
 };
 
@@ -28,9 +29,6 @@ export const ContentService = {
             title: data.title,
             description: data.description,
             difficulty: data.difficulty,
-            time_limit: data.timeLimit ? parseInt(data.timeLimit) : null,
-            prevent_backtracking: data.preventBacktracking || false,
-            randomize_questions: data.randomizeQuestions || false,
             created_by: data.createdBy
           })
           .select()
@@ -74,9 +72,6 @@ export const ContentService = {
             title: data.title,
             description: data.description,
             difficulty: data.difficulty,
-            time_limit: data.timeLimit ? parseInt(data.timeLimit) : null,
-            prevent_backtracking: data.preventBacktracking || false,
-            randomize_questions: data.randomizeQuestions || false,
             updated_at: new Date().toISOString() // Convert Date to string
           })
           .eq('id', id)
