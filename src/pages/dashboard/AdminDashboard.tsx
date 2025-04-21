@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input"; // Add this import
+import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -30,6 +29,7 @@ import {
   ShieldAlert,
   Video,
   FileText,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import MainLayout from "@/components/layout/MainLayout";
@@ -40,29 +40,28 @@ const AdminDashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const { user } = useAuth();
 
-  // Fetch users from database
+  const [deletingAssessmentId, setDeletingAssessmentId] = useState<string | null>(null);
+  const [assessments, setAssessments] = useState<any[]>([]);
+  const [isLoadingAssessments, setIsLoadingAssessments] = useState<boolean>(false);
+
   const { data: fetchedUsers, isLoading: isLoadingUsers } = useDatabaseQuery<any[]>(
     'profiles', 
     { order: ['created_at', { ascending: false }] }
   );
 
-  // Fetch candidate data
   const { data: fetchedCandidates, isLoading: isLoadingCandidates } = useDatabaseQuery<any[]>(
     'candidates'
   );
 
-  // Fetch manager data
   const { data: fetchedManagers, isLoading: isLoadingManagers } = useDatabaseQuery<any[]>(
     'managers'
   );
 
-  // Fetch activity logs
   const { data: activityLogs, isLoading: isLoadingLogs } = useDatabaseQuery<any[]>(
     'activity_logs',
     { order: ['created_at', { ascending: false }], limit: 10 }
   );
 
-  // Calculate stats based on real data
   const [stats, setStats] = useState({
     totalUsers: 0,
     activeManagers: 0,
@@ -76,17 +75,49 @@ const AdminDashboard = () => {
         totalUsers: fetchedUsers.length || 0,
         activeManagers: fetchedManagers.length || 0,
         activeCandidates: fetchedCandidates.length || 0,
-        inactiveUsers: 0, // We don't have an 'active' flag in the profile table yet, so default to 0
+        inactiveUsers: 0,
       });
     }
   }, [fetchedUsers, fetchedCandidates, fetchedManagers]);
 
-  // Process activity logs for display
+  useEffect(() => {
+    const fetchAssessments = async () => {
+      setIsLoadingAssessments(true);
+      const { data, error } = await (window as any).supabase
+        ? (window as any).supabase
+            .from('assessments')
+            .select('*')
+            .order('created_at', { ascending: false })
+        : await supabase
+            .from('assessments')
+            .select('*')
+            .order('created_at', { ascending: false });
+      if (error) {
+        toast.error("Failed to fetch assessments: " + error.message);
+        setAssessments([]);
+      } else {
+        setAssessments(data || []);
+      }
+      setIsLoadingAssessments(false);
+    };
+    fetchAssessments();
+  }, []);
+
+  const handleDeleteAssessment = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this assessment? This action cannot be undone.")) return;
+    setDeletingAssessmentId(id);
+    const { error } = await supabase.from("assessments").delete().eq("id", id);
+    if (error) {
+      toast.error("Failed to delete assessment: " + error.message);
+    } else {
+      toast.success("Assessment deleted successfully");
+      setAssessments((prev) => prev.filter((a) => a.id !== id));
+    }
+    setDeletingAssessmentId(null);
+  };
+
   const recentActivity = activityLogs ? activityLogs.slice(0, 4).map(log => {
-    // Try to find user name by ID
     const userName = fetchedUsers?.find(u => u.id === log.user_id)?.name || 'Unknown User';
-    
-    // Format the timestamp
     const timestamp = new Date(log.created_at);
     const now = new Date();
     const diffMs = now.getTime() - timestamp.getTime();
@@ -113,9 +144,7 @@ const AdminDashboard = () => {
     };
   }) : [];
 
-  // Process users for display
   const users = fetchedUsers ? fetchedUsers.map(user => {
-    // Find additional data for candidates and managers
     const candidateData = fetchedCandidates?.find(c => c.id === user.id);
     const managerData = fetchedManagers?.find(m => m.id === user.id);
     
@@ -124,21 +153,18 @@ const AdminDashboard = () => {
       name: user.name || 'Unnamed User',
       email: user.email,
       role: user.role,
-      status: 'active', // Default to active since we don't have this field yet
+      status: 'active',
       createdAt: user.created_at,
-      // Add role-specific data
       ...(user.role === 'candidate' && candidateData ? {
         region: candidateData.region
       } : {}),
       ...(user.role === 'manager' && managerData ? {
-        // We'll need to fetch this data differently, but for now:
         candidatesAssigned: 0,
-        regions: ['north'] // Placeholder
+        regions: ['north']
       } : {})
     };
   }) : [];
 
-  // Filter users based on search query
   const filteredUsers = users 
     ? users.filter(
         (user) =>
@@ -147,7 +173,6 @@ const AdminDashboard = () => {
       )
     : [];
 
-  // Show loading state if data is being fetched
   if (isLoadingUsers || isLoadingCandidates || isLoadingManagers) {
     return (
       <MainLayout>
@@ -168,7 +193,69 @@ const AdminDashboard = () => {
           </p>
         </div>
 
-        {/* Dashboard Stats */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle>Manage Assessments</CardTitle>
+            <CardDescription>
+              Create, edit, or delete active assessments
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Difficulty</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoadingAssessments ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-8">Loading...</TableCell>
+                    </TableRow>
+                  ) : assessments.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-8">No assessments found</TableCell>
+                    </TableRow>
+                  ) : (
+                    assessments.map((assessment) => (
+                      <TableRow key={assessment.id}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{assessment.title}</div>
+                            <div className="text-xs text-muted-foreground">{assessment.description}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{assessment.difficulty || "Standard"}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          {new Date(assessment.created_at).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-600 hover:text-red-700"
+                            onClick={() => handleDeleteAssessment(assessment.id)}
+                            disabled={deletingAssessmentId === assessment.id}
+                            title="Delete assessment"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-6">
@@ -243,7 +330,6 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
-        {/* Quick Access Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
             <CardHeader className="pb-2">
@@ -298,7 +384,6 @@ const AdminDashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
-          {/* Recent Activity */}
           <Card>
             <CardHeader>
               <CardTitle>Recent Activity</CardTitle>
@@ -353,7 +438,6 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
-        {/* Users Table */}
         <Card>
           <CardHeader className="pb-3">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center space-y-2 sm:space-y-0">
