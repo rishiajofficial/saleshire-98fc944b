@@ -348,19 +348,23 @@ const Candidates = () => {
                         <TableCell className="text-right">
                           <div className="flex justify-end space-x-1">
                             {profile?.role === "hr" && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                title="View History"
-                                className="h-8 w-8 text-gray-700 hover:text-blue-600"
-                                onClick={() => openHistoryDialog(candidate)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  title="View Details"
+                                  className="h-8 w-8 text-gray-700 hover:text-blue-600"
+                                  asChild
+                                >
+                                  <a href={`/candidates/${candidate.id}`}>
+                                    <Eye className="h-4 w-4" />
+                                  </a>
+                                </Button>
+                              </>
                             )}
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               onClick={() => handleDeleteCandidate(candidate.id)}
                               className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
                             >
