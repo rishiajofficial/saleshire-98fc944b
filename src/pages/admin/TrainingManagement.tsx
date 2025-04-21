@@ -58,58 +58,111 @@ import { supabase } from "@/integrations/supabase/client";
 import { Database, TablesInsert } from "@/integrations/supabase/types";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-// Define types from Supabase schema
 type Video = Database['public']['Tables']['videos']['Row'];
-type TrainingModule = Database['public']['Tables']['training_modules']['Row']; // Assuming this is the quizzes table
+type TrainingModule = Database['public']['Tables']['training_modules']['Row'];
 
-// Add Assessment type
 interface AssessmentOption { id: string; title: string; }
 
 const TrainingManagement = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Dialog visibility state
   const [showVideoDialog, setShowVideoDialog] = useState(false);
   const [showQuizDialog, setShowQuizDialog] = useState(false);
   const [showEditVideoDialog, setShowEditVideoDialog] = useState(false);
   const [showEditQuizDialog, setShowEditQuizDialog] = useState(false);
 
-  // Search and Tab state
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("videos");
 
-  // Add Video form state
   const [newVideoTitle, setNewVideoTitle] = useState("");
   const [newVideoDescription, setNewVideoDescription] = useState("");
-  const [newVideoModule, setNewVideoModule] = useState("product"); // Renamed and set default
+  const [newVideoModule, setNewVideoModule] = useState("product");
   const [newVideoUrl, setNewVideoUrl] = useState("");
-  const [newVideoDuration, setNewVideoDuration] = useState(""); // Added
+  const [newVideoDuration, setNewVideoDuration] = useState("");
+  const [newVideoFile, setNewVideoFile] = useState<File | null>(null);
+  const [videoUploadLoading, setVideoUploadLoading] = useState(false);
+  const [autoVideoDuration, setAutoVideoDuration] = useState<string>("");
 
-  // Add Quiz form state
-  const [newQuizTitle, setNewQuizTitle] = useState("");
-  const [newQuizDescription, setNewQuizDescription] = useState("");
-  const [newQuizModule, setNewQuizModule] = useState("product"); // Add state for module selection
+  const [useFileUpload, setUseFileUpload] = useState(true);
 
-  // Edit Video state
-  const [editingVideo, setEditingVideo] = useState<Video | null>(null);
-  const [editVideoTitle, setEditVideoTitle] = useState("");
-  const [editVideoDescription, setEditVideoDescription] = useState("");
-  const [editVideoModule, setEditVideoModule] = useState("product"); // Renamed and set default
-  const [editVideoUrl, setEditVideoUrl] = useState("");
-  const [editVideoDuration, setEditVideoDuration] = useState(""); // Added
+  const uploadVideoFile = async (file: File): Promise<string | null> => {
+    try {
+      setVideoUploadLoading(true);
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const { data, error } = await supabase.storage
+        .from('videos')
+        .upload(fileName, file, { cacheControl: '3600', upsert: false });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from('videos').getPublicUrl(fileName);
+      if (!urlData || !urlData.publicUrl) throw new Error("Failed to get video public URL.");
+      return urlData.publicUrl;
+    } catch (err) {
+      toast.error("Video upload failed: " + (err.message || String(err)));
+      return null;
+    } finally {
+      setVideoUploadLoading(false);
+    }
+  };
 
-  // Edit Quiz state
-  const [editingQuiz, setEditingQuiz] = useState<TrainingModule | null>(null);
-  const [editQuizTitle, setEditQuizTitle] = useState("");
-  const [editQuizDescription, setEditQuizDescription] = useState("");
-  const [editQuizModule, setEditQuizModule] = useState("product");
-  const [editQuizId, setEditQuizId] = useState<string | null>(null); // Add state for selected quiz_id
+  const handleVideoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setNewVideoFile(file);
+    setNewVideoUrl("");
+    setAutoVideoDuration("");
+    if (!file) return;
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.onloadedmetadata = function () {
+      window.URL.revokeObjectURL(video.src);
+      if (video.duration && !isNaN(video.duration)) {
+        const min = Math.floor(video.duration / 60);
+        const sec = Math.round(video.duration % 60);
+        setAutoVideoDuration(`${min}:${sec.toString().padStart(2, "0")}`);
+      }
+    };
+    video.onerror = function () {
+      setAutoVideoDuration("");
+      toast.error("Couldn't read video file duration.");
+    };
+    video.src = URL.createObjectURL(file);
+  };
 
-  // Add state for assessments list
-  const [assessments, setAssessments] = useState<AssessmentOption[]>([]);
+  const handleVideoUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setNewVideoUrl(value);
+    setNewVideoFile(null);
+    setAutoVideoDuration("");
+  };
 
-  // Fetch Training Videos
+  const handleAddVideo = async () => {
+    if (
+      (!useFileUpload && (!newVideoTitle || !newVideoModule || !newVideoUrl || !autoVideoDuration)) ||
+      (useFileUpload && (!newVideoTitle || !newVideoModule || !newVideoFile || !autoVideoDuration))
+    ) {
+      toast.error("Title, Module, and a video (with valid duration) are required.");
+      return;
+    }
+    if (!user) { toast.error("You must be logged in."); return; }
+    let finalUrl = newVideoUrl;
+    if (useFileUpload && newVideoFile) {
+      finalUrl = await uploadVideoFile(newVideoFile);
+      if (!finalUrl) {
+        toast.error("Failed to upload video file.");
+        return;
+      }
+    }
+    createVideoMutation.mutate({
+      title: newVideoTitle,
+      description: newVideoDescription || null,
+      url: finalUrl,
+      module: newVideoModule,
+      duration: autoVideoDuration,
+      created_by: user.id
+    });
+  };
+
   const { 
     data: fetchedVideos,
     isLoading: isLoadingVideos,
@@ -130,7 +183,6 @@ const TrainingManagement = () => {
     enabled: !!user,
   });
 
-  // Fetch Training Modules (Quizzes)
   const { 
     data: fetchedModules,
     isLoading: isLoadingModules,
@@ -151,7 +203,6 @@ const TrainingManagement = () => {
     enabled: !!user,
   });
 
-  // Add useQuery to fetch Assessments
   const { 
     isLoading: isLoadingAssessments,
     error: assessmentsError 
@@ -166,21 +217,17 @@ const TrainingManagement = () => {
         toast.error("Failed to fetch assessments list: " + error.message);
         throw new Error(error.message);
       }
-      setAssessments(data || []); // Set state directly on success
+      setAssessments(data || []);
       return data || [];
     },
-    enabled: !!user, // Only run if user is logged in
+    enabled: !!user,
   });
 
-  // --- MUTATIONS ---
-
-  // CREATE VIDEO (Corrected module and added duration)
   const createVideoMutation = useMutation({
-    // Use correct type excluding read-only fields
     mutationFn: async (newVideoData: Omit<Video, 'id' | 'created_at'>) => { 
       const { data, error } = await supabase
         .from('videos')
-        .insert([newVideoData]) // Pass the full object
+        .insert([newVideoData])
         .select();
       if (error) throw new Error(error.message);
       return data?.[0];
@@ -191,20 +238,17 @@ const TrainingManagement = () => {
       setShowVideoDialog(false);
       setNewVideoTitle("");
       setNewVideoDescription("");
-      setNewVideoModule("product"); // Reset module
+      setNewVideoModule("product");
       setNewVideoUrl("");
-      setNewVideoDuration(""); // Reset duration
+      setNewVideoDuration("");
     },
     onError: (error) => {
       toast.error("Failed to add video: " + error.message);
     },
   });
 
-  // CREATE QUIZ (Fix type casting)
   const createQuizMutation = useMutation({
-    // Expect the Insert type directly
     mutationFn: async (newQuizData: TablesInsert<"training_modules">) => {
-      // Ensure newQuizData includes 'module' which is required by DB
       const { data, error } = await supabase
         .from('training_modules')
         .insert([newQuizData])
@@ -218,21 +262,19 @@ const TrainingManagement = () => {
       setShowQuizDialog(false);
       setNewQuizTitle("");
       setNewQuizDescription("");
-      setNewQuizModule("product"); // Reset module
+      setNewQuizModule("product");
     },
     onError: (error) => {
       toast.error("Failed to add quiz: " + error.message);
     },
   });
 
-  // UPDATE VIDEO Mutation (Corrected module and added duration)
   const updateVideoMutation = useMutation({
-    // Use correct type 
     mutationFn: async (updatedVideoData: Pick<Video, 'id' | 'title' | 'description' | 'url' | 'module' | 'duration'>) => {
       const { id, ...updateData } = updatedVideoData;
       const { error } = await supabase
         .from('videos')
-        .update(updateData) // Pass only fields to update
+        .update(updateData)
         .eq('id', id);
       if (error) throw new Error(error.message);
       return id;
@@ -247,7 +289,6 @@ const TrainingManagement = () => {
     },
   });
 
-  // UPDATE QUIZ Handler (Add quiz_id)
   const updateQuizMutation = useMutation({
     mutationFn: async (updatedQuizData: Partial<TrainingModule> & { id: string }) => {
       const { id, ...updateData } = updatedQuizData;
@@ -268,7 +309,6 @@ const TrainingManagement = () => {
     },
   });
 
-  // DELETE mutation (remains the same)
   const deleteContentMutation = useMutation({
     mutationFn: async ({ contentType, id }: { contentType: 'Video' | 'Module', id: string }) => {
       const tableName = contentType === 'Video' ? 'videos' : 'training_modules';
@@ -280,10 +320,9 @@ const TrainingManagement = () => {
       if (error) {
         throw new Error(error.message);
       }
-      return { contentType, id }; // Return info for success message
+      return { contentType, id };
     },
     onSuccess: ({ contentType }) => {
-      // Invalidate the appropriate query cache
       const queryKey = contentType === 'Video' ? ['trainingVideos'] : ['trainingModules'];
       queryClient.invalidateQueries({ queryKey });
       toast.success(`${contentType} deleted successfully`);
@@ -293,27 +332,6 @@ const TrainingManagement = () => {
     },
   });
 
-  // --- HANDLERS ---
-
-  // CREATE VIDEO HANDLER (Corrected module and added duration)
-  const handleAddVideo = () => {
-    if (!newVideoTitle || !newVideoModule || !newVideoUrl || !newVideoDuration) { // Added duration check
-      toast.error("Title, Module, URL, and Duration are required.");
-      return;
-    }
-    if (!user) { toast.error("You must be logged in."); return; }
-
-    createVideoMutation.mutate({
-      title: newVideoTitle,
-      description: newVideoDescription || null,
-      url: newVideoUrl,
-      module: newVideoModule, // Use correct state/column
-      duration: newVideoDuration, // Add duration
-      created_by: user.id 
-    });
-  };
-
-  // CREATE QUIZ HANDLER (Fix type casting)
   const handleAddQuiz = () => {
     if (!newQuizTitle || !newQuizModule) { 
       toast.error("Quiz title and module are required.");
@@ -321,54 +339,44 @@ const TrainingManagement = () => {
     }
     if (!user) { toast.error("You must be logged in."); return; }
 
-    // Use the Supabase generated Insert type correctly
     const quizData: TablesInsert<"training_modules"> = {
       title: newQuizTitle,
       description: newQuizDescription || null,
       module: newQuizModule, 
       created_by: user.id,
-      // Explicitly set other optional fields if needed, otherwise they default
-      // content: null, 
-      // video_url: null,
-      // quiz_id: null, // Don't set quiz_id on creation here
     };
 
     createQuizMutation.mutate(quizData);
   };
 
-  // DELETE HANDLER (remains the same)
   const handleDeleteContent = (contentType: 'Video' | 'Module', id: string) => {
-    // Optional: Add a confirmation dialog here before deleting
     if (window.confirm(`Are you sure you want to delete this ${contentType}?`)) {
       deleteContentMutation.mutate({ contentType, id });
     }
   };
 
-  // EDIT VIDEO - Open Dialog & Pre-fill State (Corrected module and added duration)
   const handleEditVideoClick = (video: Video) => {
     setEditingVideo(video);
     setEditVideoTitle(video.title);
     setEditVideoDescription(video.description || "");
     setEditVideoUrl(video.url || "");
-    setEditVideoModule(video.module || "product"); // Use correct state/column
-    setEditVideoDuration(video.duration || ""); // Add duration
+    setEditVideoModule(video.module || "product");
+    setEditVideoDuration(video.duration || "");
     setShowEditVideoDialog(true);
   };
 
-  // EDIT QUIZ - Open Dialog & Pre-fill State
   const handleEditQuizClick = (quiz: TrainingModule) => {
     setEditingQuiz(quiz);
     setEditQuizTitle(quiz.title);
     setEditQuizDescription(quiz.description || "");
-    setEditQuizModule(quiz.module || "product"); 
-    setEditQuizId(quiz.quiz_id || null); // Pre-fill quiz_id state
+    setEditQuizModule(quiz.module || "product");
+    setEditQuizId(quiz.quiz_id || null);
     setShowEditQuizDialog(true);
   };
 
-  // UPDATE VIDEO Handler (Corrected module and added duration)
   const handleUpdateVideo = () => {
     if (!editingVideo) return;
-    if (!editVideoTitle || !editVideoModule || !editVideoUrl || !editVideoDuration) { // Added duration check
+    if (!editVideoTitle || !editVideoModule || !editVideoUrl || !editVideoDuration) {
       toast.error("Title, Module, URL, and Duration are required.");
       return;
     }
@@ -378,12 +386,11 @@ const TrainingManagement = () => {
       title: editVideoTitle,
       description: editVideoDescription || null,
       url: editVideoUrl,
-      module: editVideoModule, // Use correct state/column
-      duration: editVideoDuration, // Add duration
+      module: editVideoModule,
+      duration: editVideoDuration,
     });
   };
 
-  // UPDATE QUIZ Handler (Add quiz_id)
   const handleUpdateQuiz = () => {
     if (!editingQuiz) return;
     if (!editQuizTitle || !editQuizModule) {
@@ -396,7 +403,7 @@ const TrainingManagement = () => {
       title: editQuizTitle,
       description: editQuizDescription || null,
       module: editQuizModule,
-      quiz_id: editQuizId || null, // Include the selected quiz_id
+      quiz_id: editQuizId || null,
     });
   };
 
@@ -442,14 +449,21 @@ const TrainingManagement = () => {
             <TabsTrigger value="quizzes">Quizzes</TabsTrigger>
           </TabsList>
 
-          {/* Training Videos Tab */}
           <TabsContent value="videos" className="space-y-6">
             <div className="flex justify-between items-center">
               <div>
                 <h2 className="text-2xl font-bold">Training Videos</h2>
                 <p className="text-muted-foreground">Manage training video content for candidates</p>
               </div>
-              <Dialog open={showVideoDialog} onOpenChange={setShowVideoDialog}>
+              <Dialog open={showVideoDialog} onOpenChange={(val) => {
+                setShowVideoDialog(val);
+                if (!val) {
+                  setUseFileUpload(true);
+                  setNewVideoFile(null);
+                  setNewVideoUrl("");
+                  setAutoVideoDuration("");
+                }
+              }}>
                 <DialogTrigger asChild>
                   <Button>
                     <Plus className="h-4 w-4 mr-2" /> Add New Video
@@ -459,7 +473,7 @@ const TrainingManagement = () => {
                   <DialogHeader>
                     <DialogTitle>Add New Training Video</DialogTitle>
                     <DialogDescription>
-                      Upload a new training video for candidate education.
+                      Upload a new training video or enter a link for candidate education. Duration will be detected automatically.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
@@ -487,18 +501,86 @@ const TrainingManagement = () => {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="videoUrl">Video URL</Label>
-                      <Input id="videoUrl" placeholder="https://example.com/video" required 
-                             value={newVideoUrl} onChange={(e) => setNewVideoUrl(e.target.value)} />
+                      <Label className="mr-2">Source</Label>
+                      <div className="flex gap-4">
+                        <button
+                          className={`px-3 py-1 rounded ${useFileUpload ? "bg-primary text-white" : "bg-muted"} border`}
+                          type="button"
+                          onClick={() => { setUseFileUpload(true); setNewVideoUrl(""); setAutoVideoDuration(""); }}
+                        >
+                          Upload file
+                        </button>
+                        <button
+                          className={`px-3 py-1 rounded ${!useFileUpload ? "bg-primary text-white" : "bg-muted"} border`}
+                          type="button"
+                          onClick={() => { setUseFileUpload(false); setNewVideoFile(null); setAutoVideoDuration(""); }}
+                        >
+                          Use link
+                        </button>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="duration">Duration (e.g., 12:34)</Label>
-                      <Input id="duration" placeholder="MM:SS or text" required value={newVideoDuration} onChange={(e) => setNewVideoDuration(e.target.value)} />
-                    </div>
+                    {useFileUpload ? (
+                      <>
+                        <div className="space-y-2">
+                          <Label htmlFor="videoFile">Upload Video File</Label>
+                          <Input
+                            id="videoFile"
+                            type="file"
+                            accept="video/*"
+                            required
+                            onChange={handleVideoFileChange}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="space-y-2">
+                          <Label htmlFor="videoUrl">Video URL</Label>
+                          <Input
+                            id="videoUrl"
+                            placeholder="https://youtube.com/..."
+                            required
+                            value={newVideoUrl}
+                            onChange={handleVideoUrlChange}
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Automatic duration detection for direct upload only.<br/>
+                          For YouTube, duration detection is not supported; please fill below.
+                        </p>
+                        <div className="space-y-2">
+                          <Label htmlFor="duration">Duration (MM:SS)</Label>
+                          <Input
+                            id="duration"
+                            placeholder="e.g. 12:34"
+                            value={autoVideoDuration}
+                            onChange={e => setAutoVideoDuration(e.target.value)}
+                            required
+                          />
+                        </div>
+                      </>
+                    )}
+                    {useFileUpload &&
+                      <div className="space-y-2">
+                        <Label>Video Duration</Label>
+                        <Input
+                          value={autoVideoDuration}
+                          disabled
+                          placeholder="Duration will show here"
+                        />
+                        {videoUploadLoading && <div className="text-xs">Uploading...</div>}
+                      </div>
+                    }
                   </div>
                   <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setShowVideoDialog(false)}>Cancel</Button>
-                    <Button type="button" onClick={handleAddVideo} disabled={createVideoMutation.isPending}>
+                    <Button type="button" variant="outline" onClick={() => setShowVideoDialog(false)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleAddVideo}
+                      disabled={createVideoMutation.isPending || (useFileUpload ? !newVideoFile || !autoVideoDuration : !newVideoUrl || !autoVideoDuration)}
+                    >
                       {createVideoMutation.isPending ? "Adding..." : "Add Video"}
                     </Button>
                   </DialogFooter>
@@ -590,7 +672,6 @@ const TrainingManagement = () => {
               </CardContent>
             </Card>
 
-            {/* Edit Video Dialog */}
             <Dialog open={showEditVideoDialog} onOpenChange={setShowEditVideoDialog}>
               <DialogContent className="sm:max-w-[550px]">
                 <DialogHeader>
@@ -642,7 +723,6 @@ const TrainingManagement = () => {
             </Dialog>
           </TabsContent>
 
-          {/* Quizzes Tab */}
           <TabsContent value="quizzes" className="space-y-6">
             <div className="flex justify-between items-center">
               <div>
@@ -765,7 +845,6 @@ const TrainingManagement = () => {
               </CardContent>
             </Card>
 
-            {/* Edit Quiz Dialog */}
             <Dialog open={showEditQuizDialog} onOpenChange={setShowEditQuizDialog}>
               <DialogContent className="sm:max-w-[550px]">
                 <DialogHeader>
@@ -776,17 +855,14 @@ const TrainingManagement = () => {
                 </DialogHeader>
                 {editingQuiz && (
                   <div className="grid gap-4 py-4">
-                    {/* Title */}
                     <div className="space-y-2">
                       <Label htmlFor="edit-quiz-title">Title</Label>
                       <Input id="edit-quiz-title" value={editQuizTitle} onChange={(e) => setEditQuizTitle(e.target.value)} required />
                     </div>
-                    {/* Description */}
                     <div className="space-y-2">
                       <Label htmlFor="edit-quiz-description">Description</Label>
                       <Textarea id="edit-quiz-description" value={editQuizDescription} onChange={(e) => setEditQuizDescription(e.target.value)} required />
                     </div>
-                    {/* Module Category Select */}
                     <div className="space-y-2">
                       <Label htmlFor="edit-quiz-module">Module Category</Label>
                       <Select value={editQuizModule} onValueChange={setEditQuizModule}>
@@ -800,8 +876,6 @@ const TrainingManagement = () => {
                         </SelectContent>
                       </Select>
                     </div>
-
-                    {/* Associated Quiz/Assessment Select */}
                     <div className="space-y-2">
                       <Label htmlFor="edit-quiz-assessment">Associated Quiz/Assessment</Label>
                       <Select 
@@ -830,7 +904,6 @@ const TrainingManagement = () => {
                       </Select>
                       <p className="text-xs text-muted-foreground pt-1">Link an existing assessment as the quiz for this module.</p>
                     </div>
-                    
                   </div>
                 )}
                 <DialogFooter>
