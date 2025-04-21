@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -10,16 +11,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import Loading from "@/components/ui/loading";
 import ErrorMessage from "@/components/ui/error-message";
 import AssessmentForm, { AssessmentFormValues } from "@/components/assessments/AssessmentForm";
-import SectionsList from "@/components/assessments/SectionsList";
-import AssessmentResultsSummary from "@/components/assessments/AssessmentResultsSummary";
-import AssessmentStats from "@/components/assessments/AssessmentStats";
+// Remove other imports related to sections, stats or summary
+import AdminQuestionList from "@/components/assessments/AdminQuestionList";
 
 const AssessmentDetails = () => {
   const { assessmentId } = useParams();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [assessment, setAssessment] = useState<any>(null);
-  const [sections, setSections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [formData, setFormData] = useState<AssessmentFormValues | null>(null);
@@ -29,31 +28,31 @@ const AssessmentDetails = () => {
     const loadAssessment = async () => {
       setLoading(true);
       setLoadingError(null);
-      
+
       try {
         if (!assessmentId) {
           setLoadingError("Assessment ID is missing");
           return;
         }
-        
+
         // Fetch assessment
         const { data: assessmentData, error: assessmentError } = await supabase
           .from("assessments")
           .select("*")
           .eq("id", assessmentId)
           .single();
-        
+
         if (assessmentError) {
           throw assessmentError;
         }
-        
+
         if (!assessmentData) {
           setLoadingError("Assessment not found");
           return;
         }
-        
+
         setAssessment(assessmentData);
-        
+
         // Set form values
         setFormData({
           title: assessmentData.title || "",
@@ -63,19 +62,6 @@ const AssessmentDetails = () => {
           randomize_questions: assessmentData.randomize_questions || false,
           time_limit: assessmentData.time_limit !== null ? assessmentData.time_limit : null,
         });
-        
-        // Fetch sections
-        const { data: sectionData, error: sectionError } = await supabase
-          .from("assessment_sections")
-          .select("*")
-          .eq("assessment_id", assessmentId)
-          .order("created_at", { ascending: true });
-        
-        if (sectionError) {
-          throw sectionError;
-        }
-        
-        setSections(sectionData || []);
       } catch (error: any) {
         console.error("Error loading assessment:", error.message);
         setLoadingError(`Failed to load assessment: ${error.message}`);
@@ -83,27 +69,9 @@ const AssessmentDetails = () => {
         setLoading(false);
       }
     };
-    
+
     loadAssessment();
   }, [assessmentId]);
-
-  // Refresh sections if needed
-  const refreshSections = async () => {
-    try {
-      if (!assessmentId) return;
-      
-      const { data, error } = await supabase
-        .from("assessment_sections")
-        .select("*")
-        .eq("assessment_id", assessmentId)
-        .order("created_at", { ascending: true });
-      
-      if (error) throw error;
-      setSections(data || []);
-    } catch (error: any) {
-      console.error("Error refreshing sections:", error.message);
-    }
-  };
 
   if (loading) {
     return (
@@ -116,7 +84,7 @@ const AssessmentDetails = () => {
   if (loadingError) {
     return (
       <MainLayout>
-        <ErrorMessage 
+        <ErrorMessage
           title="Assessment Not Found"
           message={loadingError}
           backUrl="/assessments"
@@ -133,7 +101,7 @@ const AssessmentDetails = () => {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Assessment Details</h1>
             <p className="text-muted-foreground mt-2">
-              View and edit assessment information
+              View and edit assessment information. Add, edit, or delete questions below.
             </p>
           </div>
           <Button asChild variant="outline">
@@ -149,25 +117,20 @@ const AssessmentDetails = () => {
           ) : loadingError ? (
             <ErrorMessage message={loadingError} />
           ) : formData && (
-            <AssessmentForm 
-              assessmentId={assessmentId || ""} 
+            <AssessmentForm
+              assessmentId={assessmentId || ""}
               initialData={formData}
               onSuccess={() => {
                 queryClient.invalidateQueries({ queryKey: ['assessments'] });
-              }} 
+              }}
             />
           )}
         </Card>
 
-        {/* Add the new AssessmentStats component */}
-        <AssessmentStats assessmentId={assessmentId || ""} />
-
-        <SectionsList 
-          assessmentId={assessmentId || ""} 
-          sections={sections} 
-        />
-
-        <AssessmentResultsSummary assessmentId={assessmentId || ""} />
+        {/* Flat question management for admin */}
+        <Card className="mt-6">
+          <AdminQuestionList assessmentId={assessmentId || ""} />
+        </Card>
       </div>
     </MainLayout>
   );
