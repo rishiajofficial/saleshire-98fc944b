@@ -84,12 +84,10 @@ const TrainingManagement = () => {
   const [videoUploadLoading, setVideoUploadLoading] = useState(false);
   const [autoVideoDuration, setAutoVideoDuration] = useState<string>("");
 
-  // Add missing state variables for quiz management
   const [newQuizTitle, setNewQuizTitle] = useState("");
   const [newQuizDescription, setNewQuizDescription] = useState("");
   const [newQuizModule, setNewQuizModule] = useState("product");
   
-  // Add missing state variables for video editing
   const [editingVideo, setEditingVideo] = useState<Video | null>(null);
   const [editVideoTitle, setEditVideoTitle] = useState("");
   const [editVideoDescription, setEditVideoDescription] = useState("");
@@ -97,14 +95,12 @@ const TrainingManagement = () => {
   const [editVideoModule, setEditVideoModule] = useState("product");
   const [editVideoDuration, setEditVideoDuration] = useState("");
   
-  // Add missing state variables for quiz editing
   const [editingQuiz, setEditingQuiz] = useState<TrainingModule | null>(null);
   const [editQuizTitle, setEditQuizTitle] = useState("");
   const [editQuizDescription, setEditQuizDescription] = useState("");
   const [editQuizModule, setEditQuizModule] = useState("product");
   const [editQuizId, setEditQuizId] = useState<string | null>(null);
   
-  // Add missing state variable for assessments list
   const [assessments, setAssessments] = useState<AssessmentOption[]>([]);
 
   const [useFileUpload, setUseFileUpload] = useState(true);
@@ -227,6 +223,7 @@ const TrainingManagement = () => {
   });
 
   const { 
+    data: fetchedAssessments,
     isLoading: isLoadingAssessments,
     error: assessmentsError 
   } = useQuery<AssessmentOption[]>({
@@ -851,3 +848,85 @@ const TrainingManagement = () => {
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center py-8">
+                            <p className="text-muted-foreground">{searchTerm ? "No quizzes found matching search." : "No quizzes created yet."}</p>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Dialog open={showEditQuizDialog} onOpenChange={setShowEditQuizDialog}>
+              <DialogContent className="sm:max-w-[550px]">
+                <DialogHeader>
+                  <DialogTitle>Edit Training Quiz</DialogTitle>
+                  <DialogDescription>
+                    Modify the details of this training quiz.
+                  </DialogDescription>
+                </DialogHeader>
+                {editingQuiz && (
+                  <div className="grid gap-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-quizTitle">Quiz Title</Label>
+                      <Input id="edit-quizTitle" value={editQuizTitle} onChange={(e) => setEditQuizTitle(e.target.value)} required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-quizDescription">Description</Label>
+                      <Textarea id="edit-quizDescription" value={editQuizDescription} onChange={(e) => setEditQuizDescription(e.target.value)} required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-quizModule">Module</Label>
+                      <Select value={editQuizModule} onValueChange={setEditQuizModule}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select module" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="product">Product Knowledge</SelectItem>
+                          <SelectItem value="sales">Sales Techniques</SelectItem>
+                          <SelectItem value="relationship">Relationship Building</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-quizId">Associated Assessment</Label>
+                      <Select value={editQuizId || ""} onValueChange={setEditQuizId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select assessment" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">None</SelectItem>
+                          {assessments.map((assessment) => (
+                            <SelectItem key={assessment.id} value={assessment.id}>
+                              {assessment.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setShowEditQuizDialog(false)}>Cancel</Button>
+                  <Button type="button" onClick={handleUpdateQuiz} disabled={updateQuizMutation.isPending}>
+                    {updateQuizMutation.isPending ? "Saving..." : "Save Changes"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </MainLayout>
+  );
+};
+
+export default TrainingManagement;
