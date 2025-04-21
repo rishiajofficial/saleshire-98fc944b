@@ -1,10 +1,10 @@
-
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Edit, Trash2, Check, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Question {
   id: string;
@@ -19,33 +19,83 @@ type Props = {
   assessmentId: string;
 };
 
-const blankQuestion = (assessmentId: string): Omit<Question, "id"> => ({
-  text: "",
-  options: ["", ""],
-  scores: [1, 1],
-  correct_answer: 0,
-  time_limit: null,
-});
-
 const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editState, setEditState] = useState<Partial<Question> | null>(null);
+  const [editState, setEditState] = useState<Question | null>(null);
   const [adding, setAdding] = useState(false);
   const [addState, setAddState] = useState<Omit<Question, "id"> | null>(null);
+  const [sectionId, setSectionId] = useState<string | null>(null);
 
-  // Fetch questions (flat)
+  // Fetch or create a default section for the assessment
+  useEffect(() => {
+    const fetchOrCreateSection = async () => {
+      // First try to find an existing section
+      const { data: existingSections, error: fetchError } = await supabase
+        .from("assessment_sections")
+        .select("id")
+        .eq("assessment_id", assessmentId)
+        .limit(1);
+
+      if (fetchError) {
+        console.error("Error fetching sections:", fetchError);
+        return;
+      }
+
+      // If a section exists, use it
+      if (existingSections && existingSections.length > 0) {
+        setSectionId(existingSections[0].id);
+        return;
+      }
+
+      // Otherwise create a default section
+      const { data: newSection, error: createError } = await supabase
+        .from("assessment_sections")
+        .insert({
+          assessment_id: assessmentId,
+          title: "Default Section",
+          description: "Questions for this assessment",
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error("Error creating default section:", createError);
+        toast.error("Failed to create a default section for questions");
+        return;
+      }
+
+      if (newSection) {
+        setSectionId(newSection.id);
+      }
+    };
+
+    if (assessmentId) {
+      fetchOrCreateSection();
+    }
+  }, [assessmentId]);
+
+  // Fetch questions
   useEffect(() => {
     const fetchQuestions = async () => {
+      if (!sectionId) return;
+      
       setLoading(true);
       const { data, error } = await supabase
         .from("questions")
         .select("*")
-        .eq("assessment_id", assessmentId)
+        .eq("section_id", sectionId)
         .order("created_at", { ascending: true });
 
-      if (!error && data) {
+      if (error) {
+        console.error("Error fetching questions:", error);
+        toast.error("Failed to load questions");
+        setLoading(false);
+        return;
+      }
+
+      if (data) {
         const mapped: Question[] = data.map((q: any) => ({
           ...q,
           options: Array.isArray(q.options) ? q.options : [],
@@ -55,10 +105,20 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
       }
       setLoading(false);
     };
-    if (assessmentId) fetchQuestions();
-  }, [assessmentId, adding]);
+    
+    if (sectionId) fetchQuestions();
+  }, [sectionId, adding, editingId]);
 
-  // Handle add/edit/delete
+  // Initialize blank question
+  const blankQuestion = (): Omit<Question, "id"> => ({
+    text: "",
+    options: ["", ""],
+    scores: [1, 1],
+    correct_answer: 0,
+    time_limit: null,
+  });
+
+  // Handle edit/delete/add operations
   const handleEdit = (q: Question) => {
     setEditingId(q.id);
     setEditState({ ...q });
@@ -111,21 +171,30 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
   };
 
   const saveEdit = async () => {
-    if (!editState || !editingId) return;
+    if (!editState || !editingId || !sectionId) return;
     const { text, options, scores, correct_answer, time_limit } = editState;
-    await supabase
-      .from("questions")
-      .update({
-        text,
-        options,
-        scores,
-        correct_answer,
-        time_limit: time_limit ?? null,
-      })
-      .eq("id", editingId);
-    setEditingId(null);
-    setEditState(null);
-    setLoading(true);
+    
+    try {
+      const { error } = await supabase
+        .from("questions")
+        .update({
+          text,
+          options,
+          scores,
+          correct_answer,
+          time_limit: time_limit ?? null,
+        })
+        .eq("id", editingId);
+        
+      if (error) throw error;
+      toast.success("Question updated successfully");
+    } catch (error: any) {
+      console.error("Error updating question:", error);
+      toast.error(`Failed to update question: ${error.message}`);
+    } finally {
+      setEditingId(null);
+      setEditState(null);
+    }
   };
 
   const cancelEdit = () => {
@@ -135,15 +204,25 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
 
   const handleDelete = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this question?")) {
-      await supabase.from("questions").delete().eq("id", id);
-      setLoading(true);
+      try {
+        const { error } = await supabase.from("questions").delete().eq("id", id);
+        if (error) throw error;
+        toast.success("Question deleted successfully");
+        
+        // Refresh the questions list
+        setQuestions(questions.filter(q => q.id !== id));
+      } catch (error: any) {
+        console.error("Error deleting question:", error);
+        toast.error(`Failed to delete question: ${error.message}`);
+      }
     }
   };
 
   const startAdd = () => {
-    setAddState(blankQuestion(assessmentId));
+    setAddState(blankQuestion());
     setAdding(true);
   };
+  
   const cancelAdd = () => {
     setAddState(null);
     setAdding(false);
@@ -154,6 +233,7 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
       prev ? { ...prev, [key]: value } : prev
     );
   };
+  
   const handleAddOption = (i: number, value: string) => {
     setAddState((prev) => {
       if (!prev) return prev;
@@ -162,6 +242,7 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
       return { ...prev, options };
     });
   };
+  
   const handleAddScore = (i: number, value: number) => {
     setAddState((prev) => {
       if (!prev) return prev;
@@ -170,6 +251,7 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
       return { ...prev, scores };
     });
   };
+  
   const handleAddOptionAdd = () => {
     setAddState((prev) => {
       if (!prev) return prev;
@@ -180,6 +262,7 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
       };
     });
   };
+  
   const handleAddOptionRemove = (i: number) => {
     setAddState((prev) => {
       if (!prev) return prev;
@@ -192,27 +275,44 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
   };
 
   const saveAdd = async () => {
-    if (!addState) return;
+    if (!addState || !sectionId) {
+      toast.error("Cannot add question: No section available");
+      return;
+    }
+    
     const { text, options, scores, correct_answer, time_limit } = addState;
-    await supabase.from("questions").insert({
-      assessment_id: assessmentId,
-      text,
-      options,
-      scores,
-      correct_answer,
-      time_limit: time_limit ?? null,
-    });
-    setAdding(false);
-    setAddState(null);
-    setLoading(true);
+    
+    try {
+      const { error } = await supabase.from("questions").insert({
+        section_id: sectionId,
+        text,
+        options,
+        scores,
+        correct_answer,
+        time_limit: time_limit ?? null,
+      });
+      
+      if (error) throw error;
+      toast.success("Question added successfully");
+      setAdding(false);
+      setAddState(null);
+    } catch (error: any) {
+      console.error("Error adding question:", error);
+      toast.error(`Failed to add question: ${error.message}`);
+    }
   };
 
+  if (!sectionId && !loading) {
+    return <div className="text-center p-4">Unable to load or create section for questions</div>;
+  }
+
   return (
-    <div>
+    <div className="p-6">
       <h2 className="font-bold text-lg mb-4">Questions</h2>
       <Button variant="outline" onClick={startAdd} className="mb-6">
         <Plus className="h-4 w-4 mr-2" /> Add Question
       </Button>
+      
       {adding && addState && (
         <div className="border rounded p-4 mb-6 bg-gray-50">
           <div className="mb-2">
