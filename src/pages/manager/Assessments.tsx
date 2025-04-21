@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -330,23 +328,11 @@ const Assessments = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem asChild>
-                              <Link to={`/assessments/${assessment.id}`}>
-                                <Eye className="h-4 w-4 mr-2" /> View
-                              </Link>
-                            </DropdownMenuItem>
+                            {/* Only Edit and Delete buttons remain */}
                             <DropdownMenuItem asChild>
                               <Link to={`/assessments/${assessment.id}/edit`}>
                                 <Edit className="h-4 w-4 mr-2" /> Edit
                               </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link to={`/assessments/${assessment.id}/results`}>
-                                <BarChart className="h-4 w-4 mr-2" /> Results
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => duplicateAssessment(assessment.id)}>
-                              <Copy className="h-4 w-4 mr-2" /> Duplicate
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => deleteAssessment(assessment.id)} className="text-red-600">
