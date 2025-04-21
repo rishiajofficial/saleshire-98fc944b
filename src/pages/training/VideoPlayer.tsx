@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import ReactPlayer from 'react-player/youtube'; // Import specifically for YouTube
@@ -155,9 +156,7 @@ const VideoPlayer = () => {
               onPause={handlePause}
               onError={handleError}
               config={{
-                youtube: {
-                  playerVars: { showinfo: 0 } 
-                }
+                playerVars: { showinfo: 0 } 
               }}
             />
           </div>

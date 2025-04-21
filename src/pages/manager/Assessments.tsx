@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -73,6 +74,7 @@ const Assessments = () => {
   const [newAssessmentDescription, setNewAssessmentDescription] = useState("");
   const [newAssessmentDifficulty, setNewAssessmentDifficulty] = useState("Intermediate");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch assessments data using useQuery
   const { 
@@ -129,6 +131,30 @@ const Assessments = () => {
     },
   });
 
+  // Implement delete mutation
+  const deleteAssessmentMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('assessments')
+        .delete()
+        .eq('id', id);
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      return id;
+    },
+    onSuccess: (deletedId) => {
+      queryClient.invalidateQueries({ queryKey: ['assessments'] });
+      toast.success("Assessment deleted successfully");
+      setIsDeleting(false);
+    },
+    onError: (error) => {
+      toast.error("Failed to delete assessment: " + error.message);
+      setIsDeleting(false);
+    },
+  });
+
   const handleCreateAssessment = () => {
     if (!newAssessmentTitle) {
       toast.error("Assessment title is required");
@@ -154,8 +180,10 @@ const Assessments = () => {
   };
 
   const deleteAssessment = (id: string) => {
-    // TODO: Implement delete mutation
-    toast.info("Delete functionality not yet implemented with database.");
+    if (window.confirm("Are you sure you want to delete this assessment? This action cannot be undone.")) {
+      setIsDeleting(true);
+      deleteAssessmentMutation.mutate(id);
+    }
   };
 
   const duplicateAssessment = (id: string) => {

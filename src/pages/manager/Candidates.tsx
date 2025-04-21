@@ -55,16 +55,12 @@ const Candidates = () => {
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
   const [filteredCandidates, setFilteredCandidates] = useState<any[]>([]);
   
-  // Fetch candidate data
   const { data: candidatesData = [], isLoading: isLoadingCandidates } = useQuery({
-    // Include user ID and profile role in queryKey 
     queryKey: ['candidatesPage', user?.id, profile?.role],
     queryFn: async () => {
-      // Check for profile as well, since role check depends on it
       if (!user || !profile) return []; 
       
       try {
-        // Start building the query
         let query = supabase
           .from('candidates')
           .select(`
@@ -75,10 +71,8 @@ const Candidates = () => {
             candidate_profile:profiles!candidates_id_fkey(*),
             assessment_results(score, completed, completed_at)
           `)
-          // Ensure we only get actual candidates by checking profile role
           .eq('candidate_profile.role', 'candidate');
 
-        // Apply filter ONLY if the profile role is manager
         if (profile.role === 'manager') {
           console.log(`[Candidates.tsx] Applying manager filter for user: ${user.id}`);
           query = query.eq('assigned_manager', user.id);
@@ -86,10 +80,8 @@ const Candidates = () => {
           console.log(`[Candidates.tsx] Role is ${profile.role}, not applying manager filter.`);
         }
         
-        // Always order
         query = query.order('updated_at', { ascending: false });
 
-        // Execute the final query
         const { data, error } = await query;
 
         console.log(`Candidates.tsx (${profile.role}) Supabase Response:`, { data, error });
@@ -105,14 +97,11 @@ const Candidates = () => {
         return [];
       }
     },
-    enabled: !!user && !!profile // Only run query if user and profile exist
+    enabled: !!user && !!profile
   });
 
-  // Use candidatesData as the source for filtering
   useEffect(() => {
-    // Filter candidates whenever the searchTerm, filterStatus, or candidatesData changes
     const filtered = candidatesData.filter(candidate => {
-      // Explicitly check if the profile exists and role is 'candidate'
       if (candidate.candidate_profile?.role !== 'candidate') {
         return false; 
       }
@@ -150,7 +139,6 @@ const Candidates = () => {
         return;
       }
    
-      // Remove the deleted candidate from the filteredCandidates state
       setFilteredCandidates(prevState => prevState.filter(candidate => candidate.id !== id));
   
       toast.success("Candidate deleted successfully");
@@ -239,7 +227,6 @@ const Candidates = () => {
     if (scores.length === 0) return "N/A";
     
     const avgScore = Math.round(scores.reduce((a: number, b: number) => a + b, 0) / scores.length);
-    // Return just the number, % sign is added in JSX
     return avgScore; 
   };
 
