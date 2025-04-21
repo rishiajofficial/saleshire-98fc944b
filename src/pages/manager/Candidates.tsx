@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -50,7 +51,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-type Candidate = Database['public']['Tables']['candidates']['Row'];
+// Enhanced candidate type including profile data
+type CandidateWithProfile = Database['public']['Tables']['candidates']['Row'] & {
+  profile?: {
+    name: string;
+    email: string;
+  }
+};
 
 const Candidates = () => {
   const { user } = useAuth();
@@ -68,13 +75,16 @@ const Candidates = () => {
     data: fetchedCandidates,
     isLoading: isLoadingCandidates,
     error: candidatesError
-  } = useQuery<Candidate[]>({
+  } = useQuery<CandidateWithProfile[]>({
     queryKey: ['candidates'],
-    queryFn: async (): Promise<Candidate[]> => {
+    queryFn: async (): Promise<CandidateWithProfile[]> => {
       const { data, error } = await supabase
         .from('candidates')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select(`
+          *,
+          profile:profiles(name, email)
+        `)
+        .order('updated_at', { ascending: false });
       if (error) {
         toast.error("Failed to fetch candidates: " + error.message);
         throw new Error(error.message);
@@ -84,14 +94,44 @@ const Candidates = () => {
     enabled: !!user,
   });
 
+  // Modified to ensure we're creating both profile and candidate records properly
   const createCandidateMutation = useMutation({
-    mutationFn: async (newCandidateData: Omit<Candidate, 'id' | 'created_at'>) => {
-      const { data, error } = await supabase
-        .from('candidates')
-        .insert([newCandidateData])
+    mutationFn: async (candidateData: {
+      name: string;
+      email: string;
+      phone: string;
+      location: string;
+      status: string;
+    }) => {
+      // First, we need to create a user profile
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .insert([{
+          name: candidateData.name,
+          email: candidateData.email,
+          role: 'candidate'
+        }])
         .select();
-      if (error) throw new Error(error.message);
-      return data?.[0];
+
+      if (profileError) throw new Error(`Profile creation failed: ${profileError.message}`);
+      if (!profileData || profileData.length === 0) throw new Error('Failed to create profile');
+
+      const profileId = profileData[0].id;
+
+      // Then create the candidate record linked to the profile
+      const { data: candidateData, error: candidateError } = await supabase
+        .from('candidates')
+        .insert([{
+          id: profileId,
+          phone: candidateData.phone,
+          location: candidateData.location,
+          status: candidateData.status,
+        }])
+        .select();
+
+      if (candidateError) throw new Error(`Candidate creation failed: ${candidateError.message}`);
+
+      return { profile: profileData[0], candidate: candidateData?.[0] };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['candidates'] });
@@ -141,7 +181,6 @@ const Candidates = () => {
       phone: newCandidatePhone,
       location: newCandidateLocation,
       status: newCandidateStatus,
-      created_by: user.id,
     });
   };
 
@@ -153,10 +192,10 @@ const Candidates = () => {
 
   const filteredCandidates = fetchedCandidates?.filter(
     (candidate) =>
-      candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      candidate.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      candidate.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      candidate.location.toLowerCase().includes(searchTerm.toLowerCase())
+      (candidate.profile?.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+      (candidate.profile?.email?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+      (candidate.phone?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+      (candidate.location?.toLowerCase() || "").includes(searchTerm.toLowerCase())
   ) || [];
 
   return (
@@ -271,11 +310,11 @@ const Candidates = () => {
                   ) : filteredCandidates.length > 0 ? (
                     filteredCandidates.map((candidate) => (
                       <TableRow key={candidate.id}>
-                        <TableCell>{candidate.name}</TableCell>
-                        <TableCell>{candidate.email}</TableCell>
-                        <TableCell className="hidden md:table-cell">{candidate.phone}</TableCell>
-                        <TableCell className="hidden md:table-cell">{candidate.location}</TableCell>
-                        <TableCell>{candidate.status}</TableCell>
+                        <TableCell>{candidate.profile?.name || "Unknown"}</TableCell>
+                        <TableCell>{candidate.profile?.email || "Unknown"}</TableCell>
+                        <TableCell className="hidden md:table-cell">{candidate.phone || "N/A"}</TableCell>
+                        <TableCell className="hidden md:table-cell">{candidate.location || "N/A"}</TableCell>
+                        <TableCell>{candidate.status || "Unknown"}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end space-x-1">
                             <Button 

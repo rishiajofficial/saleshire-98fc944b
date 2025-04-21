@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -189,9 +190,11 @@ const CandidateList: React.FC<CandidateListProps> = ({
                               <ChevronDown className="h-4 w-4" />}
                           </Button>
                           <div>
-                            <div className="font-medium">{candidate.profiles?.name}</div>
+                            <div className="font-medium">
+                              {candidate.profiles?.name || candidate.candidate_profile?.name || "Unknown"}
+                            </div>
                             <div className="text-sm text-muted-foreground">
-                              {candidate.candidate_profile?.email}
+                              {candidate.candidate_profile?.email || candidate.profiles?.email || "No email"}
                             </div>
                           </div>
                         </div>
