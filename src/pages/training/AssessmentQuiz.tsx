@@ -64,6 +64,7 @@ const AssessmentQuiz = () => {
   const [score, setScore] = useState<number | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number>(0);
+  const assessmentStartTimeRef = useRef<string | null>(null);
   
   const [preventTabChange, setPreventTabChange] = useState(false);
   
@@ -142,8 +143,11 @@ const AssessmentQuiz = () => {
         if (questionsError) throw questionsError;
         
         const questions = questionsData.map((q: any) => ({
-          ...q,
-          options: Array.isArray(q.options) ? q.options : JSON.parse(q.options)
+          id: q.id,
+          text: q.text,
+          options: Array.isArray(q.options) ? q.options : JSON.parse(q.options),
+          correctAnswer: q.correct_answer,
+          timeLimit: q.time_limit
         }));
         
         const randomizedQuestions = assessmentData.randomize_questions 
@@ -182,6 +186,7 @@ const AssessmentQuiz = () => {
   };
   
   const startAssessment = () => {
+    assessmentStartTimeRef.current = new Date().toISOString();
     setAssessmentStarted(true);
     setPreventTabChange(true);
     startTimer();
@@ -235,6 +240,7 @@ const AssessmentQuiz = () => {
     if (selectedAnswer !== null) {
       newAnswers[currentQuestion.id] = selectedAnswer;
     }
+    console.log(`[AssessmentQuiz] Saving answer for Q:${currentQuestion.id}. Selected Index:`, selectedAnswer);
     
     newTimings[currentQuestion.id] = timeTaken;
     
@@ -287,16 +293,37 @@ const AssessmentQuiz = () => {
         section.questions.forEach(question => {
           totalQuestions++;
           
-          if (finalAnswers[question.id] === question.correctAnswer) {
+          // Ensure both values are compared as numbers
+          const selectedAnswerIndex = finalAnswers[question.id];
+          const correctAnswerIndex = question.correctAnswer;
+          
+          // --- Detailed Logging Start ---
+          // console.log(`[AssessmentQuiz] Comparing Q:${question.id}`);
+          // console.log(`  -> Selected Index (raw):`, selectedAnswerIndex, typeof selectedAnswerIndex);
+          // console.log(`  -> Correct Index (raw):`, correctAnswerIndex, typeof correctAnswerIndex);
+          // console.log(`  -> Comparison: Number(${selectedAnswerIndex}) === Number(${correctAnswerIndex})`);
+          // --- Detailed Logging End ---
+          
+          if (selectedAnswerIndex !== undefined && 
+              selectedAnswerIndex !== null &&
+              correctAnswerIndex !== undefined && 
+              correctAnswerIndex !== null && 
+              Number(selectedAnswerIndex) === Number(correctAnswerIndex)) {
             correctAnswers++;
+            // Log if correct
+            // console.log(`  -> CORRECT! Incrementing score.`);
+          } else {
+            // Log if incorrect
+            // console.log(`  -> INCORRECT! Score not incremented.`);
           }
         });
       });
       
       const calculatedScore = (correctAnswers / totalQuestions) * 100;
+      // console.log(`[AssessmentQuiz] Final Calculation: Correct=${correctAnswers}, Total=${totalQuestions}, Score=${calculatedScore}`); // Log final calc
       setScore(calculatedScore);
       
-      if (user && assessment) {
+      if (user && assessment && assessmentStartTimeRef.current) {
         const { data: candidateData, error: candidateError } = await supabase
           .from('candidates')
           .select('id')
@@ -314,6 +341,7 @@ const AssessmentQuiz = () => {
             answers: finalAnswers,
             answer_timings: finalTimings,
             completed: true,
+            started_at: assessmentStartTimeRef.current,
             completed_at: new Date().toISOString()
           });
           
@@ -330,6 +358,9 @@ const AssessmentQuiz = () => {
           });
           
         if (activityError) throw activityError;
+      } else {
+        console.error("Cannot submit assessment: User, assessment, or start time is missing.");
+        toast.error("Submission failed: Missing required information.");
       }
       
       setAssessmentCompleted(true);

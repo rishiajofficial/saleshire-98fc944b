@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -53,6 +52,7 @@ const formSchema = z.object({
 const Application = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [candidateStatus, setCandidateStatus] = useState<string | null>(null);
   const [applicationData, setApplicationData] = useState({
     resume: null,
     aboutMeVideo: null,
@@ -72,14 +72,114 @@ const Application = () => {
     },
   });
 
+  const [uploadingResume, setUploadingResume] = useState(false);
+  const [uploadingAboutVideo, setUploadingAboutVideo] = useState(false);
+  const [uploadingSalesVideo, setUploadingSalesVideo] = useState(false);
+
+  // Helper function to upload a file and get its public URL
+  const uploadFileAndGetUrl = async (file: File, path: string): Promise<string | null> => {
+    try {
+      // 1. Upload the file
+      const { error: uploadError } = await supabase.storage
+        .from('candidateartifacts') // Use your actual bucket name
+        .upload(path, file, {
+          cacheControl: '3600',
+          upsert: true, // Overwrite if exists for simplicity
+        });
+
+      if (uploadError) {
+        console.error('Supabase upload error:', uploadError);
+        throw new Error(`Failed to upload file: ${uploadError.message}`);
+      }
+
+      // 2. Get the public URL
+      const { data } = supabase.storage
+        .from('candidateartifacts') // Use your actual bucket name
+        .getPublicUrl(path);
+
+      if (!data?.publicUrl) {
+        throw new Error("Could not get public URL after upload.");
+      }
+
+      return data.publicUrl;
+
+    } catch (error) {
+      console.error("Error during file upload process:", error);
+      toast({
+        title: "Upload Error",
+        description: error instanceof Error ? error.message : "An unknown error occurred during upload.",
+        variant: "destructive",
+      });
+      return null;
+    }
+  };
+
+  // Actual file upload handler for Resume
+  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0 || !user) {
+      return;
+    }
+    const file = e.target.files[0];
+    const fileExtension = file.name.split('.').pop();
+    const filePath = `${user.id}/resume.${fileExtension}`;
+    console.log('[handleResumeUpload] Calculated file path:', filePath);
+    
+    setUploadingResume(true);
+    const publicUrl = await uploadFileAndGetUrl(file, filePath);
+    setUploadingResume(false);
+
+    if (publicUrl) {
+      form.setValue("resume", publicUrl); // Set REAL URL in form
+      toast({
+        title: "Resume uploaded",
+        description: "Your resume has been uploaded successfully.",
+      });
+    } else {
+      // Reset input if upload failed
+      e.target.value = ""; 
+    }
+  };
+
+  // Actual file upload handler for Videos
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: "aboutMe" | "salesPitch") => {
+     if (!e.target.files || e.target.files.length === 0 || !user) {
+      return;
+    }
+    const file = e.target.files[0];
+    const fileExtension = file.name.split('.').pop();
+    const fieldName = type === "aboutMe" ? "aboutMeVideo" : "salesPitchVideo";
+    const filePath = `${user.id}/${fieldName}.${fileExtension}`;
+    console.log(`[handleVideoUpload - ${type}] Calculated file path:`, filePath);
+    const setUploading = type === "aboutMe" ? setUploadingAboutVideo : setUploadingSalesVideo;
+
+    setUploading(true);
+    const publicUrl = await uploadFileAndGetUrl(file, filePath);
+    setUploading(false);
+
+    if (publicUrl) {
+      form.setValue(fieldName, publicUrl); // Set REAL URL in form
+      toast({
+        title: "Video uploaded",
+        description: `Your ${type === "aboutMe" ? "about me" : "sales pitch"} video has been uploaded successfully.`,
+      });
+    } else {
+       e.target.value = "";
+    }
+  };
+
   useEffect(() => {
+    console.log("[Application.tsx] Running useEffect to fetch application data...");
     const fetchApplicationData = async () => {
-      if (!user) return;
+      if (!user) {
+          console.log("[Application.tsx] useEffect - No user, returning.");
+         return;
+      }
+      console.log("[Application.tsx] useEffect - User found, fetching data for:", user.id);
 
       try {
         const { data, error } = await supabase
           .from("candidates")
-          .select("resume, about_me_video, sales_pitch_video")
+          .select("resume, about_me_video, sales_pitch_video, status")
           .eq("id", user.id)
           .single();
 
@@ -99,6 +199,8 @@ const Application = () => {
           form.setValue("resume", data.resume || "");
           form.setValue("aboutMeVideo", data.about_me_video || "");
           form.setValue("salesPitchVideo", data.sales_pitch_video || "");
+
+          setCandidateStatus(data.status);
 
           // Check if all required fields are filled to determine if application is submitted
           if (data.resume && data.about_me_video && data.sales_pitch_video) {
@@ -155,33 +257,6 @@ const Application = () => {
     }
   };
 
-  // Simulating file upload handlers (in a real app, these would upload files to storage)
-  const handleResumeUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Simulate successful upload and get a URL
-    const mockResumeUrl = "https://example.com/resume.pdf";
-    form.setValue("resume", mockResumeUrl);
-    toast({
-      title: "Resume uploaded",
-      description: "Your resume has been uploaded successfully.",
-    });
-  };
-
-  const handleVideoUpload = (type: "aboutMe" | "salesPitch") => {
-    // Simulate successful upload and get a URL
-    const mockVideoUrl = `https://example.com/${type}.mp4`;
-    
-    if (type === "aboutMe") {
-      form.setValue("aboutMeVideo", mockVideoUrl);
-    } else {
-      form.setValue("salesPitchVideo", mockVideoUrl);
-    }
-    
-    toast({
-      title: "Video uploaded",
-      description: `Your ${type === "aboutMe" ? "about me" : "sales pitch"} video has been uploaded successfully.`,
-    });
-  };
-
   // Mock function to simulate saving URLs from external sources
   const saveExternalUrl = (type: "resume" | "aboutMeVideo" | "salesPitchVideo", url: string) => {
     form.setValue(type, url);
@@ -191,12 +266,19 @@ const Application = () => {
     });
   };
 
+  // Determine which alert to show
+  const showApplicationRequiredAlert = 
+    candidateStatus && // Status must be loaded
+    ["applied", "screening"].includes(candidateStatus.toLowerCase()); // Only show if status is initial
+  
+  const showApplicationSubmittedAlert = isSubmitted; // Show only if form fields were submitted
+
   return (
     <MainLayout>
       <div className="container mx-auto py-8">
         <h1 className="text-3xl font-bold mb-8">Application Form</h1>
 
-        {isSubmitted ? (
+        {showApplicationSubmittedAlert ? (
           <Alert className="mb-8">
             <AlertTitle>Application Submitted</AlertTitle>
             <AlertDescription>
@@ -204,7 +286,7 @@ const Application = () => {
               You'll be notified when there's an update on your application status.
             </AlertDescription>
           </Alert>
-        ) : (
+        ) : showApplicationRequiredAlert ? (
           <Alert className="mb-8" variant="destructive">
             <AlertTitle>Application Required</AlertTitle>
             <AlertDescription>
@@ -212,7 +294,7 @@ const Application = () => {
               All fields are required.
             </AlertDescription>
           </Alert>
-        )}
+        ) : null} {/* No alert if submitted=false AND status is past initial stages */}
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -347,7 +429,7 @@ const Application = () => {
                             id="aboutMeUpload" 
                             type="file" 
                             className="hidden" 
-                            onChange={() => handleVideoUpload("aboutMe")}
+                            onChange={(e) => handleVideoUpload(e, "aboutMe")}
                             disabled={isSubmitted}
                           />
                         </label>
@@ -417,7 +499,7 @@ const Application = () => {
                             id="salesPitchUpload" 
                             type="file" 
                             className="hidden" 
-                            onChange={() => handleVideoUpload("salesPitch")}
+                            onChange={(e) => handleVideoUpload(e, "salesPitch")}
                             disabled={isSubmitted}
                           />
                         </label>

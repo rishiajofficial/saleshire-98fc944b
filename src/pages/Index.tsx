@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import HeroSection from "../components/landing/HeroSection";
 import FeaturesSection from "../components/landing/FeaturesSection";
 import AIFeaturesSection from "../components/landing/AIFeaturesSection";
@@ -11,10 +11,10 @@ import CtaSection from "../components/landing/CtaSection";
 import StylesSection from "../components/landing/StylesSection";
 
 const Index = () => {
-  const sectionsRef = React.useRef<(HTMLElement | null)[]>([]);
+  const sectionsRef = useRef<(HTMLElement | null)[]>([]);
 
   // Animation on scroll
-  React.useEffect(() => {
+  useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {

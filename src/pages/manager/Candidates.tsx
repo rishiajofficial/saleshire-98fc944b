@@ -1,5 +1,7 @@
-
-import React, { useState } from "react";
+import React, { useState , useEffect} from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,103 +41,130 @@ import {
   Edit,
   Trash2,
   Calendar,
+  Info,
 } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
 import { toast } from "sonner";
+import { set } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Candidates = () => {
-  const [expandedCandidate, setExpandedCandidate] = useState<number | null>(null);
+  const { user, profile } = useAuth();
+  const [expandedCandidate, setExpandedCandidate] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
+  const [filteredCandidates, setFilteredCandidates] = useState<any[]>([]);
+  
+  // Fetch candidate data
+  const { data: candidatesData = [], isLoading: isLoadingCandidates } = useQuery({
+    // Include user ID and profile role in queryKey 
+    queryKey: ['candidatesPage', user?.id, profile?.role],
+    queryFn: async () => {
+      // Check for profile as well, since role check depends on it
+      if (!user || !profile) return []; 
+      
+      try {
+        // Start building the query
+        let query = supabase
+          .from('candidates')
+          .select(`
+            id,
+            status,
+            current_step,
+            updated_at,
+            candidate_profile:profiles!candidates_id_fkey(*),
+            assessment_results(score, completed, completed_at)
+          `)
+          // Ensure we only get actual candidates by checking profile role
+          .eq('candidate_profile.role', 'candidate');
 
-  const toggleExpand = (id: number) => {
-    if (expandedCandidate === id) {
-      setExpandedCandidate(null);
-    } else {
-      setExpandedCandidate(id);
+        // Apply filter ONLY if the profile role is manager
+        if (profile.role === 'manager') {
+          console.log(`[Candidates.tsx] Applying manager filter for user: ${user.id}`);
+          query = query.eq('assigned_manager', user.id);
+        } else {
+          console.log(`[Candidates.tsx] Role is ${profile.role}, not applying manager filter.`);
+        }
+        
+        // Always order
+        query = query.order('updated_at', { ascending: false });
+
+        // Execute the final query
+        const { data, error } = await query;
+
+        console.log(`Candidates.tsx (${profile.role}) Supabase Response:`, { data, error });
+
+        if (error) {
+          toast.error(`Error fetching candidates: ${error.message}`);
+          throw error;
+        }
+
+        return data || [];
+      } catch (err) {
+        console.error("Error in candidatesData query:", err);
+        return [];
+      }
+    },
+    enabled: !!user && !!profile // Only run query if user and profile exist
+  });
+
+  // Use candidatesData as the source for filtering
+  useEffect(() => {
+    // Filter candidates whenever the searchTerm, filterStatus, or candidatesData changes
+    const filtered = candidatesData.filter(candidate => {
+      // Explicitly check if the profile exists and role is 'candidate'
+      if (candidate.candidate_profile?.role !== 'candidate') {
+        return false; 
+      }
+      
+      const candidateName = candidate.candidate_profile?.name || "";
+      const candidateEmail = candidate.candidate_profile?.email || "";
+      const matchesSearch = candidateName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                            candidateEmail.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesFilter = filterStatus ? candidate.status === filterStatus : true;
+      return matchesSearch && matchesFilter;
+    });
+    
+    setFilteredCandidates(filtered);
+  }, [candidatesData, searchTerm, filterStatus]);
+
+  const toggleExpand = (id: string) => {
+    setExpandedCandidate(prev => (prev === id ? null : id));
+  };
+
+  const deleteCandidate = async (id: string) => {
+    try {
+       const { error, count } = await supabase
+        .from('candidates')
+        .delete()
+        .eq('id', id)
+        .select();
+  
+      if (error) {
+        throw new Error(`Supabase error: ${error.message}`);
+      }
+  
+      if (count === 0) {
+        toast.error("Candidate not found or already deleted");
+        return;
+      }
+   
+      // Remove the deleted candidate from the filteredCandidates state
+      setFilteredCandidates(prevState => prevState.filter(candidate => candidate.id !== id));
+  
+      toast.success("Candidate deleted successfully");
+  
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Deletion failed";
+      toast.error(`Error deleting candidate: ${message}`);
     }
   };
-
-  const deleteCandidate = (id: number) => {
-    toast.success("Candidate deleted successfully");
-  };
-
-  const scheduleInterview = (id: number) => {
+  
+  const scheduleInterview = (id: string) => {
     toast.success("Interview scheduled successfully");
+    // Implement interview scheduling logic here
   };
-
-  const candidates = [
-    {
-      id: 1,
-      name: "Jane Smith",
-      email: "jane.smith@example.com",
-      status: "applied",
-      statusText: "Applied",
-      applicationDate: "2023-09-28",
-      step: 1,
-      testScore: 78,
-      videos: 2,
-      resume: "jane_smith_resume.pdf",
-      location: "New York, NY",
-      phone: "+1 (555) 123-4567",
-    },
-    {
-      id: 2,
-      name: "Michael Johnson",
-      email: "michael.johnson@example.com",
-      status: "screening",
-      statusText: "Screening",
-      applicationDate: "2023-09-25",
-      step: 1,
-      testScore: 82,
-      videos: 2,
-      resume: "michael_johnson_resume.pdf",
-      location: "Chicago, IL",
-      phone: "+1 (555) 234-5678",
-    },
-    {
-      id: 3,
-      name: "Emily Davis",
-      email: "emily.davis@example.com",
-      status: "training",
-      statusText: "Training",
-      applicationDate: "2023-09-20",
-      step: 2,
-      testScore: 91,
-      videos: 2,
-      resume: "emily_davis_resume.pdf",
-      location: "Austin, TX",
-      phone: "+1 (555) 345-6789",
-    },
-    {
-      id: 4,
-      name: "David Wilson",
-      email: "david.wilson@example.com",
-      status: "sales_task",
-      statusText: "Sales Task",
-      applicationDate: "2023-09-15",
-      step: 3,
-      testScore: 85,
-      videos: 2,
-      resume: "david_wilson_resume.pdf",
-      location: "Seattle, WA",
-      phone: "+1 (555) 456-7890",
-    },
-    {
-      id: 5,
-      name: "Sarah Brown",
-      email: "sarah.brown@example.com",
-      status: "interview",
-      statusText: "Interview",
-      applicationDate: "2023-09-10",
-      step: 4,
-      testScore: 88,
-      videos: 2,
-      resume: "sarah_brown_resume.pdf",
-      location: "Boston, MA",
-      phone: "+1 (555) 567-8901",
-    },
-  ];
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -181,19 +210,38 @@ const Candidates = () => {
             <XCircle className="mr-1 h-3 w-3" /> Rejected
           </Badge>
         );
+      case "hr_review":
+        return (
+          <Badge className="bg-cyan-100 text-cyan-800">
+            <Info className="mr-1 h-3 w-3" /> HR Review
+          </Badge>
+        );
+      case "hr_approved":
+        return (
+          <Badge className="bg-teal-100 text-teal-800">
+            <CheckCircle className="mr-1 h-3 w-3" /> HR Approved
+          </Badge>
+        );
       default:
         return null;
     }
   };
 
-  const filteredCandidates = candidates.filter(candidate => {
-    const matchesSearch = candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         candidate.email.toLowerCase().includes(searchTerm.toLowerCase());
+  const getCandidateScore = (candidate: any) => {
+    if (!candidate.assessment_results || candidate.assessment_results.length === 0) {
+      return "N/A";
+    }
     
-    const matchesFilter = filterStatus ? candidate.status === filterStatus : true;
+    const scores = candidate.assessment_results
+      .filter((result: any) => result.score !== null)
+      .map((result: any) => result.score);
     
-    return matchesSearch && matchesFilter;
-  });
+    if (scores.length === 0) return "N/A";
+    
+    const avgScore = Math.round(scores.reduce((a: number, b: number) => a + b, 0) / scores.length);
+    // Return just the number, % sign is added in JSX
+    return avgScore; 
+  };
 
   return (
     <MainLayout>
@@ -276,7 +324,13 @@ const Candidates = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredCandidates.length > 0 ? (
+                  {isLoadingCandidates ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-4">
+                        Loading candidates...
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredCandidates.length > 0 ? (
                     filteredCandidates.map((candidate) => (
                       <React.Fragment key={candidate.id}>
                         <TableRow>
@@ -293,21 +347,24 @@ const Candidates = () => {
                                   <ChevronDown className="h-4 w-4" />}
                               </Button>
                               <div>
-                                <div className="font-medium">{candidate.name}</div>
+                                <div className="font-medium">
+                                  {candidate.candidate_profile?.name}
+                                </div>
                                 <div className="text-sm text-muted-foreground">
-                                  {candidate.email}
+                                  {candidate.candidate_profile?.email}
                                 </div>
                               </div>
                             </div>
                           </TableCell>
                           <TableCell>
+                            {console.log('Rendering Candidate Status:', candidate.id, '| Status:', candidate.status)}
                             {getStatusBadge(candidate.status)}
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
-                            {new Date(candidate.applicationDate).toLocaleDateString()}
+                            {new Date(candidate.updated_at).toLocaleDateString()}
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
-                            {candidate.testScore}%
+                            {getCandidateScore(candidate) !== "N/A" ? `${getCandidateScore(candidate)}%` : "N/A"}
                           </TableCell>
                           <TableCell className="text-right">
                             <DropdownMenu>
@@ -321,14 +378,6 @@ const Candidates = () => {
                                   <Link to={`/candidates/${candidate.id}`}>
                                     <Eye className="h-4 w-4 mr-2" /> View Details
                                   </Link>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem asChild>
-                                  <Link to={`/candidates/${candidate.id}/edit`}>
-                                    <Edit className="h-4 w-4 mr-2" /> Edit
-                                  </Link>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => scheduleInterview(candidate.id)}>
-                                  <Calendar className="h-4 w-4 mr-2" /> Schedule Interview
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={() => deleteCandidate(candidate.id)} className="text-red-600">
@@ -347,7 +396,7 @@ const Candidates = () => {
                                   <div className="space-y-1 text-sm">
                                     <div className="flex justify-between">
                                       <span className="text-muted-foreground">Email:</span>
-                                      <span>{candidate.email}</span>
+                                      <span>{candidate.candidate_profile?.email}</span>
                                     </div>
                                     <div className="flex justify-between">
                                       <span className="text-muted-foreground">Phone:</span>
@@ -364,11 +413,11 @@ const Candidates = () => {
                                   <div className="space-y-1 text-sm">
                                     <div className="flex justify-between">
                                       <span className="text-muted-foreground">Step:</span>
-                                      <span>Step {candidate.step} of 4</span>
+                                      <span>Step {candidate.current_step} of 4</span>
                                     </div>
                                     <div className="flex justify-between">
                                       <span className="text-muted-foreground">Test Score:</span>
-                                      <span>{candidate.testScore}%</span>
+                                      <span>{getCandidateScore(candidate) !== "N/A" ? `${getCandidateScore(candidate)}%` : "N/A"}</span>
                                     </div>
                                     <div className="flex justify-between">
                                       <span className="text-muted-foreground">Videos:</span>
@@ -384,10 +433,6 @@ const Candidates = () => {
                                         <Eye className="h-4 w-4 mr-2" />
                                         View Full Profile
                                       </Link>
-                                    </Button>
-                                    <Button size="sm" variant="outline" className="w-full justify-start" onClick={() => scheduleInterview(candidate.id)}>
-                                      <Calendar className="h-4 w-4 mr-2" />
-                                      Schedule Interview
                                     </Button>
                                   </div>
                                 </div>
