@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -96,7 +96,7 @@ const Candidates = () => {
 
   // Modified to ensure we're creating both profile and candidate records properly
   const createCandidateMutation = useMutation({
-    mutationFn: async (candidateData: {
+    mutationFn: async (formData: {
       name: string;
       email: string;
       phone: string;
@@ -107,8 +107,8 @@ const Candidates = () => {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .insert([{
-          name: candidateData.name,
-          email: candidateData.email,
+          name: formData.name,
+          email: formData.email,
           role: 'candidate'
         }])
         .select();
@@ -119,19 +119,19 @@ const Candidates = () => {
       const profileId = profileData[0].id;
 
       // Then create the candidate record linked to the profile
-      const { data: candidateData, error: candidateError } = await supabase
+      const { data: createdCandidate, error: candidateError } = await supabase
         .from('candidates')
         .insert([{
           id: profileId,
-          phone: candidateData.phone,
-          location: candidateData.location,
-          status: candidateData.status,
+          phone: formData.phone,
+          location: formData.location,
+          status: formData.status,
         }])
         .select();
 
       if (candidateError) throw new Error(`Candidate creation failed: ${candidateError.message}`);
 
-      return { profile: profileData[0], candidate: candidateData?.[0] };
+      return { profile: profileData[0], candidate: createdCandidate?.[0] };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['candidates'] });

@@ -191,10 +191,10 @@ const CandidateList: React.FC<CandidateListProps> = ({
                           </Button>
                           <div>
                             <div className="font-medium">
-                              {candidate.profiles?.name || candidate.candidate_profile?.name || "Unknown"}
+                              {candidate.profile?.name || candidate.candidate_profile?.name || "Unknown"}
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              {candidate.candidate_profile?.email || candidate.profiles?.email || "No email"}
+                              {candidate.profile?.email || candidate.candidate_profile?.email || "No email"}
                             </div>
                           </div>
                         </div>
