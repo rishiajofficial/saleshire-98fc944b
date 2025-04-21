@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -35,6 +34,7 @@ import {
   PenLine,
   Trash2,
   UserPlus,
+  Eye,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -51,7 +51,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-// Enhanced candidate type including profile data
 type CandidateWithProfile = Database['public']['Tables']['candidates']['Row'] & {
   profile?: {
     name: string;
@@ -60,7 +59,7 @@ type CandidateWithProfile = Database['public']['Tables']['candidates']['Row'] & 
 };
 
 const Candidates = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const queryClient = useQueryClient();
 
   const [showAddCandidateDialog, setShowAddCandidateDialog] = useState(false);
@@ -71,6 +70,12 @@ const Candidates = () => {
   const [newCandidateLocation, setNewCandidateLocation] = useState("");
   const [newCandidateStatus, setNewCandidateStatus] = useState("pending");
 
+  const [showHistoryDialog, setShowHistoryDialog] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyLogs, setHistoryLogs] = useState<any[]>([]);
+  const [historyCandidateName, setHistoryCandidateName] = useState<string>("");
+  const [historyCandidateId, setHistoryCandidateId] = useState<string>("");
+
   const { 
     data: fetchedCandidates,
     isLoading: isLoadingCandidates,
@@ -78,7 +83,6 @@ const Candidates = () => {
   } = useQuery<CandidateWithProfile[]>({
     queryKey: ['candidates'],
     queryFn: async (): Promise<CandidateWithProfile[]> => {
-      // Fix the query to properly join profiles data
       const { data, error } = await supabase
         .from('candidates')
         .select(`
@@ -92,13 +96,11 @@ const Candidates = () => {
         throw new Error(error.message);
       }
       
-      // Cast to the correct type
       return (data || []) as CandidateWithProfile[];
     },
     enabled: !!user,
   });
 
-  // Fixed mutation to properly create profiles and candidates
   const createCandidateMutation = useMutation({
     mutationFn: async (formData: {
       name: string;
@@ -107,10 +109,8 @@ const Candidates = () => {
       location: string;
       status: string;
     }) => {
-      // Generate a new UUID for the user
       const userId = crypto.randomUUID();
 
-      // Create a profile with the id provided
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .insert({
@@ -124,7 +124,6 @@ const Candidates = () => {
       if (profileError) throw new Error(`Profile creation failed: ${profileError.message}`);
       if (!profileData || profileData.length === 0) throw new Error('Failed to create profile');
 
-      // Then create the candidate record with the same id
       const { data: candidateData, error: candidateError } = await supabase
         .from('candidates')
         .insert({
@@ -173,6 +172,31 @@ const Candidates = () => {
       toast.error("Failed to delete candidate: " + error.message);
     },
   });
+
+  const openHistoryDialog = async (candidate: CandidateWithProfile) => {
+    setShowHistoryDialog(true);
+    setHistoryCandidateName(candidate.profile?.name || candidate.id);
+    setHistoryCandidateId(candidate.id);
+    setHistoryLoading(true);
+    const { data, error } = await supabase
+      .from("activity_logs")
+      .select("id, action, details, created_at, user_id")
+      .eq("entity_id", candidate.id)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    if (error) {
+      toast.error("Failed to load candidate history: " + error.message);
+      setHistoryLogs([]);
+    } else {
+      setHistoryLogs(data || []);
+    }
+    setHistoryLoading(false);
+  };
+
+  const closeHistoryDialog = () => {
+    setShowHistoryDialog(false);
+    setHistoryLogs([]);
+  };
 
   const handleAddCandidate = () => {
     if (!newCandidateName || !newCandidateEmail || !newCandidatePhone || !newCandidateLocation || !newCandidateStatus) {
@@ -323,6 +347,17 @@ const Candidates = () => {
                         <TableCell>{candidate.status || "Unknown"}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end space-x-1">
+                            {profile?.role === "hr" && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="View History"
+                                className="h-8 w-8 text-gray-700 hover:text-blue-600"
+                                onClick={() => openHistoryDialog(candidate)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button 
                               variant="ghost" 
                               size="icon" 
@@ -347,6 +382,52 @@ const Candidates = () => {
             </div>
           </CardContent>
         </Card>
+
+        <Dialog open={showHistoryDialog} onOpenChange={closeHistoryDialog}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>
+                Candidate History for {historyCandidateName}
+              </DialogTitle>
+              <DialogDescription>
+                Recent actions performed for this candidate
+              </DialogDescription>
+            </DialogHeader>
+            {historyLoading ? (
+              <div className="text-center py-6 text-muted-foreground">Loading history...</div>
+            ) : (
+              <div className="max-h-60 overflow-y-auto py-2">
+                {historyLogs && historyLogs.length > 0 ? (
+                  historyLogs.map((log) => (
+                    <div
+                      key={log.id}
+                      className="p-3 rounded border mb-2 flex flex-col gap-0.5"
+                    >
+                      <span className="font-medium text-gray-800">{log.action}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(log.created_at).toLocaleString()}
+                      </span>
+                      {log.details && (
+                        <pre className="text-xs text-gray-500 bg-gray-100 p-2 rounded mt-1 overflow-x-auto">
+                          {JSON.stringify(log.details, null, 2)}
+                        </pre>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-muted-foreground">
+                    No history found for this candidate.
+                  </div>
+                )}
+              </div>
+            )}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={closeHistoryDialog}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );
