@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import ReactPlayer from 'react-player/youtube'; // Import specifically for YouTube
@@ -17,7 +16,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
-// Simplified VideoData type (no watched status needed here)
 interface VideoData {
   id: string;
   title: string;
@@ -29,7 +27,7 @@ interface VideoData {
 
 const VideoPlayer = () => {
   const navigate = useNavigate();
-  const { user } = useAuth(); // Still need user potentially for RLS
+  const { user } = useAuth();
   const { moduleId, videoId } = useParams<{ moduleId: string; videoId: string }>();
   const playerRef = useRef<ReactPlayer>(null);
 
@@ -37,14 +35,12 @@ const VideoPlayer = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  const [isPlaying, setIsPlaying] = useState(false); // Player state (optional, for custom controls)
+  const [isPlaying, setIsPlaying] = useState(false);
   const [durationSeconds, setDurationSeconds] = useState(0);
-  // Removed states: playedSeconds, isWatched, isMarkingWatched
 
-  // Fetch video details from Supabase
   useEffect(() => {
     const fetchVideo = async () => {
-      if (!videoId) { // Don't necessarily need user here unless RLS depends on it
+      if (!videoId) {
         setError("Video ID missing.");
         setIsLoading(false);
         return;
@@ -54,7 +50,6 @@ const VideoPlayer = () => {
       setError(null);
 
       try {
-        // Fetch video details
         const { data: videoResult, error: videoError } = await supabase
           .from('videos')
           .select('*')
@@ -66,8 +61,6 @@ const VideoPlayer = () => {
 
         setVideoData(videoResult as VideoData);
 
-        // Removed watched status check
-
       } catch (err: any) {
         console.error("Error fetching video:", err);
         setError(err.message || "Failed to load video data.");
@@ -78,11 +71,7 @@ const VideoPlayer = () => {
     };
 
     fetchVideo();
-  }, [videoId]); // Dependency only on videoId now
-
-  // Removed markVideoAsWatched function
-
-  // --- ReactPlayer Callbacks (Simplified) ---
+  }, [videoId]);
 
   const handleReady = () => {
     console.log('Player ready');
@@ -92,9 +81,6 @@ const VideoPlayer = () => {
     setDurationSeconds(duration);
   };
 
-  // Removed handleProgress callback (no tracking needed)
-  // Removed handleEnded callback (no marking watched needed)
-  
   const handlePlay = () => setIsPlaying(true);
   const handlePause = () => setIsPlaying(false);
   const handleError = (e: any) => {
@@ -102,8 +88,6 @@ const VideoPlayer = () => {
     setError("Failed to load or play video.");
     toast.error("Video playback error.");
   }
-
-  // --- Rendering ---
 
   const handleBackToTraining = () => {
     navigate('/training');
@@ -163,12 +147,10 @@ const VideoPlayer = () => {
               url={videoData.url} 
               width='100%'
               height='100%'
-              playing={isPlaying} // Still useful for play/pause state if using custom controls
-              controls={true} // Using built-in controls is simplest
+              playing={isPlaying}
+              controls={true}
               onReady={handleReady}
               onDuration={handleDuration}
-              // onProgress removed
-              // onEnded removed
               onPlay={handlePlay}
               onPause={handlePause}
               onError={handleError}
@@ -195,13 +177,10 @@ const VideoPlayer = () => {
               {videoData.description}
             </div>
             )}
-            {/* Progress Bar removed or could be static */}
           </CardContent>
           
-          {/* Footer simplified - no watched status needed */}
           <CardFooter className="border-t pt-4 flex justify-end">
-             {/* Footer content can be simplified or removed */}
-              <Button variant="outline" onClick={handleBackToTraining}>Back to Training</Button>
+             <Button variant="outline" onClick={handleBackToTraining}>Back to Training</Button>
           </CardFooter>
         </Card>
       </div>
