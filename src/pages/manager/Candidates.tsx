@@ -1,14 +1,12 @@
-import React, { useState , useEffect} from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -21,418 +19,281 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
-  CheckCircle,
-  Clock,
-  MoreHorizontal,
   Search,
-  Filter,
-  XCircle,
-  ChevronDown,
-  ChevronUp,
-  Eye,
-  Edit,
+  Plus,
+  MoreHorizontal,
+  PenLine,
   Trash2,
-  Calendar,
-  Info,
+  UserPlus,
 } from "lucide-react";
-import MainLayout from "@/components/layout/MainLayout";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { set } from "date-fns";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Database } from "@/integrations/supabase/types";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+
+type Candidate = Database['public']['Tables']['candidates']['Row'];
 
 const Candidates = () => {
-  const { user, profile } = useAuth();
-  const [expandedCandidate, setExpandedCandidate] = useState<string | null>(null);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const [showAddCandidateDialog, setShowAddCandidateDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string | null>(null);
-  const [filteredCandidates, setFilteredCandidates] = useState<any[]>([]);
-  
-  const { data: candidatesData = [], isLoading: isLoadingCandidates } = useQuery({
-    queryKey: ['candidatesPage', user?.id, profile?.role],
-    queryFn: async () => {
-      if (!user || !profile) return []; 
-      
-      try {
-        let query = supabase
-          .from('candidates')
-          .select(`
-            id,
-            status,
-            current_step,
-            updated_at,
-            candidate_profile:profiles!candidates_id_fkey(*),
-            assessment_results(score, completed, completed_at)
-          `)
-          .eq('candidate_profile.role', 'candidate');
+  const [newCandidateName, setNewCandidateName] = useState("");
+  const [newCandidateEmail, setNewCandidateEmail] = useState("");
+  const [newCandidatePhone, setNewCandidatePhone] = useState("");
+  const [newCandidateLocation, setNewCandidateLocation] = useState("");
+  const [newCandidateStatus, setNewCandidateStatus] = useState("pending");
 
-        if (profile.role === 'manager') {
-          console.log(`[Candidates.tsx] Applying manager filter for user: ${user.id}`);
-          query = query.eq('assigned_manager', user.id);
-        } else {
-          console.log(`[Candidates.tsx] Role is ${profile.role}, not applying manager filter.`);
-        }
-        
-        query = query.order('updated_at', { ascending: false });
-
-        const { data, error } = await query;
-
-        console.log(`Candidates.tsx (${profile.role}) Supabase Response:`, { data, error });
-
-        if (error) {
-          toast.error(`Error fetching candidates: ${error.message}`);
-          throw error;
-        }
-
-        return data || [];
-      } catch (err) {
-        console.error("Error in candidatesData query:", err);
-        return [];
+  const { 
+    data: fetchedCandidates,
+    isLoading: isLoadingCandidates,
+    error: candidatesError
+  } = useQuery<Candidate[]>({
+    queryKey: ['candidates'],
+    queryFn: async (): Promise<Candidate[]> => {
+      const { data, error } = await supabase
+        .from('candidates')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) {
+        toast.error("Failed to fetch candidates: " + error.message);
+        throw new Error(error.message);
       }
+      return data || [];
     },
-    enabled: !!user && !!profile
+    enabled: !!user,
   });
 
-  useEffect(() => {
-    const filtered = candidatesData.filter(candidate => {
-      if (candidate.candidate_profile?.role !== 'candidate') {
-        return false; 
-      }
-      
-      const candidateName = candidate.candidate_profile?.name || "";
-      const candidateEmail = candidate.candidate_profile?.email || "";
-      const matchesSearch = candidateName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                            candidateEmail.toLowerCase().includes(searchTerm.toLowerCase());
+  const createCandidateMutation = useMutation({
+    mutationFn: async (newCandidateData: Omit<Candidate, 'id' | 'created_at'>) => {
+      const { data, error } = await supabase
+        .from('candidates')
+        .insert([newCandidateData])
+        .select();
+      if (error) throw new Error(error.message);
+      return data?.[0];
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['candidates'] });
+      toast.success("Candidate added successfully");
+      setShowAddCandidateDialog(false);
+      setNewCandidateName("");
+      setNewCandidateEmail("");
+      setNewCandidatePhone("");
+      setNewCandidateLocation("");
+      setNewCandidateStatus("pending");
+    },
+    onError: (error) => {
+      toast.error("Failed to add candidate: " + error.message);
+    },
+  });
 
-      const matchesFilter = filterStatus ? candidate.status === filterStatus : true;
-      return matchesSearch && matchesFilter;
-    });
-    
-    setFilteredCandidates(filtered);
-  }, [candidatesData, searchTerm, filterStatus]);
-
-  const toggleExpand = (id: string) => {
-    setExpandedCandidate(prev => (prev === id ? null : id));
-  };
-
-  const deleteCandidate = async (id: string) => {
-    try {
-       const { error, count } = await supabase
+  const deleteCandidateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
         .from('candidates')
         .delete()
-        .eq('id', id)
-        .select();
-  
+        .eq('id', id);
       if (error) {
-        throw new Error(`Supabase error: ${error.message}`);
+        throw new Error(error.message);
       }
-  
-      if (count === 0) {
-        toast.error("Candidate not found or already deleted");
-        return;
-      }
-   
-      setFilteredCandidates(prevState => prevState.filter(candidate => candidate.id !== id));
-  
+      return id;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['candidates'] });
       toast.success("Candidate deleted successfully");
-  
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Deletion failed";
-      toast.error(`Error deleting candidate: ${message}`);
+    },
+    onError: (error) => {
+      toast.error("Failed to delete candidate: " + error.message);
+    },
+  });
+
+  const handleAddCandidate = () => {
+    if (!newCandidateName || !newCandidateEmail || !newCandidatePhone || !newCandidateLocation || !newCandidateStatus) {
+      toast.error("All fields are required.");
+      return;
     }
-  };
-  
-  const scheduleInterview = (id: string) => {
-    toast.success("Interview scheduled successfully");
-    // Implement interview scheduling logic here
+    if (!user) { toast.error("You must be logged in."); return; }
+
+    createCandidateMutation.mutate({
+      name: newCandidateName,
+      email: newCandidateEmail,
+      phone: newCandidatePhone,
+      location: newCandidateLocation,
+      status: newCandidateStatus,
+      created_by: user.id,
+    });
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "applied":
-        return (
-          <Badge className="bg-blue-100 text-blue-800">
-            Applied
-          </Badge>
-        );
-      case "screening":
-        return (
-          <Badge className="bg-yellow-100 text-yellow-800">
-            <Clock className="mr-1 h-3 w-3" /> Screening
-          </Badge>
-        );
-      case "training":
-        return (
-          <Badge className="bg-purple-100 text-purple-800">
-            Training
-          </Badge>
-        );
-      case "sales_task":
-        return (
-          <Badge className="bg-orange-100 text-orange-800">
-            Sales Task
-          </Badge>
-        );
-      case "interview":
-        return (
-          <Badge className="bg-green-100 text-green-800">
-            Interview
-          </Badge>
-        );
-      case "hired":
-        return (
-          <Badge className="bg-green-100 text-green-800">
-            <CheckCircle className="mr-1 h-3 w-3" /> Hired
-          </Badge>
-        );
-      case "rejected":
-        return (
-          <Badge className="bg-red-100 text-red-800">
-            <XCircle className="mr-1 h-3 w-3" /> Rejected
-          </Badge>
-        );
-      case "hr_review":
-        return (
-          <Badge className="bg-cyan-100 text-cyan-800">
-            <Info className="mr-1 h-3 w-3" /> HR Review
-          </Badge>
-        );
-      case "hr_approved":
-        return (
-          <Badge className="bg-teal-100 text-teal-800">
-            <CheckCircle className="mr-1 h-3 w-3" /> HR Approved
-          </Badge>
-        );
-      default:
-        return null;
+  const handleDeleteCandidate = (id: string) => {
+    if (window.confirm("Are you sure you want to delete this candidate?")) {
+      deleteCandidateMutation.mutate(id);
     }
   };
 
-  const getCandidateScore = (candidate: any) => {
-    if (!candidate.assessment_results || candidate.assessment_results.length === 0) {
-      return "N/A";
-    }
-    
-    const scores = candidate.assessment_results
-      .filter((result: any) => result.score !== null)
-      .map((result: any) => result.score);
-    
-    if (scores.length === 0) return "N/A";
-    
-    const avgScore = Math.round(scores.reduce((a: number, b: number) => a + b, 0) / scores.length);
-    return avgScore; 
-  };
+  const filteredCandidates = fetchedCandidates?.filter(
+    (candidate) =>
+      candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      candidate.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      candidate.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      candidate.location.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
 
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Candidates</h1>
             <p className="text-muted-foreground mt-2">
-              Manage and review candidate applications
+              Manage candidates for the sales training program
             </p>
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-          <div className="relative w-full md:w-64">
+        <div className="flex items-center space-x-2">
+          <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
-              placeholder="Search candidates..."
+              placeholder="Search..."
               className="pl-10"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="flex gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2">
-                  <Filter className="h-4 w-4" />
-                  {filterStatus ? `Filter: ${filterStatus}` : 'Filter'}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setFilterStatus(null)}>
-                  All Status
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setFilterStatus("applied")}>
-                  Applied
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setFilterStatus("screening")}>
-                  Screening
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setFilterStatus("training")}>
-                  Training
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setFilterStatus("sales_task")}>
-                  Sales Task
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setFilterStatus("interview")}>
-                  Interview
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setFilterStatus("hired")}>
-                  Hired
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setFilterStatus("rejected")}>
-                  Rejected
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+        </div>
+
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold">Candidate List</h2>
+            <p className="text-muted-foreground">View and manage candidates</p>
           </div>
+          <Dialog open={showAddCandidateDialog} onOpenChange={setShowAddCandidateDialog}>
+            <DialogTrigger asChild>
+              <Button>
+                <UserPlus className="h-4 w-4 mr-2" /> Add New Candidate
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[550px]">
+              <DialogHeader>
+                <DialogTitle>Add New Candidate</DialogTitle>
+                <DialogDescription>
+                  Create a new candidate for the sales training program.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Name</Label>
+                  <Input id="name" placeholder="Enter candidate name" required value={newCandidateName} onChange={(e) => setNewCandidateName(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" placeholder="Enter candidate email" type="email" required value={newCandidateEmail} onChange={(e) => setNewCandidateEmail(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input id="phone" placeholder="Enter candidate phone" required value={newCandidatePhone} onChange={(e) => setNewCandidatePhone(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="location">Location</Label>
+                  <Input id="location" placeholder="Enter candidate location" required value={newCandidateLocation} onChange={(e) => setNewCandidateLocation(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select value={newCandidateStatus} onValueChange={setNewCandidateStatus}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setShowAddCandidateDialog(false)}>
+                  Cancel
+                </Button>
+                <Button type="button" onClick={handleAddCandidate} disabled={createCandidateMutation.isPending}>
+                  {createCandidateMutation.isPending ? "Adding..." : "Add Candidate"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
 
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle>All Candidates</CardTitle>
-            <CardDescription>
-              Total: {filteredCandidates.length} candidates
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Candidate</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead className="hidden md:table-cell">Phone</TableHead>
+                    <TableHead className="hidden md:table-cell">Location</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="hidden md:table-cell">Applied</TableHead>
-                    <TableHead className="hidden md:table-cell">Score</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoadingCandidates ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-4">
-                        Loading candidates...
-                      </TableCell>
+                      <TableCell colSpan={6} className="text-center py-8">Loading candidates...</TableCell>
+                    </TableRow>
+                  ) : candidatesError ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-red-600">Error: {candidatesError.message}</TableCell>
                     </TableRow>
                   ) : filteredCandidates.length > 0 ? (
                     filteredCandidates.map((candidate) => (
-                      <React.Fragment key={candidate.id}>
-                        <TableRow>
-                          <TableCell>
-                            <div className="flex items-center">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0 mr-2 text-muted-foreground"
-                                onClick={() => toggleExpand(candidate.id)}
-                              >
-                                {expandedCandidate === candidate.id ? 
-                                  <ChevronUp className="h-4 w-4" /> : 
-                                  <ChevronDown className="h-4 w-4" />}
-                              </Button>
-                              <div>
-                                <div className="font-medium">
-                                  {candidate.candidate_profile?.name}
-                                </div>
-                                <div className="text-sm text-muted-foreground">
-                                  {candidate.candidate_profile?.email}
-                                </div>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {console.log('Rendering Candidate Status:', candidate.id, '| Status:', candidate.status)}
-                            {getStatusBadge(candidate.status)}
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            {new Date(candidate.updated_at).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            {getCandidateScore(candidate) !== "N/A" ? `${getCandidateScore(candidate)}%` : "N/A"}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem asChild>
-                                  <Link to={`/candidates/${candidate.id}`}>
-                                    <Eye className="h-4 w-4 mr-2" /> View Details
-                                  </Link>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => deleteCandidate(candidate.id)} className="text-red-600">
-                                  <Trash2 className="h-4 w-4 mr-2" /> Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                        {expandedCandidate === candidate.id && (
-                          <TableRow className="bg-muted/50">
-                            <TableCell colSpan={5} className="p-4">
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                  <h4 className="text-sm font-medium mb-2">Contact Information</h4>
-                                  <div className="space-y-1 text-sm">
-                                    <div className="flex justify-between">
-                                      <span className="text-muted-foreground">Email:</span>
-                                      <span>{candidate.candidate_profile?.email}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                      <span className="text-muted-foreground">Phone:</span>
-                                      <span>{candidate.phone}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                      <span className="text-muted-foreground">Location:</span>
-                                      <span>{candidate.location}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div>
-                                  <h4 className="text-sm font-medium mb-2">Application Details</h4>
-                                  <div className="space-y-1 text-sm">
-                                    <div className="flex justify-between">
-                                      <span className="text-muted-foreground">Step:</span>
-                                      <span>Step {candidate.current_step} of 4</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                      <span className="text-muted-foreground">Test Score:</span>
-                                      <span>{getCandidateScore(candidate) !== "N/A" ? `${getCandidateScore(candidate)}%` : "N/A"}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                      <span className="text-muted-foreground">Videos:</span>
-                                      <span>{candidate.videos} submitted</span>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div>
-                                  <h4 className="text-sm font-medium mb-2">Actions</h4>
-                                  <div className="space-y-2">
-                                    <Button size="sm" variant="default" className="w-full justify-start" asChild>
-                                      <Link to={`/candidates/${candidate.id}`}>
-                                        <Eye className="h-4 w-4 mr-2" />
-                                        View Full Profile
-                                      </Link>
-                                    </Button>
-                                  </div>
-                                </div>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </React.Fragment>
+                      <TableRow key={candidate.id}>
+                        <TableCell>{candidate.name}</TableCell>
+                        <TableCell>{candidate.email}</TableCell>
+                        <TableCell className="hidden md:table-cell">{candidate.phone}</TableCell>
+                        <TableCell className="hidden md:table-cell">{candidate.location}</TableCell>
+                        <TableCell>{candidate.status}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end space-x-1">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => handleDeleteCandidate(candidate.id)}
+                              className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-4">
-                        No candidates found matching your search.
+                      <TableCell colSpan={6} className="text-center py-8">
+                        <p className="text-muted-foreground">{searchTerm ? "No candidates found matching search." : "No candidates created yet."}</p>
                       </TableCell>
                     </TableRow>
                   )}

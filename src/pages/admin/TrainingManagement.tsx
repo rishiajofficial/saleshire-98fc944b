@@ -84,6 +84,29 @@ const TrainingManagement = () => {
   const [videoUploadLoading, setVideoUploadLoading] = useState(false);
   const [autoVideoDuration, setAutoVideoDuration] = useState<string>("");
 
+  // Add missing state variables for quiz management
+  const [newQuizTitle, setNewQuizTitle] = useState("");
+  const [newQuizDescription, setNewQuizDescription] = useState("");
+  const [newQuizModule, setNewQuizModule] = useState("product");
+  
+  // Add missing state variables for video editing
+  const [editingVideo, setEditingVideo] = useState<Video | null>(null);
+  const [editVideoTitle, setEditVideoTitle] = useState("");
+  const [editVideoDescription, setEditVideoDescription] = useState("");
+  const [editVideoUrl, setEditVideoUrl] = useState("");
+  const [editVideoModule, setEditVideoModule] = useState("product");
+  const [editVideoDuration, setEditVideoDuration] = useState("");
+  
+  // Add missing state variables for quiz editing
+  const [editingQuiz, setEditingQuiz] = useState<TrainingModule | null>(null);
+  const [editQuizTitle, setEditQuizTitle] = useState("");
+  const [editQuizDescription, setEditQuizDescription] = useState("");
+  const [editQuizModule, setEditQuizModule] = useState("product");
+  const [editQuizId, setEditQuizId] = useState<string | null>(null);
+  
+  // Add missing state variable for assessments list
+  const [assessments, setAssessments] = useState<AssessmentOption[]>([]);
+
   const [useFileUpload, setUseFileUpload] = useState(true);
 
   const uploadVideoFile = async (file: File): Promise<string | null> => {
@@ -828,97 +851,3 @@ const TrainingManagement = () => {
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={3} className="text-center py-8">
-                            <p className="text-muted-foreground">{searchTerm ? "No quizzes found matching search." : "No quizzes created yet."}</p>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Dialog open={showEditQuizDialog} onOpenChange={setShowEditQuizDialog}>
-              <DialogContent className="sm:max-w-[550px]">
-                <DialogHeader>
-                  <DialogTitle>Edit Training Quiz/Module</DialogTitle>
-                  <DialogDescription>
-                    Modify the details of this training quiz/module.
-                  </DialogDescription>
-                </DialogHeader>
-                {editingQuiz && (
-                  <div className="grid gap-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-quiz-title">Title</Label>
-                      <Input id="edit-quiz-title" value={editQuizTitle} onChange={(e) => setEditQuizTitle(e.target.value)} required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-quiz-description">Description</Label>
-                      <Textarea id="edit-quiz-description" value={editQuizDescription} onChange={(e) => setEditQuizDescription(e.target.value)} required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-quiz-module">Module Category</Label>
-                      <Select value={editQuizModule} onValueChange={setEditQuizModule}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select module category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="product">Product Knowledge</SelectItem>
-                          <SelectItem value="sales">Sales Techniques</SelectItem>
-                          <SelectItem value="relationship">Relationship Building</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-quiz-assessment">Associated Quiz/Assessment</Label>
-                      <Select 
-                        value={editQuizId ?? "__NONE__"}
-                        onValueChange={(value) => setEditQuizId(value === "__NONE__" ? null : value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select an assessment (optional)" />
-                        </SelectTrigger>
-                        <SelectContent>
-                           <SelectItem value="__NONE__">None</SelectItem> 
-                           {isLoadingAssessments ? (
-                              <div className="p-2 text-center text-sm text-muted-foreground">Loading...</div>
-                           ) : assessmentsError ? (
-                              <div className="p-2 text-center text-sm text-red-500">Error loading</div>
-                           ) : assessments.length === 0 ? (
-                              <div className="p-2 text-center text-sm text-muted-foreground">No assessments found</div>
-                           ) : (
-                              assessments.map((assessment) => (
-                                <SelectItem key={assessment.id} value={assessment.id}>
-                                  {assessment.title}
-                                </SelectItem>
-                              ))
-                           )}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground pt-1">Link an existing assessment as the quiz for this module.</p>
-                    </div>
-                  </div>
-                )}
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setShowEditQuizDialog(false)}>Cancel</Button>
-                  <Button type="button" onClick={handleUpdateQuiz} disabled={updateQuizMutation.isPending}>
-                    {updateQuizMutation.isPending ? "Saving..." : "Save Changes"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </MainLayout>
-  );
-};
-
-export default TrainingManagement;
