@@ -33,12 +33,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// Define types for assessments and training modules
+interface Assessment {
+  id: string;
+  title: string;
+}
+
+interface TrainingModule {
+  id: string;
+  title: string;
+}
+
 const JobManagement = () => {
   const { user } = useAuth();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [assessments, setAssessments] = useState<any[]>([]);
-  const [trainingModules, setTrainingModules] = useState<any[]>([]);
+  const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [trainingModules, setTrainingModules] = useState<TrainingModule[]>([]);
   const [newJob, setNewJob] = useState({
     title: "",
     description: "",
@@ -75,22 +86,23 @@ const JobManagement = () => {
 
   const fetchAssessmentsAndTraining = async () => {
     try {
-      // Fetch assessments
-      const assessmentsResult = await supabase
+      // Fetch assessments with explicit typing
+      const { data: assessmentsData, error: assessmentsError } = await supabase
         .from('assessments')
         .select('id, title')
         .eq('status', 'active');
 
-      // Fetch training modules
-      const trainingResult = await supabase
+      if (assessmentsError) throw assessmentsError;
+      
+      // Fetch training modules with explicit typing
+      const { data: trainingData, error: trainingError } = await supabase
         .from('training_modules')
         .select('id, title');
 
-      if (assessmentsResult.error) throw assessmentsResult.error;
-      if (trainingResult.error) throw trainingResult.error;
+      if (trainingError) throw trainingError;
 
-      setAssessments(assessmentsResult.data || []);
-      setTrainingModules(trainingResult.data || []);
+      setAssessments(assessmentsData as Assessment[] || []);
+      setTrainingModules(trainingData as TrainingModule[] || []);
     } catch (error: any) {
       console.error('Error fetching assessments and training:', error);
       toast.error('Failed to load assessments and training modules');
