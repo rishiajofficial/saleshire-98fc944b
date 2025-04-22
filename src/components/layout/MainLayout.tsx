@@ -12,6 +12,9 @@ interface MainLayoutProps {
   children: React.ReactNode;
 }
 
+// Key for storing sidebar state in localStorage
+const SIDEBAR_STATE_KEY = "sidebar-expanded";
+
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const { user, profile, signOut } = useAuth();
   const { toast } = useToast();
@@ -19,12 +22,24 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
+  
+  // Initialize sidebar state from localStorage or default to expanded
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(() => {
+    const savedState = localStorage.getItem(SIDEBAR_STATE_KEY);
+    return savedState !== null ? savedState === "true" : true;
+  });
+  
   const [activeDropdowns, setActiveDropdowns] = useState<string[]>([]);
 
+  // Only close mobile menu on route change, don't affect desktop sidebar
   useEffect(() => {
     setIsOpen(false);
   }, [location.pathname]);
+
+  // Save sidebar state to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem(SIDEBAR_STATE_KEY, isSidebarExpanded.toString());
+  }, [isSidebarExpanded]);
 
   const handleSignOut = async () => {
     try {
@@ -87,7 +102,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         />
       )}
 
-      <div className={`flex-1 ${isMobile ? "pt-16" : `lg:pl-${isSidebarExpanded ? '64' : '20'}`}`}>
+      <div className={`flex-1 ${isMobile ? "pt-16" : ""}`} style={{ 
+        paddingLeft: isMobile ? 0 : (isSidebarExpanded ? '16rem' : '5rem'),
+        transition: 'padding-left 0.3s'
+      }}>
         <main className="container py-6 md:py-8 max-w-6xl">
           {children}
         </main>

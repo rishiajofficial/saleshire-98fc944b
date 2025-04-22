@@ -28,7 +28,7 @@ export const DesktopNav = ({
   handleSignOut,
 }: DesktopNavProps) => {
   return (
-    <div className={`fixed z-30 ${isSidebarExpanded ? 'w-64' : 'w-20'} transition-all duration-300 border-r h-screen bg-background hidden lg:block`}>
+    <div className={`fixed z-20 ${isSidebarExpanded ? 'w-64' : 'w-20'} transition-all duration-300 border-r h-screen bg-background hidden lg:block`}>
       <div className="flex flex-col h-full">
         <div className="p-6 flex items-center gap-2 justify-between">
           {isSidebarExpanded && (
