@@ -1,5 +1,6 @@
+
 import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query"; // Add useQueryClient here
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -34,6 +35,7 @@ interface InterviewData {
 const Interviews = () => {
   const { user, profile } = useAuth();
   const [filteredInterviews, setFilteredInterviews] = useState<InterviewData[]>([]);
+  const queryClient = useQueryClient(); // Initialize queryClient
 
   const { data: interviewsData = [], isLoading: isLoadingInterviews } = useQuery({
     queryKey: ['interviews', user?.id],
@@ -176,3 +178,4 @@ const Interviews = () => {
 };
 
 export default Interviews;
+
