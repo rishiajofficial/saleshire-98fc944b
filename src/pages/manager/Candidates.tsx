@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -249,7 +250,7 @@ const Candidates = () => {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Candidates</h1>
             <p className="text-muted-foreground mt-2">
-              Manage candidates for the sales training program
+              Manage candidates for the hiring portal
             </p>
           </div>
         </div>
@@ -281,7 +282,7 @@ const Candidates = () => {
               <DialogHeader>
                 <DialogTitle>Add New Candidate</DialogTitle>
                 <DialogDescription>
-                  Create a new candidate for the sales training program.
+                  Create a new candidate for the hiring portal.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -386,7 +387,7 @@ const Candidates = () => {
                                   </Link>
                                 </Button>
                               </>
-                            )}
+                            ) : null}
                             <Button
                               variant="ghost"
                               size="icon"
