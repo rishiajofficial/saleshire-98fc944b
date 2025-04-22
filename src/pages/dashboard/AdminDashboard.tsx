@@ -190,69 +190,6 @@ const AdminDashboard = () => {
           </p>
         </div>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle>Manage Assessments</CardTitle>
-            <CardDescription>
-              Create, edit, or delete active assessments
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Difficulty</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoadingAssessments ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8">Loading...</TableCell>
-                    </TableRow>
-                  ) : assessments.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8">No assessments found</TableCell>
-                    </TableRow>
-                  ) : (
-                    assessments.map((assessment) => (
-                      <TableRow key={assessment.id}>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{assessment.title}</div>
-                            <div className="text-xs text-muted-foreground">{assessment.description}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{assessment.difficulty || "Standard"}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          {new Date(assessment.created_at).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-red-600 hover:text-red-700"
-                            onClick={() => handleDeleteAssessment(assessment.id)}
-                            disabled={deletingAssessmentId === assessment.id}
-                            title="Delete assessment"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-6">
