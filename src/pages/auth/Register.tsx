@@ -24,7 +24,6 @@ import { AlertCircle, Eye, EyeOff } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import AuthLayout from '@/components/layout/AuthLayout';
 
-// Indian states array
 const indianStates = [
   "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", 
   "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", 
@@ -55,17 +54,13 @@ const Register = () => {
   const [rawPhone, setRawPhone] = useState("");
 
   useEffect(() => {
-    // If user is already logged in and we're on the register page, redirect
     if (user && location.pathname === '/register') {
       navigate("/");
     }
   }, [user, navigate, location]);
 
   const formatPhoneNumber = (value: string) => {
-    // Remove all non-digit characters
     const cleaned = value.replace(/\D/g, '');
-    
-    // Format the phone number
     let formatted = '';
     
     if (cleaned.length <= 5) {
@@ -76,12 +71,10 @@ const Register = () => {
       formatted = `${cleaned.slice(0, 5)} ${cleaned.slice(5, 10)}`;
     }
     
-    // Add the +91 prefix
     return cleaned.length > 0 ? `+91 ${formatted}` : '';
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Only allow digits, max 10
     let cleaned = e.target.value.replace(/\D/g, "");
     if (cleaned.length > 10) cleaned = cleaned.slice(0, 10);
     setRawPhone(cleaned);
@@ -91,7 +84,6 @@ const Register = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Basic validation
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
@@ -106,24 +98,20 @@ const Register = () => {
     setError("");
     
     try {
-      // Create location string combining city and state
       const location = `${city}, ${state}`;
       
-      // Create user data object for candidate
       const userData = {
         name,
         role: 'candidate',
         phone,
         location,
         region,
-        // Initialize with default values
         resume: null,
         about_me_video: null,
         sales_pitch_video: null
       };
 
       await signUp(email, password, userData);
-      // On signup, redirect to job openings, not application
       navigate("/job-openings");
     } catch (error: any) {
       setError(error.message || "Registration failed");

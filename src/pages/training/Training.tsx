@@ -1,68 +1,70 @@
-
 import React, { useEffect, useState } from "react";
-import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Book, Calendar } from "lucide-react";
+import { Loader2, Book, Calendar, Lock } from "lucide-react";
 import { Link } from "react-router-dom";
+import MainLayout from '@/components/layout/MainLayout';
 
 const Training = () => {
   const { user } = useAuth();
   const [trainingModules, setTrainingModules] = useState<any[]>([]);
   const [assessments, setAssessments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasAccess, setHasAccess] = useState(false);
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [jobs, setJobs] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) return;
     
-    const fetchData = async () => {
+    const checkAccessAndFetchData = async () => {
       try {
         setIsLoading(true);
         
-        // Fetch candidate's jobs
+        // Get candidate status
         const { data: candidateData, error: candidateError } = await supabase
           .from('candidates')
-          .select('id')
+          .select('status, current_step')
           .eq('id', user.id)
           .single();
           
-        if (candidateError || !candidateData) {
-          console.error("Error fetching candidate data:", candidateError);
-          return;
+        if (candidateError) throw candidateError;
+        
+        // Check if candidate has access to training (after HR review)
+        const hasTrainingAccess = candidateData.status === 'hr_approved' || 
+                                 candidateData.current_step >= 3;
+        setHasAccess(hasTrainingAccess);
+        
+        // Get selected job from localStorage
+        const selectedJobId = localStorage.getItem("selectedJob");
+        if (!selectedJobId) return;
+        
+        const { data: jobData, error: jobError } = await supabase
+          .from('jobs')
+          .select('*')
+          .eq('id', selectedJobId)
+          .single();
+          
+        if (jobError) throw jobError;
+        setSelectedJob(jobData);
+        
+        if (hasTrainingAccess) {
+          await fetchTrainingModules(selectedJobId);
+          await fetchAssessments(selectedJobId);
         }
-        
-        // For now, we'll use mock job data since we don't have a proper association table yet
-        // In a real implementation, you would fetch from a candidate_jobs table or similar
-        const mockJobs = [
-          { id: "job-a", title: "Sales Executive" },
-          { id: "job-b", title: "Business Development Associate" },
-          { id: "job-c", title: "Field Sales Representative" },
-        ];
-        
-        // In a real implementation, you would retrieve the job the candidate applied for
-        setJobs(mockJobs);
-        setSelectedJob(mockJobs[0]);
-        
-        // Fetch all training modules
-        await fetchTrainingModules(mockJobs[0].id);
-        
-        // Fetch all assessments
-        await fetchAssessments(mockJobs[0].id);
       } catch (error) {
-        console.error("Error in fetchData:", error);
+        console.error("Error in checkAccessAndFetchData:", error);
       } finally {
         setIsLoading(false);
       }
     };
     
-    fetchData();
+    checkAccessAndFetchData();
   }, [user]);
-  
+
   const fetchTrainingModules = async (jobId: string) => {
     try {
       // Fetch training modules associated with the job
@@ -164,6 +166,30 @@ const Training = () => {
       setIsLoading(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div className="flex justify-center items-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (!hasAccess) {
+    return (
+      <MainLayout>
+        <div className="max-w-2xl mx-auto py-12 text-center">
+          <Lock className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+          <h2 className="text-2xl font-bold mb-4">Training Content Locked</h2>
+          <p className="text-gray-600 mb-6">
+            Training modules will be available after your application is reviewed by HR.
+          </p>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
