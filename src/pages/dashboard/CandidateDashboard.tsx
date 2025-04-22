@@ -97,39 +97,60 @@ const CandidateDashboard = () => {
       try {
         console.log("Dashboard: Fetching initial non-training data for user:", user.id);
 
-        const candidatePromise = supabase
-          .from('candidates')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-          
-        const resultsPromise = supabase
-          .from('assessment_results')
-          .select('*')
-          .eq('candidate_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(5);
-          
-        const notificationPromise = supabase
-          .from('activity_logs')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(10);
-
-        const [candidateResult, resultsResult, notificationResult] = await Promise.all([
-          candidatePromise.catch(error => {
+        const fetchCandidate = async () => {
+          try {
+            const { data, error } = await supabase
+              .from('candidates')
+              .select('*')
+              .eq('id', user.id)
+              .single();
+              
+            if (error) throw error;
+            return { data, error: null };
+          } catch (error: any) {
             console.error("Candidate data fetch error:", error.message);
             return { data: null, error };
-          }),
-          resultsPromise.catch(error => {
+          }
+        };
+        
+        const fetchResults = async () => {
+          try {
+            const { data, error } = await supabase
+              .from('assessment_results')
+              .select('*')
+              .eq('candidate_id', user.id)
+              .order('created_at', { ascending: false })
+              .limit(5);
+              
+            if (error) throw error;
+            return { data: data || [], error: null };
+          } catch (error: any) {
             console.error("Assessment results fetch error:", error.message);
             return { data: [], error };
-          }),
-          notificationPromise.catch(error => {
+          }
+        };
+        
+        const fetchNotifications = async () => {
+          try {
+            const { data, error } = await supabase
+              .from('activity_logs')
+              .select('*')
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: false })
+              .limit(10);
+              
+            if (error) throw error;
+            return { data: data || [], error: null };
+          } catch (error: any) {
             console.error("Notifications fetch error:", error.message);
             return { data: [], error };
-          })
+          }
+        };
+
+        const [candidateResult, resultsResult, notificationResult] = await Promise.all([
+          fetchCandidate(),
+          fetchResults(),
+          fetchNotifications()
         ]);
 
         if (candidateResult.error) {
@@ -141,17 +162,9 @@ const CandidateDashboard = () => {
           }
         }
 
-        if (resultsResult.error) {
-            console.error("Assessment results fetch failed:", resultsResult.error.message);
-        }
-        
-        if (notificationResult.error) {
-          console.error("Notifications fetch failed:", notificationResult.error.message);
-        }
-
         const fetchedCandidateData = candidateResult.data;
-        const assessmentResults = resultsResult.data || [];
-        const notifications = notificationResult.data || [];
+        const assessmentResults = resultsResult.data;
+        const notifications = notificationResult.data;
         
         const applicationSubmitted = 
             !!fetchedCandidateData?.resume && 
