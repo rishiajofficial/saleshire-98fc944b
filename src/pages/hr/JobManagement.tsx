@@ -86,23 +86,28 @@ const JobManagement = () => {
 
   const fetchAssessmentsAndTraining = async () => {
     try {
-      // Fetch assessments with explicit typing
-      const { data: assessmentsData, error: assessmentsError } = await supabase
+      // Simplify assessment fetch to avoid deep type instantiation
+      const assessmentsQuery = supabase
         .from('assessments')
         .select('id, title')
         .eq('status', 'active');
+      
+      const { data: assessmentsData, error: assessmentsError } = await assessmentsQuery;
 
       if (assessmentsError) throw assessmentsError;
       
-      // Fetch training modules with explicit typing
-      const { data: trainingData, error: trainingError } = await supabase
+      // Simplify training modules fetch
+      const trainingQuery = supabase
         .from('training_modules')
         .select('id, title');
+        
+      const { data: trainingData, error: trainingError } = await trainingQuery;
 
       if (trainingError) throw trainingError;
 
-      setAssessments(assessmentsData as Assessment[] || []);
-      setTrainingModules(trainingData as TrainingModule[] || []);
+      // Use explicit type casting
+      setAssessments((assessmentsData || []) as Assessment[]);
+      setTrainingModules((trainingData || []) as TrainingModule[]);
     } catch (error: any) {
       console.error('Error fetching assessments and training:', error);
       toast.error('Failed to load assessments and training modules');
