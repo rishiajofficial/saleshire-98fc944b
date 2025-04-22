@@ -1,16 +1,76 @@
+
 import React, { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import {
+  Search,
+  Filter,
+  MoreHorizontal,
+  Eye,
+  Mail,
+  Phone,
+  Calendar,
+  MapPin,
+  User,
+  UserPlus,
+  Trash2,
+} from "lucide-react";
+import { Link } from "react-router-dom";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { CandidateWithProfile } from "@/types/candidate";
-import { AddCandidateDialog } from "@/components/candidates/AddCandidateDialog";
-import { CandidatesTable } from "@/components/candidates/CandidatesTable";
-import { CandidateHistoryDialog } from "@/components/candidates/CandidateHistoryDialog";
+import { Database } from "@/integrations/supabase/types";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+type CandidateWithProfile = Database['public']['Tables']['candidates']['Row'] & {
+  profile?: {
+    name: string;
+    email: string;
+  }
+};
 
 const Candidates = () => {
   const { user, profile } = useAuth();
@@ -189,7 +249,7 @@ const Candidates = () => {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Candidates</h1>
             <p className="text-muted-foreground mt-2">
-              Manage candidates for the hiring portal
+              Manage candidates for the sales training program
             </p>
           </div>
         </div>
@@ -211,52 +271,181 @@ const Candidates = () => {
             <h2 className="text-2xl font-bold">Candidate List</h2>
             <p className="text-muted-foreground">View and manage candidates</p>
           </div>
-          <AddCandidateDialog
-            isOpen={showAddCandidateDialog}
-            onOpenChange={setShowAddCandidateDialog}
-            onSubmit={handleAddCandidate}
-            isSubmitting={createCandidateMutation.isPending}
-            formData={{
-              name: newCandidateName,
-              email: newCandidateEmail,
-              phone: newCandidatePhone,
-              location: newCandidateLocation,
-              status: newCandidateStatus,
-            }}
-            onFormChange={{
-              setName: setNewCandidateName,
-              setEmail: setNewCandidateEmail,
-              setPhone: setNewCandidatePhone,
-              setLocation: setNewCandidateLocation,
-              setStatus: setNewCandidateStatus,
-            }}
-          />
+          <Dialog open={showAddCandidateDialog} onOpenChange={setShowAddCandidateDialog}>
+            <DialogTrigger asChild>
+              <Button>
+                <UserPlus className="h-4 w-4 mr-2" /> Add New Candidate
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[550px]">
+              <DialogHeader>
+                <DialogTitle>Add New Candidate</DialogTitle>
+                <DialogDescription>
+                  Create a new candidate for the sales training program.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Name</Label>
+                  <Input id="name" placeholder="Enter candidate name" required value={newCandidateName} onChange={(e) => setNewCandidateName(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" placeholder="Enter candidate email" type="email" required value={newCandidateEmail} onChange={(e) => setNewCandidateEmail(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input id="phone" placeholder="Enter candidate phone" required value={newCandidatePhone} onChange={(e) => setNewCandidatePhone(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="location">Location</Label>
+                  <Input id="location" placeholder="Enter candidate location" required value={newCandidateLocation} onChange={(e) => setNewCandidateLocation(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select value={newCandidateStatus} onValueChange={setNewCandidateStatus}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setShowAddCandidateDialog(false)}>
+                  Cancel
+                </Button>
+                <Button type="button" onClick={handleAddCandidate} disabled={createCandidateMutation.isPending}>
+                  {createCandidateMutation.isPending ? "Adding..." : "Add Candidate"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
 
         <Card>
           <CardContent className="p-6">
             <div className="rounded-md border">
-              <CandidatesTable
-                candidates={filteredCandidates}
-                isLoading={isLoadingCandidates}
-                error={candidatesError}
-                userRole={profile?.role}
-                onDelete={handleDeleteCandidate}
-              />
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead className="hidden md:table-cell">Phone</TableHead>
+                    <TableHead className="hidden md:table-cell">Location</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoadingCandidates ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8">Loading candidates...</TableCell>
+                    </TableRow>
+                  ) : candidatesError ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-red-600">Error: {candidatesError.message}</TableCell>
+                    </TableRow>
+                  ) : filteredCandidates.length > 0 ? (
+                    filteredCandidates.map((candidate) => (
+                      <TableRow key={candidate.id}>
+                        <TableCell>{candidate.profile?.name || "Unknown"}</TableCell>
+                        <TableCell>{candidate.profile?.email || "Unknown"}</TableCell>
+                        <TableCell className="hidden md:table-cell">{candidate.phone || "N/A"}</TableCell>
+                        <TableCell className="hidden md:table-cell">{candidate.location || "N/A"}</TableCell>
+                        <TableCell>{candidate.status || "Unknown"}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end space-x-1">
+                            {profile?.role === "hr" && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  title="View Details"
+                                  className="h-8 w-8 text-gray-700 hover:text-blue-600"
+                                  asChild
+                                >
+                                  <Link to={`/candidates/${candidate.id}`}>
+                                    <Eye className="h-4 w-4" />
+                                  </Link>
+                                </Button>
+                              </>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteCandidate(candidate.id)}
+                              className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8">
+                        <p className="text-muted-foreground">{searchTerm ? "No candidates found matching search." : "No candidates created yet."}</p>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </div>
           </CardContent>
         </Card>
 
-        <CandidateHistoryDialog
-          isOpen={showHistoryDialog}
-          onClose={() => {
-            setShowHistoryDialog(false);
-            setHistoryLogs([]);
-          }}
-          candidateName={historyCandidateName}
-          isLoading={historyLoading}
-          logs={historyLogs}
-        />
+        <Dialog open={showHistoryDialog} onOpenChange={closeHistoryDialog}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>
+                Candidate History for {historyCandidateName}
+              </DialogTitle>
+              <DialogDescription>
+                Recent actions performed for this candidate
+              </DialogDescription>
+            </DialogHeader>
+            {historyLoading ? (
+              <div className="text-center py-6 text-muted-foreground">Loading history...</div>
+            ) : (
+              <div className="max-h-60 overflow-y-auto py-2">
+                {historyLogs && historyLogs.length > 0 ? (
+                  historyLogs.map((log) => (
+                    <div
+                      key={log.id}
+                      className="p-3 rounded border mb-2 flex flex-col gap-0.5"
+                    >
+                      <span className="font-medium text-gray-800">{log.action}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(log.created_at).toLocaleString()}
+                      </span>
+                      {log.details && (
+                        <pre className="text-xs text-gray-500 bg-gray-100 p-2 rounded mt-1 overflow-x-auto">
+                          {JSON.stringify(log.details, null, 2)}
+                        </pre>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-muted-foreground">
+                    No history found for this candidate.
+                  </div>
+                )}
+              </div>
+            )}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={closeHistoryDialog}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );
