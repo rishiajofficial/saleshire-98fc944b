@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +23,12 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 interface JobCreationDialogProps {
-  onJobCreated: () => void;
+  onJobCreated: (job: {
+    title: string;
+    description: string;
+    selectedAssessment?: string;
+    selectedTrainingModule?: string;
+  }) => void;
   assessments: { id: string; title: string; }[];
   trainingModules: { id: string; title: string; }[];
 }
@@ -42,54 +46,15 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
     selectedTrainingModule: "",
   });
 
-  const handleCreateJob = async () => {
-    try {
-      const { data: jobData, error: jobError } = await supabase
-        .from('jobs')
-        .insert({
-          title: newJob.title,
-          description: newJob.description,
-          created_by: (await supabase.auth.getUser()).data.user?.id,
-          status: 'active'
-        })
-        .select()
-        .single();
-
-      if (jobError) throw jobError;
-
-      const jobAssessmentPromise = newJob.selectedAssessment
-        ? supabase
-            .from('job_assessments')
-            .insert({
-              job_id: jobData.id,
-              assessment_id: newJob.selectedAssessment
-            })
-        : Promise.resolve();
-
-      const jobTrainingPromise = newJob.selectedTrainingModule
-        ? supabase
-            .from('job_training')
-            .insert({
-              job_id: jobData.id,
-              training_module_id: newJob.selectedTrainingModule
-            })
-        : Promise.resolve();
-
-      await Promise.all([jobAssessmentPromise, jobTrainingPromise]);
-
-      setDialogOpen(false);
-      setNewJob({
-        title: "",
-        description: "",
-        selectedAssessment: "",
-        selectedTrainingModule: "",
-      });
-      onJobCreated();
-      toast.success('Job created successfully');
-    } catch (error: any) {
-      console.error('Error creating job:', error);
-      toast.error('Failed to create job');
-    }
+  const handleCreateJob = () => {
+    onJobCreated(newJob);
+    setDialogOpen(false);
+    setNewJob({
+      title: "",
+      description: "",
+      selectedAssessment: "",
+      selectedTrainingModule: "",
+    });
   };
 
   return (

@@ -1,35 +1,15 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import MainLayout from '@/components/layout/MainLayout';
 import { Loader2 } from "lucide-react";
-import { Job } from "@/types/job";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import JobCreationDialog from "@/components/jobs/JobCreationDialog";
 import JobList from "@/components/jobs/JobList";
+import { useJobs } from "@/hooks/useJobs";
 
 const JobManagement = () => {
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { jobs, isLoading, createJob, deleteJob } = useJobs();
   const [assessments, setAssessments] = useState<{ id: string; title: string; }[]>([]);
   const [trainingModules, setTrainingModules] = useState<{ id: string; title: string; }[]>([]);
-
-  const fetchJobs = async () => {
-    try {
-      const { data: jobsData, error: jobsError } = await supabase
-        .from('jobs')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (jobsError) throw jobsError;
-      setJobs(jobsData as Job[] || []);
-    } catch (error) {
-      console.error('Error fetching jobs:', error);
-      toast.error('Failed to load jobs');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const fetchAssessmentsAndTraining = async () => {
     try {
@@ -52,8 +32,7 @@ const JobManagement = () => {
     }
   };
 
-  useEffect(() => {
-    fetchJobs();
+  React.useEffect(() => {
     fetchAssessmentsAndTraining();
   }, []);
 
@@ -73,13 +52,12 @@ const JobManagement = () => {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Job Management</h1>
           <JobCreationDialog
-            onJobCreated={fetchJobs}
+            onJobCreated={createJob.mutate}
             assessments={assessments}
             trainingModules={trainingModules}
           />
         </div>
-
-        <JobList jobs={jobs} onJobDeleted={fetchJobs} />
+        <JobList jobs={jobs || []} onJobDeleted={deleteJob.mutate} />
       </div>
     </MainLayout>
   );
