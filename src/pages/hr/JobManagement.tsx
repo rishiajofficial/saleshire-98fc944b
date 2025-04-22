@@ -75,22 +75,23 @@ const JobManagement = () => {
 
   const fetchAssessmentsAndTraining = async () => {
     try {
-      const [assessmentsResult, trainingResult] = await Promise.all([
-        supabase
-          .from('assessments')
-          .select('id, title')
-          .eq('status', 'active'),
-        supabase
-          .from('training_modules')
-          .select('id, title')
-      ]);
+      // Fetch assessments
+      const assessmentsResult = await supabase
+        .from('assessments')
+        .select('id, title')
+        .eq('status', 'active');
+
+      // Fetch training modules
+      const trainingResult = await supabase
+        .from('training_modules')
+        .select('id, title');
 
       if (assessmentsResult.error) throw assessmentsResult.error;
       if (trainingResult.error) throw trainingResult.error;
 
       setAssessments(assessmentsResult.data || []);
       setTrainingModules(trainingResult.data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching assessments and training:', error);
       toast.error('Failed to load assessments and training modules');
     }
