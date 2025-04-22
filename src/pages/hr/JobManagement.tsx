@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,7 +32,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// Define types for assessments and training modules
 interface Assessment {
   id: string;
   title: string;
@@ -74,7 +72,6 @@ const JobManagement = () => {
 
       if (jobsError) throw jobsError;
       
-      // Type assertion to ensure it matches our Job interface
       setJobs(jobsData as Job[] || []);
     } catch (error) {
       console.error('Error fetching jobs:', error);
@@ -86,28 +83,21 @@ const JobManagement = () => {
 
   const fetchAssessmentsAndTraining = async () => {
     try {
-      // Simplify assessment fetch to avoid deep type instantiation
-      const assessmentsQuery = supabase
+      const assessmentsResult = await supabase
         .from('assessments')
         .select('id, title')
-        .eq('status', 'active');
-      
-      const { data: assessmentsData, error: assessmentsError } = await assessmentsQuery;
+        .returns<Assessment[]>();
 
-      if (assessmentsError) throw assessmentsError;
-      
-      // Simplify training modules fetch
-      const trainingQuery = supabase
+      const trainingResult = await supabase
         .from('training_modules')
-        .select('id, title');
-        
-      const { data: trainingData, error: trainingError } = await trainingQuery;
+        .select('id, title')
+        .returns<TrainingModule[]>();
 
-      if (trainingError) throw trainingError;
+      if (assessmentsResult.error) throw assessmentsResult.error;
+      if (trainingResult.error) throw trainingResult.error;
 
-      // Use explicit type casting
-      setAssessments((assessmentsData || []) as Assessment[]);
-      setTrainingModules((trainingData || []) as TrainingModule[]);
+      setAssessments(assessmentsResult.data || []);
+      setTrainingModules(trainingResult.data || []);
     } catch (error: any) {
       console.error('Error fetching assessments and training:', error);
       toast.error('Failed to load assessments and training modules');
@@ -118,7 +108,6 @@ const JobManagement = () => {
     if (!user) return;
 
     try {
-      // Insert job
       const { data: jobData, error: jobError } = await supabase
         .from('jobs')
         .insert({
@@ -132,7 +121,6 @@ const JobManagement = () => {
 
       if (jobError) throw jobError;
 
-      // Associate assessment if selected
       const jobAssessmentPromise = newJob.selectedAssessment
         ? supabase
             .from('job_assessments')
@@ -142,7 +130,6 @@ const JobManagement = () => {
             })
         : Promise.resolve();
 
-      // Associate training module if selected
       const jobTrainingPromise = newJob.selectedTrainingModule
         ? supabase
             .from('job_training')
@@ -154,7 +141,6 @@ const JobManagement = () => {
 
       await Promise.all([jobAssessmentPromise, jobTrainingPromise]);
 
-      // Refresh jobs list
       const { data: updatedJobs } = await supabase
         .from('jobs')
         .select('*')

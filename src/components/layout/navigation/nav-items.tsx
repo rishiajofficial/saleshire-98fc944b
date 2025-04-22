@@ -38,7 +38,7 @@ export const getNavItems = (role?: string): NavItem[] => [
     label: "Candidates",
     href: "/candidates",
     icon: <Users className="h-5 w-5" />,
-    role: ["admin", "manager", "hr", "director"],
+    role: ["manager", "hr", "director"],
   },
   {
     label: "Assessments",
@@ -50,13 +50,13 @@ export const getNavItems = (role?: string): NavItem[] => [
     label: "Interviews",
     href: "/interviews",
     icon: <Video className="h-5 w-5" />,
-    role: ["admin", "manager", "hr", "director"],
+    role: ["manager", "hr", "director"],
   },
   {
     label: "Analytics",
     href: "/analytics",
     icon: <BarChart3 className="h-5 w-5" />,
-    role: ["admin", "manager", "hr", "director"],
+    role: ["manager", "hr", "director"],
   },
   {
     label: "Training",
