@@ -78,3 +78,4 @@ export const CandidateHistoryDialog: React.FC<CandidateHistoryDialogProps> = ({
     </Dialog>
   );
 };
+

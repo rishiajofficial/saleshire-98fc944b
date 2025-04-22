@@ -7,3 +7,4 @@ export type CandidateWithProfile = Database['public']['Tables']['candidates']['R
     email: string;
   }
 };
+

@@ -133,3 +133,4 @@ export const AddCandidateDialog: React.FC<AddCandidateDialogProps> = ({
     </Dialog>
   );
 };
+
