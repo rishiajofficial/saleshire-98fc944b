@@ -63,7 +63,8 @@ const JobManagement = () => {
 
       if (jobsError) throw jobsError;
       
-      setJobs(jobsData || []);
+      // Type assertion to ensure it matches our Job interface
+      setJobs(jobsData as Job[] || []);
     } catch (error) {
       console.error('Error fetching jobs:', error);
       toast.error('Failed to load jobs');
@@ -142,7 +143,7 @@ const JobManagement = () => {
         .order('created_at', { ascending: false });
 
       if (updatedJobs) {
-        setJobs(updatedJobs);
+        setJobs(updatedJobs as Job[]);
       }
 
       setDialogOpen(false);

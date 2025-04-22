@@ -3,9 +3,10 @@ export interface Job {
   id: string;
   title: string;
   description: string;
-  status: 'active' | 'inactive';
+  status: string; // Changed from 'active' | 'inactive' to string to match database value
   created_at?: string;
   created_by?: string;
+  updated_at?: string;
 }
 
 export interface JobAssessment {
