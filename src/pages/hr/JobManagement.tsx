@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import MainLayout from '@/components/layout/MainLayout';
 import { Loader2 } from "lucide-react";
@@ -5,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import JobCreationDialog from "@/components/jobs/JobCreationDialog";
 import JobList from "@/components/jobs/JobList";
 import { useJobs } from "@/hooks/useJobs";
+import { toast } from "sonner";
 
 const JobManagement = () => {
   const { jobs, isLoading, createJob, deleteJob } = useJobs();
