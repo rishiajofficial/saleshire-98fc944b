@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ import {
   MoreHorizontal,
   Edit,
   Trash2,
+  FileText
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";

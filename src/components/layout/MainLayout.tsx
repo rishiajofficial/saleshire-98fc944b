@@ -48,7 +48,7 @@ interface NavItem {
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const { user, profile, signOut } = useAuth();
   const { toast } = useToast();
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
   const location = useLocation();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState<boolean>(false);
