@@ -10,21 +10,19 @@ import DashboardStats from "@/components/dashboard/DashboardStats";
 import CandidateList from "@/components/dashboard/CandidateList";
 import InterviewList from "@/components/dashboard/InterviewList";
 import RecentResultsList from "@/components/dashboard/RecentResultsList";
+import JobListings from '@/components/dashboard/JobListings';
 import { Interview, AssessmentWithStats } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 
-// Define types directly based on expected query results
-// Adjust Candidate type to handle potential inconsistencies in nested profiles
 type Candidate = Database['public']['Tables']['candidates']['Row'] & {
-   profiles?: any | null // Use any for profiles to bypass strict Supabase return type issues
+   profiles?: any | null;
 };
-// SupabaseInterview includes the potentially nested candidate
+
 type SupabaseInterview = Database['public']['Tables']['interviews']['Row'] & { candidates: Candidate | null };
 
-// Define a type for the Director's view of assessment results
 type DirectorAssessmentEntry = {
-  id: string; // Result ID
+  id: string;
   assessmentTitle: string;
   candidateName: string;
   score: number | null;
@@ -36,7 +34,6 @@ const DirectorDashboard = () => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("all-candidates");
 
-  // Fetch ALL candidates (including Closed)
   const { data: allCandidates, isLoading: isLoadingCandidates } = useQuery<Candidate[], Error>({
     queryKey: ['allCandidatesDirector'],
     queryFn: async (): Promise<Candidate[]> => {
@@ -60,7 +57,6 @@ const DirectorDashboard = () => {
     },
   });
 
-  // Fetch ALL upcoming interviews and map to Interview type
   const { data: upcomingInterviews, isLoading: isLoadingInterviews } = useQuery<Interview[], Error>({
     queryKey: ['allUpcomingInterviews'],
     queryFn: async (): Promise<Interview[]> => {
@@ -85,7 +81,6 @@ const DirectorDashboard = () => {
         throw new Error(error.message);
       }
       
-      // Cast intermediate data to any[] before mapping if direct cast fails
       const supabaseData = (data || []) as any[]; 
       const mappedData = supabaseData.map((interview): Interview => ({
         id: interview.id,
@@ -100,7 +95,6 @@ const DirectorDashboard = () => {
     },
   });
 
-  // Fetch recent assessment results for the Director view
   const { data: recentAssessmentResults, isLoading: isLoadingAssessments } = useQuery<DirectorAssessmentEntry[], Error>({
       queryKey: ['directorRecentAssessmentResults'],
       queryFn: async (): Promise<DirectorAssessmentEntry[]> => {
@@ -142,11 +136,9 @@ const DirectorDashboard = () => {
       },
     });
 
-  // Combined loading state
   const isLoading = isLoadingCandidates || isLoadingInterviews || isLoadingAssessments;
 
   const dashboardStats = useMemo(() => {
-    // Define statuses considered "pending review" for the Director
     const pendingReviewStatuses = ['hr_approved', 'final_interview'];
     
     const candidatesForStats = allCandidates || [];
@@ -158,20 +150,20 @@ const DirectorDashboard = () => {
     return {
       totalActiveCandidates: candidatesForStats.filter(c => c.status !== 'Closed').length ?? 0,
       totalCandidates: candidatesForStats.length ?? 0,
-      pendingReviews: pendingReviewsCount, // Calculate pending reviews
+      pendingReviews: pendingReviewsCount,
       interviewsScheduled: upcomingInterviews?.length ?? 0,
     };
   }, [allCandidates, upcomingInterviews]);
 
   return (
     <MainLayout>
-       <div className="space-y-8">
-         <div>
-           <h1 className="text-3xl font-bold tracking-tight">Director Dashboard</h1>
-           <p className="text-muted-foreground mt-2">
-              Overview of all candidates, interviews, and assessments.
-           </p>
-         </div>
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Director Dashboard</h1>
+          <p className="text-muted-foreground mt-2">
+            Overview of all candidates, interviews, and assessments.
+          </p>
+        </div>
         
         <DashboardStats
           totalCandidates={dashboardStats.totalCandidates}
@@ -179,6 +171,8 @@ const DirectorDashboard = () => {
           interviewsScheduled={dashboardStats.interviewsScheduled}
           isLoading={isLoading}
         />
+
+        <JobListings />
 
         <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-4">
@@ -203,18 +197,15 @@ const DirectorDashboard = () => {
           </TabsContent>
 
           <TabsContent value="recent-assessments">
-             {/* Use the new component designed for assessment results */}
             <RecentResultsList 
               results={recentAssessmentResults || []} 
               isLoading={isLoadingAssessments} 
             />
           </TabsContent>
         </Tabs>
-
-        
-       </div>
+      </div>
     </MainLayout>
   );
 };
 
-export default DirectorDashboard; 
+export default DirectorDashboard;

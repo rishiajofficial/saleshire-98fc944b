@@ -1,4 +1,3 @@
-
 import {
   Users,
   BarChart3,
@@ -7,6 +6,7 @@ import {
   Settings,
   Video,
   Home,
+  Briefcase,
 } from "lucide-react";
 import { UserRole } from "@/types";
 
@@ -39,6 +39,12 @@ export const getNavItems = (role?: string): NavItem[] => [
     href: "/candidates",
     icon: <Users className="h-5 w-5" />,
     role: ["manager", "hr", "director"],
+  },
+  {
+    label: "Job Management",
+    href: "/hr/job-management",
+    icon: <Briefcase className="h-5 w-5" />,
+    role: ["hr", "director"],
   },
   {
     label: "Assessments",

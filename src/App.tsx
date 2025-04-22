@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -35,6 +34,7 @@ import AssessmentSectionDetails from "./pages/admin/AssessmentSectionDetails";
 import TrainingModuleDetails from "./pages/admin/TrainingModuleDetails";
 import QuestionDetails from "./pages/admin/QuestionDetails";
 import JobOpenings from "./pages/candidate/JobOpenings";
+import JobManagement from "./pages/hr/JobManagement";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
@@ -198,6 +198,11 @@ const App = () => (
             <Route path="/job-openings" element={
               <ProtectedRoute allowedRoles={['candidate']}>
                 <JobOpenings />
+              </ProtectedRoute>
+            } />
+            <Route path="/hr/job-management" element={
+              <ProtectedRoute allowedRoles={['hr', 'director']}>
+                <JobManagement />
               </ProtectedRoute>
             } />
             <Route path="*" element={<NotFound />} />
