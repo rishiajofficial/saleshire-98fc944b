@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -856,3 +857,68 @@ const TrainingManagement = () => {
             <Dialog open={showEditQuizDialog} onOpenChange={setShowEditQuizDialog}>
               <DialogContent className="sm:max-w-[550px]">
                 <DialogHeader>
+                  <DialogTitle>Edit Training Quiz</DialogTitle>
+                  <DialogDescription>
+                    Modify the details of this training quiz.
+                  </DialogDescription>
+                </DialogHeader>
+                {editingQuiz && (
+                  <div className="grid gap-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-quiz-title">Quiz Title</Label>
+                      <Input id="edit-quiz-title" value={editQuizTitle} onChange={(e) => setEditQuizTitle(e.target.value)} required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-quiz-description">Description</Label>
+                      <Textarea id="edit-quiz-description" value={editQuizDescription} onChange={(e) => setEditQuizDescription(e.target.value)} required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-quiz-module">Module</Label>
+                      <Select value={editQuizModule} onValueChange={setEditQuizModule}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select module" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="product">Product Knowledge</SelectItem>
+                          <SelectItem value="sales">Sales Techniques</SelectItem>
+                          <SelectItem value="relationship">Relationship Building</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-quiz-id">Associated Assessment</Label>
+                      <Select 
+                        value={editQuizId || "none"} 
+                        onValueChange={(val) => setEditQuizId(val === "none" ? null : val)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select assessment" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None (No Assessment)</SelectItem>
+                          {assessments.map(assessment => (
+                            <SelectItem key={assessment.id} value={assessment.id}>
+                              {assessment.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setShowEditQuizDialog(false)}>Cancel</Button>
+                  <Button type="button" onClick={handleUpdateQuiz} disabled={updateQuizMutation.isPending}>
+                    {updateQuizMutation.isPending ? "Saving..." : "Save Changes"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </MainLayout>
+  );
+};
+
+export default TrainingManagement;
