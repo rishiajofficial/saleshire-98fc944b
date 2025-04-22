@@ -11,6 +11,7 @@ import { CandidateWithProfile } from "@/types/candidate";
 import { AddCandidateDialog } from "@/components/candidates/AddCandidateDialog";
 import { CandidatesTable } from "@/components/candidates/CandidatesTable";
 import { CandidateHistoryDialog } from "@/components/candidates/CandidateHistoryDialog";
+import { CandidateStatusFilter } from "@/components/candidates/CandidateStatusFilter";
 
 const Candidates = () => {
   const { user, profile } = useAuth();
@@ -29,6 +30,8 @@ const Candidates = () => {
   const [historyLogs, setHistoryLogs] = useState<any[]>([]);
   const [historyCandidateName, setHistoryCandidateName] = useState<string>("");
   const [historyCandidateId, setHistoryCandidateId] = useState<string>("");
+
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const { 
     data: fetchedCandidates,
@@ -174,13 +177,53 @@ const Candidates = () => {
     }
   };
 
-  const filteredCandidates = fetchedCandidates?.filter(
-    (candidate) =>
+  const handleArchiveCandidate = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('candidates')
+        .update({ archived: true })
+        .eq('id', id);
+
+      if (error) throw error;
+      toast.success("Candidate archived successfully");
+      queryClient.invalidateQueries({ queryKey: ['candidates'] });
+    } catch (err) {
+      console.error("Error archiving candidate:", err);
+      toast.error("Failed to archive candidate");
+    }
+  };
+
+  const handleStatusChange = async (id: string, status: string) => {
+    try {
+      const { error } = await supabase
+        .from('candidates')
+        .update({ status })
+        .eq('id', id);
+
+      if (error) throw error;
+      toast.success("Candidate status updated successfully");
+      queryClient.invalidateQueries({ queryKey: ['candidates'] });
+    } catch (err) {
+      console.error("Error updating candidate status:", err);
+      toast.error("Failed to update candidate status");
+    }
+  };
+
+  const filteredCandidates = fetchedCandidates
+    ?.filter(candidate => 
+      statusFilter === "all" ? true :
+      statusFilter === "archived" ? candidate.archived :
+      statusFilter === "active" ? !candidate.archived && candidate.status === "active" :
+      statusFilter === "inactive" ? !candidate.archived && candidate.status === "inactive" :
+      candidate.status === statusFilter
+    )
+    .filter(candidate =>
+      searchTerm === "" ? true :
       (candidate.profile?.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
       (candidate.profile?.email?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
       (candidate.phone?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
       (candidate.location?.toLowerCase() || "").includes(searchTerm.toLowerCase())
-  ) || [];
+    ) || [];
 
   return (
     <MainLayout>
@@ -233,6 +276,13 @@ const Candidates = () => {
           />
         </div>
 
+        <div className="mb-4">
+          <CandidateStatusFilter
+            currentStatus={statusFilter}
+            onStatusChange={setStatusFilter}
+          />
+        </div>
+
         <Card>
           <CardContent className="p-6">
             <div className="rounded-md border">
@@ -242,6 +292,8 @@ const Candidates = () => {
                 error={candidatesError}
                 userRole={profile?.role}
                 onDelete={handleDeleteCandidate}
+                onArchive={handleArchiveCandidate}
+                onStatusChange={handleStatusChange}
               />
             </div>
           </CardContent>
