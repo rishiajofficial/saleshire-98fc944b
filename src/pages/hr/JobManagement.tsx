@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -237,7 +238,7 @@ const JobManagement = () => {
                       <SelectValue placeholder="Select an assessment" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
                       {assessments.map((assessment) => (
                         <SelectItem key={assessment.id} value={assessment.id}>
                           {assessment.title}
@@ -256,7 +257,7 @@ const JobManagement = () => {
                       <SelectValue placeholder="Select a training module" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
                       {trainingModules.map((module) => (
                         <SelectItem key={module.id} value={module.id}>
                           {module.title}
