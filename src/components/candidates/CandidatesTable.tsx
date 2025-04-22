@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link } from "react-router-dom";
 import {
@@ -9,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Eye, Edit, Trash2, Archive } from "lucide-react";
+import { Eye, Edit, Trash2 } from "lucide-react";
 import { CandidateWithProfile } from "@/types/candidate";
 
 interface CandidatesTableProps {
@@ -18,8 +19,6 @@ interface CandidatesTableProps {
   error: Error | null;
   userRole?: string;
   onDelete: (id: string) => void;
-  onArchive: (id: string) => void;
-  onStatusChange: (id: string, status: string) => void;
 }
 
 export const CandidatesTable: React.FC<CandidatesTableProps> = ({
@@ -28,8 +27,6 @@ export const CandidatesTable: React.FC<CandidatesTableProps> = ({
   error,
   userRole,
   onDelete,
-  onArchive,
-  onStatusChange,
 }) => {
   if (isLoading) {
     return (
@@ -84,18 +81,7 @@ export const CandidatesTable: React.FC<CandidatesTableProps> = ({
             <TableCell className="hidden md:table-cell">
               {candidate.location || "N/A"}
             </TableCell>
-            <TableCell>
-              <select
-                value={candidate.status}
-                onChange={(e) => onStatusChange(candidate.id, e.target.value)}
-                className="border rounded px-2 py-1"
-              >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="hired">Hired</option>
-                <option value="rejected">Rejected</option>
-              </select>
-            </TableCell>
+            <TableCell>{candidate.status || "Unknown"}</TableCell>
             <TableCell className="text-right">
               <div className="flex justify-end space-x-1">
                 {(userRole === "hr" ||
@@ -134,14 +120,6 @@ export const CandidatesTable: React.FC<CandidatesTableProps> = ({
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onArchive(candidate.id)}
-                  className="h-8 w-8 text-gray-700 hover:text-blue-600"
-                >
-                  <Archive className="h-4 w-4" />
-                </Button>
               </div>
             </TableCell>
           </TableRow>
@@ -150,3 +128,4 @@ export const CandidatesTable: React.FC<CandidatesTableProps> = ({
     </Table>
   );
 };
+

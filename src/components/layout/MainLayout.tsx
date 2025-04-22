@@ -1,10 +1,9 @@
 
 import React, { useState, useEffect } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
-import { Button } from "@/components/ui/button";
 import { getNavItems } from "./navigation/nav-items";
 import { MobileNav } from "./navigation/mobile-nav";
 import { DesktopNav } from "./navigation/desktop-nav";
@@ -102,7 +101,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   onNavigate={(to) => navigate(to)}
                 />
               )}
-              <Link to={user ? `/dashboard/${profile?.role}` : "/"} className="flex items-center">
+              <Link to={user ? `dashboard/${profile?.role}` : "/"} className="flex items-center">
                 <div className="font-bold text-lg">WorkForce</div>
               </Link>
             </div>
@@ -110,25 +109,25 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               <nav className="flex items-center gap-4">
                 <Link 
                   to="/dashboard/candidate" 
-                  className={`text-sm font-medium ${location.pathname === '/dashboard/candidate' ? 'text-primary' : 'text-gray-600 hover:text-gray-900'}`}
+                  className={`text-sm font-medium ${pathname === '/dashboard/candidate' ? 'text-primary' : 'text-gray-600 hover:text-gray-900'}`}
                 >
                   Dashboard
                 </Link>
                 <Link 
                   to="/training" 
-                  className={`text-sm font-medium ${location.pathname === '/training' ? 'text-primary' : 'text-gray-600 hover:text-gray-900'}`}
+                  className={`text-sm font-medium ${pathname === '/training' ? 'text-primary' : 'text-gray-600 hover:text-gray-900'}`}
                 >
                   Training
                 </Link>
                 <Link 
                   to="/application" 
-                  className={`text-sm font-medium ${location.pathname === '/application' ? 'text-primary' : 'text-gray-600 hover:text-gray-900'}`}
+                  className={`text-sm font-medium ${pathname === '/application' ? 'text-primary' : 'text-gray-600 hover:text-gray-900'}`}
                 >
                   My Application
                 </Link>
                 <Link 
                   to="/profile" 
-                  className={`text-sm font-medium ${location.pathname === '/profile' ? 'text-primary' : 'text-gray-600 hover:text-gray-900'}`}
+                  className={`text-sm font-medium ${pathname === '/profile' ? 'text-primary' : 'text-gray-600 hover:text-gray-900'}`}
                 >
                   Profile
                 </Link>
