@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,7 +9,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { InterviewActions } from "@/components/interviews/InterviewActions";
 
 interface InterviewData {
   id: string;
@@ -35,6 +35,7 @@ const Interviews = () => {
   const { user, profile } = useAuth();
   const [filteredInterviews, setFilteredInterviews] = useState<InterviewData[]>([]);
 
+  // Query interviews - Supabase RLS will handle the filtering
   const { data: interviewsData = [], isLoading: isLoadingInterviews } = useQuery({
     queryKey: ['interviews', user?.id],
     queryFn: async () => {
@@ -64,15 +65,18 @@ const Interviews = () => {
     enabled: !!user,
   });
 
+  // Update filtered interviews whenever data changes
   React.useEffect(() => {
     setFilteredInterviews(interviewsData);
   }, [interviewsData]);
 
+  // Format datetime for display
   const formatDateTime = (dateString: string) => {
     if (!dateString) return "Not scheduled";
     return new Date(dateString).toLocaleString();
   };
 
+  // Get status badge
   const getStatusBadge = (status: string) => {
     const variants: { [key: string]: "default" | "secondary" | "destructive" | "outline" | "success" } = {
       scheduled: "outline",
@@ -84,6 +88,7 @@ const Interviews = () => {
     return <Badge variant={variants[status] || "outline"}>{status}</Badge>;
   };
 
+  // Handle status update
   const handleUpdateStatus = async (interviewId: string, newStatus: string) => {
     try {
       const { error } = await supabase
@@ -146,12 +151,27 @@ const Interviews = () => {
                             {interview.manager?.profile?.name || 'N/A'}
                           </TableCell>
                         )}
-                        <TableCell className="text-right">
-                          <InterviewActions 
-                            interviewId={interview.id}
-                            onArchive={() => queryClient.invalidateQueries({ queryKey: ['interviews'] })}
-                            onCancel={() => queryClient.invalidateQueries({ queryKey: ['interviews'] })}
-                          />
+                        <TableCell>
+                          <div className="flex space-x-2">
+                            {(interview.status === 'scheduled' || interview.status === 'confirmed') && (
+                              <>
+                                <Button 
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleUpdateStatus(interview.id, 'completed')}
+                                >
+                                  Mark Completed
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => handleUpdateStatus(interview.id, 'cancelled')}
+                                >
+                                  Cancel
+                                </Button>
+                              </>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
