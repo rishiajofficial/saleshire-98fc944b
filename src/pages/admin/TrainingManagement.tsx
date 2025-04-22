@@ -898,12 +898,12 @@ const TrainingManagement = () => {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="edit-quizId">Associated Assessment</Label>
-                      <Select value={editQuizId || ""} onValueChange={setEditQuizId}>
+                      <Select value={editQuizId || "none"} onValueChange={setEditQuizId}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select assessment" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">None</SelectItem>
+                          <SelectItem value="none">None</SelectItem>
                           {assessments.map((assessment) => (
                             <SelectItem key={assessment.id} value={assessment.id}>
                               {assessment.title}
