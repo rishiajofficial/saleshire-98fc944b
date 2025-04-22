@@ -1,262 +1,287 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
-  PlayCircle,
-  CheckCircle2,
-  Lock,
-  Loader2
-} from "lucide-react";
+
+import React, { useEffect, useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2, Book, Calendar } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Badge } from "@/components/ui/badge";
-import { useTrainingProgress } from "@/hooks/useTrainingProgress";
-import ErrorMessage from "@/components/ui/error-message";
-import { toast } from "sonner";
 
 const Training = () => {
-  const navigate = useNavigate();
-  const [activeModule, setActiveModule] = useState("product");
+  const { user } = useAuth();
+  const [trainingModules, setTrainingModules] = useState<any[]>([]);
+  const [assessments, setAssessments] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedJob, setSelectedJob] = useState<any>(null);
+  const [jobs, setJobs] = useState<any[]>([]);
 
-  const { 
-    trainingModules,
-    progress,
-    isLoading,
-    error,
-    refetch
-  } = useTrainingProgress();
-
-  const getYouTubeThumbnail = (url: string): string => {
-    if (!url) return "/placeholder.svg";
-    try {
-      const urlObj = new URL(url);
-      let videoId: string | null = null;
-
-      if (urlObj.hostname === 'youtu.be') {
-        videoId = urlObj.pathname.slice(1);
-      } else if (urlObj.hostname.includes('youtube.com') && urlObj.searchParams.get('v')) {
-        videoId = urlObj.searchParams.get('v');
+  useEffect(() => {
+    if (!user) return;
+    
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Fetch candidate's jobs
+        const { data: candidateData, error: candidateError } = await supabase
+          .from('candidates')
+          .select('id')
+          .eq('id', user.id)
+          .single();
+          
+        if (candidateError || !candidateData) {
+          console.error("Error fetching candidate data:", candidateError);
+          return;
+        }
+        
+        // For now, we'll use mock job data since we don't have a proper association table yet
+        // In a real implementation, you would fetch from a candidate_jobs table or similar
+        const mockJobs = [
+          { id: "job-a", title: "Sales Executive" },
+          { id: "job-b", title: "Business Development Associate" },
+          { id: "job-c", title: "Field Sales Representative" },
+        ];
+        
+        // In a real implementation, you would retrieve the job the candidate applied for
+        setJobs(mockJobs);
+        setSelectedJob(mockJobs[0]);
+        
+        // Fetch all training modules
+        await fetchTrainingModules(mockJobs[0].id);
+        
+        // Fetch all assessments
+        await fetchAssessments(mockJobs[0].id);
+      } catch (error) {
+        console.error("Error in fetchData:", error);
+      } finally {
+        setIsLoading(false);
       }
-
-      if (videoId) {
-        return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`; 
-      }
-    } catch (e) {
-      console.error("Error parsing video URL for thumbnail:", e);
-    }
-    return "/placeholder.svg"; 
-  };
-
-  const handleTakeQuiz = (quizId: string | null) => {
-    if (!quizId) {
-      toast.info("No quiz associated with this module.");
-      return;
-    }
-    navigate(`/training/assessment/${quizId}`);
-  };
-
-  const handleWatchVideo = (moduleId: string, videoId: string) => {
-    navigate(`/training/video/${moduleId}/${videoId}`);
-  };
-
-  if (isLoading) {
-    return (
-      <MainLayout>
-        <div className="flex justify-center items-center h-[70vh]">
-           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-           <p className="ml-4 text-muted-foreground">Loading Training Center...</p>
-        </div>
-      </MainLayout>
-    );
-  }
+    };
+    
+    fetchData();
+  }, [user]);
   
-  if (error) {
-     return (
-       <MainLayout>
-         <ErrorMessage 
-           title="Error Loading Training" 
-           message={error} 
-         />
-       </MainLayout>
-     );
-  }
-
-  const getModuleStatusBadge = (status: string) => {
-    switch (status) {
-      case "completed":
-        return (
-          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-            <CheckCircle2 className="mr-1 h-3 w-3" /> Completed
-          </Badge>
-        );
-      case "in_progress":
-        return (
-          <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-            <PlayCircle className="mr-1 h-3 w-3" /> In Progress
-          </Badge>
-        );
-      case "locked":
-        return (
-          <Badge variant="secondary">
-            <Lock className="mr-1 h-3 w-3" /> Locked
-          </Badge>
-        );
-      default:
-        return null;
+  const fetchTrainingModules = async (jobId: string) => {
+    try {
+      // Fetch training modules associated with the job
+      const { data: jobTrainingData, error: jobTrainingError } = await supabase
+        .from('job_training')
+        .select(`
+          training_modules:training_module_id (
+            id,
+            title,
+            description,
+            module,
+            video_url,
+            content
+          )
+        `)
+        .eq('job_id', jobId);
+        
+      if (jobTrainingError) {
+        console.error("Error fetching job training modules:", jobTrainingError);
+        return;
+      }
+      
+      if (jobTrainingData && jobTrainingData.length > 0) {
+        const modules = jobTrainingData
+          .map(item => item.training_modules)
+          .filter(Boolean);
+          
+        setTrainingModules(modules);
+      } else {
+        // Fallback to fetch all training modules if no job-specific ones are found
+        const { data: allModules, error: modulesError } = await supabase
+          .from('training_modules')
+          .select('*')
+          .order('module');
+          
+        if (modulesError) {
+          console.error("Error fetching all training modules:", modulesError);
+          return;
+        }
+        
+        setTrainingModules(allModules || []);
+      }
+    } catch (error) {
+      console.error("Error in fetchTrainingModules:", error);
+    }
+  };
+  
+  const fetchAssessments = async (jobId: string) => {
+    try {
+      // Fetch assessments associated with the job
+      const { data: jobAssessmentData, error: jobAssessmentError } = await supabase
+        .from('job_assessments')
+        .select(`
+          assessments:assessment_id (
+            id,
+            title,
+            description,
+            difficulty
+          )
+        `)
+        .eq('job_id', jobId);
+        
+      if (jobAssessmentError) {
+        console.error("Error fetching job assessments:", jobAssessmentError);
+        return;
+      }
+      
+      if (jobAssessmentData && jobAssessmentData.length > 0) {
+        const assessments = jobAssessmentData
+          .map(item => item.assessments)
+          .filter(Boolean);
+          
+        setAssessments(assessments);
+      } else {
+        // Fallback to fetch all assessments if no job-specific ones are found
+        const { data: allAssessments, error: assessmentsError } = await supabase
+          .from('assessments')
+          .select('*');
+          
+        if (assessmentsError) {
+          console.error("Error fetching all assessments:", assessmentsError);
+          return;
+        }
+        
+        setAssessments(allAssessments || []);
+      }
+    } catch (error) {
+      console.error("Error in fetchAssessments:", error);
+    }
+  };
+  
+  const handleJobChange = async (jobId: string) => {
+    const job = jobs.find(j => j.id === jobId);
+    if (job) {
+      setSelectedJob(job);
+      setIsLoading(true);
+      await fetchTrainingModules(jobId);
+      await fetchAssessments(jobId);
+      setIsLoading(false);
     }
   };
 
   return (
     <MainLayout>
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight mb-1">Training Center</h1>
-          <p className="text-muted-foreground">
-            Complete all modules and pass the quizzes to move to the next step
-          </p>
-        </div>
-
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Your Training Progress</CardTitle>
-            <CardDescription>
-              Overall completion across all required modules
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-6 pt-6">
-             <div className="space-y-2">
-                <div className="flex justify-between text-sm font-medium">
-                  <span>Product Knowledge</span>
-                  <span>{progress.product}%</span>
-                </div>
-                <Progress value={progress.product} />
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm font-medium">
-                  <span>Sales Techniques</span>
-                  <span>{progress.sales}%</span>
-                </div>
-                <Progress value={progress.sales} />
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm font-medium">
-                  <span>Retailer Relationships</span>
-                  <span>{progress.relationship}%</span>
-                </div>
-                <Progress value={progress.relationship} />
-              </div>
-              <div className="space-y-2 md:col-span-1 md:border-l md:pl-6">
-                <div className="flex justify-between text-sm font-bold">
-                  <span>Overall Progress</span>
-                  <span>{progress.overall}%</span>
-                </div>
-                <Progress value={progress.overall} />
+      <div className="container mx-auto py-8">
+        <h1 className="text-3xl font-bold mb-6">Training Center</h1>
+        
+        {jobs.length > 1 && (
+          <div className="mb-6">
+            <h2 className="text-lg font-medium mb-2">Select Job</h2>
+            <div className="flex flex-wrap gap-2">
+              {jobs.map(job => (
+                <Button
+                  key={job.id}
+                  variant={selectedJob?.id === job.id ? "default" : "outline"}
+                  onClick={() => handleJobChange(job.id)}
+                  className="text-sm"
+                >
+                  {job.title}
+                </Button>
+              ))}
             </div>
-          </CardContent>
-        </Card>
-
-        {trainingModules.length > 0 ? (
-        <Tabs value={activeModule} onValueChange={setActiveModule}>
-          <TabsList className="grid w-full grid-cols-3">
-                 {['product', 'sales', 'relationship'].map(moduleKey => {
-                     const moduleData = trainingModules.find(m => m.module === moduleKey);
-                     return (
-                       <TabsTrigger 
-                         key={moduleKey} 
-                         value={moduleKey} 
-                         disabled={!moduleData || moduleData.locked}
-                       >
-                         {moduleData?.title || (moduleKey.charAt(0).toUpperCase() + moduleKey.slice(1))}
-            </TabsTrigger>
-                     );
-                 })}
-          </TabsList>
-
-          {trainingModules.map((module) => (
-               <TabsContent key={module.id} value={module.module} className="pt-4">
-              <Card>
-                <CardHeader>
-                      <CardTitle>{module.title}</CardTitle>
-                      <CardDescription>{module.description}</CardDescription>
-                      <div className="pt-2">{getModuleStatusBadge(module.status)}</div>
-                </CardHeader>
-                <CardContent>
-                     <h4 className="text-lg font-semibold mb-4">Training Videos</h4>
-                     {module.videos.length > 0 ? (
-                  <div className="grid gap-4">
-                    {module.videos.map((video) => (
-                      <div 
-                        key={video.id} 
-                             className={`p-4 border rounded-lg ${module.locked ? 'opacity-60 cursor-not-allowed' : ''}`}
-                      >
-                        <div className="flex gap-4">
-                          <div className="w-32 h-20 rounded-md bg-muted overflow-hidden flex-shrink-0">
-                            <img 
-                                   src={getYouTubeThumbnail(video.url)}
-                              alt={video.title} 
-                              className="w-full h-full object-cover"
-                                   onError={(e) => (e.currentTarget.src = '/placeholder.svg')}
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-medium mb-1">{video.title}</h4>
-                                 {video.duration && (
-                                     <p className="text-sm text-muted-foreground">Duration: {video.duration}</p>
-                                  )}
-                          </div>
-                          <div className="flex flex-col justify-center">
-                            <Button 
-                                   onClick={() => handleWatchVideo(module.module, video.id)}
-                              variant="outline" 
-                              size="sm"
-                              className="flex items-center"
-                              disabled={module.locked}
-                            >
-                                   <PlayCircle className="mr-1 h-4 w-4" /> Watch
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                     ) : (
-                       <p className="text-muted-foreground text-sm">No videos available for this module yet.</p>
-                     )}
-                </CardContent>
-                    <CardFooter className="border-t pt-4 flex justify-end">
-                  <Button 
-                        onClick={() => handleTakeQuiz(module.quizId)}
-                        disabled={module.locked || !module.quizId || module.status === 'completed'}
-                  >
-                        {module.status === 'completed' ? "Quiz Completed" : (module.quizId ? "Take Quiz" : "No Quiz")}
-                  </Button>
-                </CardFooter>
-              </Card>
-            </TabsContent>
-          ))}
-        </Tabs>
-        ) : (
-            <Card>
-              <CardContent className="pt-6 text-center text-muted-foreground">
-                 No training modules found or assigned.
-              </CardContent>
-            </Card>
+          </div>
         )}
+        
+        {selectedJob && (
+          <div className="bg-blue-50 p-4 rounded-md mb-6">
+            <h2 className="font-semibold text-blue-800">Training for: {selectedJob.title}</h2>
+            <p className="text-sm text-gray-600">
+              Complete the following training modules and assessments.
+            </p>
+          </div>
+        )}
+        
+        <Tabs defaultValue="modules">
+          <TabsList className="mb-4">
+            <TabsTrigger value="modules" className="flex items-center">
+              <Book className="h-4 w-4 mr-2" />
+              Training Modules
+            </TabsTrigger>
+            <TabsTrigger value="assessments" className="flex items-center">
+              <Calendar className="h-4 w-4 mr-2" />
+              Assessments
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="modules">
+            {isLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : trainingModules.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500">No training modules available for this job.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {trainingModules.map((module) => (
+                  <Card key={module.id}>
+                    <CardHeader>
+                      <CardTitle className="flex items-center">
+                        <Book className="h-5 w-5 mr-2 text-primary" />
+                        {module.title}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-gray-600 mb-4 line-clamp-3">
+                        {module.description || "No description available."}
+                      </p>
+                      <Button asChild className="w-full">
+                        <Link to={`/training/module/${module.id}`}>
+                          Start Module
+                        </Link>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="assessments">
+            {isLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : assessments.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500">No assessments available for this job.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {assessments.map((assessment) => (
+                  <Card key={assessment.id}>
+                    <CardHeader>
+                      <CardTitle className="flex items-center">
+                        <Calendar className="h-5 w-5 mr-2 text-primary" />
+                        {assessment.title}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-gray-600 mb-2">
+                        {assessment.description || "No description available."}
+                      </p>
+                      <p className="text-xs font-medium mb-4">
+                        Difficulty: {assessment.difficulty || "Not specified"}
+                      </p>
+                      <Button asChild className="w-full">
+                        <Link to={`/training/assessment/${assessment.id}`}>
+                          Take Assessment
+                        </Link>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </MainLayout>
   );
