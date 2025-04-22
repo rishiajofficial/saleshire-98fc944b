@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -37,6 +36,7 @@ import {
   User,
   UserPlus,
   Trash2,
+  Edit,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -361,7 +361,7 @@ const Candidates = () => {
                         <TableCell>{candidate.status || "Unknown"}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end space-x-1">
-                            {profile?.role === "hr" && (
+                            {profile?.role === "hr" || profile?.role === "admin" || profile?.role === "manager" ? (
                               <>
                                 <Button
                                   variant="ghost"
@@ -372,6 +372,17 @@ const Candidates = () => {
                                 >
                                   <Link to={`/candidates/${candidate.id}`}>
                                     <Eye className="h-4 w-4" />
+                                  </Link>
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  title="Edit"
+                                  className="h-8 w-8 text-gray-700 hover:text-blue-600"
+                                  asChild
+                                >
+                                  <Link to={`/candidates/${candidate.id}/edit`}>
+                                    <Edit className="h-4 w-4" />
                                   </Link>
                                 </Button>
                               </>
