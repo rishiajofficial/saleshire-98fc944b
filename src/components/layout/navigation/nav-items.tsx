@@ -44,7 +44,7 @@ export const getNavItems = (role?: string): NavItem[] => [
     label: "Assessments",
     href: "/assessments",
     icon: <FileText className="h-5 w-5" />,
-    role: ["admin", "manager", "hr", "director"],
+    role: ["admin", "hr", "director"],
   },
   {
     label: "Interviews",
