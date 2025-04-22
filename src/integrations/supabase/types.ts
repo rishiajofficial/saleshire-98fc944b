@@ -313,6 +313,96 @@ export type Database = {
           },
         ]
       }
+      job_assessments: {
+        Row: {
+          assessment_id: string
+          job_id: string
+        }
+        Insert: {
+          assessment_id: string
+          job_id: string
+        }
+        Update: {
+          assessment_id?: string
+          job_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_assessments_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_assessments_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_training: {
+        Row: {
+          job_id: string
+          training_module_id: string
+        }
+        Insert: {
+          job_id: string
+          training_module_id: string
+        }
+        Update: {
+          job_id?: string
+          training_module_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_training_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_training_training_module_id_fkey"
+            columns: ["training_module_id"]
+            isOneToOne: false
+            referencedRelation: "training_modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jobs: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description: string
+          id?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       manager_regions: {
         Row: {
           id: string

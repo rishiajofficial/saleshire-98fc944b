@@ -6,8 +6,6 @@ export interface Job {
   status: 'active' | 'inactive';
   created_at?: string;
   created_by?: string;
-  assessment_id?: string;
-  training_modules?: string[];
 }
 
 export interface JobAssessment {
