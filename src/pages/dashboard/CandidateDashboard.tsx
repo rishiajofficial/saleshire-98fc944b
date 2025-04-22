@@ -57,6 +57,8 @@ const CandidateDashboard = () => {
   const navigate = useNavigate();
   const { profile, user } = useAuth();
   
+  const candidateName = profile?.name || (user?.email ? user.email.split('@')[0] : 'Candidate');
+  
   const [dashboardState, setDashboardState] = useState<Omit<CandidateDashboardState, 'trainingModules'>>({
     loading: true,
     error: null,
@@ -82,7 +84,7 @@ const CandidateDashboard = () => {
     let channel: RealtimeChannel | null = null;
 
     const fetchOtherDashboardData = async () => {
-      if (!user || !profile) {
+      if (!user) {
         setDashboardState(prev => ({ ...prev, loading: false, error: "User not logged in" }));
         return;
       }
@@ -388,7 +390,7 @@ const CandidateDashboard = () => {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Candidate Dashboard</h1>
           <p className="text-muted-foreground mt-2">
-              Welcome back, {profile?.name || 'Candidate'}
+              Welcome back, {candidateName}
           </p>
         </div>
 

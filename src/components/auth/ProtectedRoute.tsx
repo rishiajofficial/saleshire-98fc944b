@@ -1,9 +1,10 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/types';
 import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -16,6 +17,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { user, profile, isLoading } = useAuth();
   const location = useLocation();
+  const [waitingForProfile, setWaitingForProfile] = useState(true);
   
   // Save current path for redirect after login
   useEffect(() => {
@@ -24,11 +26,25 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     }
   }, [user, isLoading, location.pathname]);
   
+  // Set a timeout to prevent infinite loading if profile fetch fails
+  useEffect(() => {
+    if (user && !profile) {
+      const timer = setTimeout(() => {
+        setWaitingForProfile(false);
+      }, 5000); // Wait 5 seconds max for profile
+      
+      return () => clearTimeout(timer);
+    } else {
+      setWaitingForProfile(false);
+    }
+  }, [user, profile]);
+  
   // Show loading state
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      <div className="flex flex-col items-center justify-center h-screen">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading application...</p>
       </div>
     );
   }
@@ -38,17 +54,31 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/login" replace />;
   }
   
-  // If profile is not loaded yet but user is authenticated, show loading
-  if (!profile) {
+  // If profile is not loaded yet but user is authenticated and still waiting
+  if (!profile && waitingForProfile) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      <div className="flex flex-col items-center justify-center h-screen">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading profile data...</p>
       </div>
     );
   }
   
+  // If there's an error loading profile but user is authenticated (after timeout)
+  if (!profile && !waitingForProfile) {
+    // Show a fallback UI for profile loading error
+    toast.error("Could not load profile data. Using basic access.");
+    
+    // Provide basic access to pages that don't strictly require role validation
+    if (allowedRoles.includes('candidate' as UserRole)) {
+      return <>{children}</>;
+    } else {
+      return <Navigate to="/dashboard/candidate" replace />;
+    }
+  }
+  
   // If profile is loaded and role is not allowed, redirect to appropriate dashboard
-  if (!allowedRoles.includes(profile.role as UserRole)) {
+  if (profile && !allowedRoles.includes(profile.role as UserRole)) {
     if (profile.role === 'admin') {
       return <Navigate to="/dashboard/admin" replace />;
     } else if (profile.role === 'manager') {
