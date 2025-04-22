@@ -29,12 +29,8 @@ import {
   Search,
   Plus,
   MoreHorizontal,
-  FileText,
   Edit,
-  Copy,
   Trash2,
-  Eye,
-  BarChart
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -328,9 +324,8 @@ const Assessments = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            {/* Only Edit and Delete buttons remain */}
                             <DropdownMenuItem asChild>
-                              <Link to={`/assessments/${assessment.id}/edit`}>
+                              <Link to={`/assessments/${assessment.id}`}>
                                 <Edit className="h-4 w-4 mr-2" /> Edit
                               </Link>
                             </DropdownMenuItem>

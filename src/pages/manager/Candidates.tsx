@@ -356,9 +356,9 @@ const Candidates = () => {
                                   className="h-8 w-8 text-gray-700 hover:text-blue-600"
                                   asChild
                                 >
-                                  <a href={`/candidates/${candidate.id}`}>
+                                  <Link to={`/candidates/${candidate.id}`}>
                                     <Eye className="h-4 w-4" />
-                                  </a>
+                                  </Link>
                                 </Button>
                               </>
                             )}

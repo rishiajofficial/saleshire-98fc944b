@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -156,6 +157,11 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/assessments/:assessmentId" element={
+              <ProtectedRoute allowedRoles={['admin', 'hr', 'director']}>
+                <AssessmentDetails />
+              </ProtectedRoute>
+            } />
+            <Route path="/assessments/:assessmentId/edit" element={
               <ProtectedRoute allowedRoles={['admin', 'hr', 'director']}>
                 <AssessmentDetails />
               </ProtectedRoute>
