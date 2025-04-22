@@ -57,6 +57,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Database, TablesInsert } from "@/integrations/supabase/types";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSupabaseStorage } from '@/hooks/useSupabaseStorage';
 
 type Video = Database['public']['Tables']['videos']['Row'];
 type TrainingModule = Database['public']['Tables']['training_modules']['Row'];
@@ -105,24 +106,11 @@ const TrainingManagement = () => {
 
   const [useFileUpload, setUseFileUpload] = useState(true);
 
+  const { uploadFile: uploadTrainingVideo, isUploading: uploadingTrainingVideo } = useSupabaseStorage('videos');
+
   const uploadVideoFile = async (file: File): Promise<string | null> => {
-    try {
-      setVideoUploadLoading(true);
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const { data, error } = await supabase.storage
-        .from('videos')
-        .upload(fileName, file, { cacheControl: '3600', upsert: false });
-      if (error) throw error;
-      const { data: urlData } = supabase.storage.from('videos').getPublicUrl(fileName);
-      if (!urlData || !urlData.publicUrl) throw new Error("Failed to get video public URL.");
-      return urlData.publicUrl;
-    } catch (err) {
-      toast.error("Video upload failed: " + (err.message || String(err)));
-      return null;
-    } finally {
-      setVideoUploadLoading(false);
-    }
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${file.name.split('.').pop()}`;
+    return await uploadTrainingVideo(file, fileName);
   };
 
   const handleVideoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -868,65 +856,3 @@ const TrainingManagement = () => {
             <Dialog open={showEditQuizDialog} onOpenChange={setShowEditQuizDialog}>
               <DialogContent className="sm:max-w-[550px]">
                 <DialogHeader>
-                  <DialogTitle>Edit Training Quiz</DialogTitle>
-                  <DialogDescription>
-                    Modify the details of this training quiz.
-                  </DialogDescription>
-                </DialogHeader>
-                {editingQuiz && (
-                  <div className="grid gap-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-quizTitle">Quiz Title</Label>
-                      <Input id="edit-quizTitle" value={editQuizTitle} onChange={(e) => setEditQuizTitle(e.target.value)} required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-quizDescription">Description</Label>
-                      <Textarea id="edit-quizDescription" value={editQuizDescription} onChange={(e) => setEditQuizDescription(e.target.value)} required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-quizModule">Module</Label>
-                      <Select value={editQuizModule} onValueChange={setEditQuizModule}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select module" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="product">Product Knowledge</SelectItem>
-                          <SelectItem value="sales">Sales Techniques</SelectItem>
-                          <SelectItem value="relationship">Relationship Building</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-quizId">Associated Assessment</Label>
-                      <Select value={editQuizId || "none"} onValueChange={setEditQuizId}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select assessment" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
-                          {assessments.map((assessment) => (
-                            <SelectItem key={assessment.id} value={assessment.id}>
-                              {assessment.title}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                )}
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setShowEditQuizDialog(false)}>Cancel</Button>
-                  <Button type="button" onClick={handleUpdateQuiz} disabled={updateQuizMutation.isPending}>
-                    {updateQuizMutation.isPending ? "Saving..." : "Save Changes"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </MainLayout>
-  );
-};
-
-export default TrainingManagement;

@@ -485,6 +485,7 @@ export type Database = {
           created_at: string
           id: string
           options: Json
+          score: number | null
           section_id: string
           text: string
           time_limit: number | null
@@ -495,6 +496,7 @@ export type Database = {
           created_at?: string
           id?: string
           options: Json
+          score?: number | null
           section_id: string
           text: string
           time_limit?: number | null
@@ -505,6 +507,7 @@ export type Database = {
           created_at?: string
           id?: string
           options?: Json
+          score?: number | null
           section_id?: string
           text?: string
           time_limit?: number | null

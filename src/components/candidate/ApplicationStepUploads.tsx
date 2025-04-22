@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { FileText, Upload, Video, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { useSupabaseStorage } from '@/hooks/useSupabaseStorage';
 
 interface ApplicationStepUploadsProps {
   onNext: () => void;
@@ -28,59 +27,12 @@ const ApplicationStepUploads = ({
   const { toast } = useToast();
   const { user } = useAuth();
   
-  const [uploadingResume, setUploadingResume] = useState(false);
+  const { uploadFile: uploadResume, isUploading: uploadingResume } = useSupabaseStorage('resumes');
+  const { uploadFile: uploadVideo, isUploading: uploadingVideo } = useSupabaseStorage('candidate-videos');
+  
   const [uploadingAboutVideo, setUploadingAboutVideo] = useState(false);
   const [uploadingSalesVideo, setUploadingSalesVideo] = useState(false);
   
-  const uploadFileAndGetUrl = async (file: File, path: string): Promise<string | null> => {
-    try {
-      // Check if bucket exists
-      const { data: buckets } = await supabase.storage.listBuckets();
-      const candidateArtifactsBucket = buckets?.find(b => b.name === 'candidateartifacts');
-      
-      // Create bucket if it doesn't exist
-      if (!candidateArtifactsBucket) {
-        const { error: createBucketError } = await supabase.storage.createBucket('candidateartifacts', {
-          public: true,
-          fileSizeLimit: 100 * 1024 * 1024 // 100MB limit
-        });
-        
-        if (createBucketError) {
-          throw new Error(`Failed to create bucket: ${createBucketError.message}`);
-        }
-      }
-      
-      const { error: uploadError } = await supabase.storage
-        .from('candidateartifacts')
-        .upload(path, file, {
-          cacheControl: '3600',
-          upsert: true,
-        });
-
-      if (uploadError) {
-        throw new Error(`Failed to upload file: ${uploadError.message}`);
-      }
-
-      const { data } = supabase.storage
-        .from('candidateartifacts')
-        .getPublicUrl(path);
-
-      if (!data?.publicUrl) {
-        throw new Error("Could not get public URL after upload.");
-      }
-
-      return data.publicUrl;
-    } catch (error) {
-      console.error("Error during file upload process:", error);
-      toast({
-        title: "Upload Error",
-        description: error instanceof Error ? error.message : "An unknown error occurred during upload.",
-        variant: "destructive",
-      });
-      return null;
-    }
-  };
-
   const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0 || !user) {
       return;
@@ -89,22 +41,19 @@ const ApplicationStepUploads = ({
     const fileExtension = file.name.split('.').pop();
     const filePath = `${user.id}/resume.${fileExtension}`;
     
-    setUploadingResume(true);
-    const publicUrl = await uploadFileAndGetUrl(file, filePath);
-    setUploadingResume(false);
-
+    const publicUrl = await uploadResume(file, filePath);
+    
     if (publicUrl) {
       setApplicationData({
         ...applicationData,
         resume: publicUrl
       });
-      
       toast({
         title: "Resume uploaded",
         description: "Your resume has been uploaded successfully.",
       });
     } else {
-      e.target.value = "";
+      e.target.value = '';
     }
   };
 
@@ -117,26 +66,25 @@ const ApplicationStepUploads = ({
     const fieldName = type === "aboutMe" ? "aboutMeVideo" : "salesPitchVideo";
     const filePath = `${user.id}/${fieldName}.${fileExtension}`;
     const setUploading = type === "aboutMe" ? setUploadingAboutVideo : setUploadingSalesVideo;
-
+    
     setUploading(true);
-    const publicUrl = await uploadFileAndGetUrl(file, filePath);
+    const publicUrl = await uploadVideo(file, filePath);
     setUploading(false);
-
+    
     if (publicUrl) {
       setApplicationData({
         ...applicationData,
         [fieldName]: publicUrl
       });
-      
       toast({
         title: "Video uploaded",
         description: `Your ${type === "aboutMe" ? "about me" : "sales pitch"} video has been uploaded successfully.`,
       });
     } else {
-      e.target.value = "";
+      e.target.value = '';
     }
   };
-  
+
   const handleRemoveFile = (type: "resume" | "aboutMeVideo" | "salesPitchVideo") => {
     setApplicationData({
       ...applicationData,
