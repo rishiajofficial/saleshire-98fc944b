@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -16,8 +17,7 @@ import {
   Users,
   LineChart,
   FileText,
-  Video,
-  LogIn
+  Video
 } from "lucide-react";
 
 const Navbar: React.FC = () => {
@@ -79,12 +79,15 @@ const Navbar: React.FC = () => {
           >
             About
           </Link>
-          <Button asChild variant="ghost" className="flex items-center gap-2">
-            <Link to="/login">
-              <LogIn className="h-4 w-4" />
-              <span>Login</span>
-            </Link>
-          </Button>
+          <Link
+            to="/login"
+            className={cn(
+              "nav-item",
+              isActive("/login") && "nav-item-active"
+            )}
+          >
+            Login
+          </Link>
           <Button asChild className="ml-2">
             <Link to="/register">Apply Now</Link>
           </Button>
