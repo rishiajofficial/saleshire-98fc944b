@@ -205,6 +205,7 @@ export type Database = {
       candidates: {
         Row: {
           about_me_video: string | null
+          archived: boolean | null
           assigned_manager: string | null
           current_step: number
           id: string
@@ -218,6 +219,7 @@ export type Database = {
         }
         Insert: {
           about_me_video?: string | null
+          archived?: boolean | null
           assigned_manager?: string | null
           current_step?: number
           id: string
@@ -231,6 +233,7 @@ export type Database = {
         }
         Update: {
           about_me_video?: string | null
+          archived?: boolean | null
           assigned_manager?: string | null
           current_step?: number
           id?: string
@@ -261,6 +264,7 @@ export type Database = {
       }
       interviews: {
         Row: {
+          archived: boolean | null
           candidate_id: string
           created_at: string
           decision: string | null
@@ -273,6 +277,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          archived?: boolean | null
           candidate_id: string
           created_at?: string
           decision?: string | null
@@ -285,6 +290,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          archived?: boolean | null
           candidate_id?: string
           created_at?: string
           decision?: string | null

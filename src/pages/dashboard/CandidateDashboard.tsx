@@ -37,6 +37,7 @@ import { Tables } from "@/integrations/supabase/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useTrainingProgress, TrainingModuleProgress } from "@/hooks/useTrainingProgress";
 import ErrorMessage from "@/components/ui/error-message";
+import Loading from "@/components/ui/loading";
 import { RealtimeChannel } from '@supabase/supabase-js';
 
 type CandidateProfile = Tables<'candidates'>;
@@ -56,6 +57,8 @@ interface CandidateDashboardState {
 const CandidateDashboard = () => {
   const navigate = useNavigate();
   const { profile, user } = useAuth();
+  
+  const candidateName = profile?.name || (user?.email ? user.email.split('@')[0] : 'Candidate');
   
   const [dashboardState, setDashboardState] = useState<Omit<CandidateDashboardState, 'trainingModules'>>({
     loading: true,
@@ -82,7 +85,7 @@ const CandidateDashboard = () => {
     let channel: RealtimeChannel | null = null;
 
     const fetchOtherDashboardData = async () => {
-      if (!user || !profile) {
+      if (!user) {
         setDashboardState(prev => ({ ...prev, loading: false, error: "User not logged in" }));
         return;
       }
@@ -94,39 +97,74 @@ const CandidateDashboard = () => {
       try {
         console.log("Dashboard: Fetching initial non-training data for user:", user.id);
 
+        const fetchCandidate = async () => {
+          try {
+            const { data, error } = await supabase
+              .from('candidates')
+              .select('*')
+              .eq('id', user.id)
+              .single();
+              
+            if (error) throw error;
+            return { data, error: null };
+          } catch (error: any) {
+            console.error("Candidate data fetch error:", error.message);
+            return { data: null, error };
+          }
+        };
+        
+        const fetchResults = async () => {
+          try {
+            const { data, error } = await supabase
+              .from('assessment_results')
+              .select('*')
+              .eq('candidate_id', user.id)
+              .order('created_at', { ascending: false })
+              .limit(5);
+              
+            if (error) throw error;
+            return { data: data || [], error: null };
+          } catch (error: any) {
+            console.error("Assessment results fetch error:", error.message);
+            return { data: [], error };
+          }
+        };
+        
+        const fetchNotifications = async () => {
+          try {
+            const { data, error } = await supabase
+              .from('activity_logs')
+              .select('*')
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: false })
+              .limit(10);
+              
+            if (error) throw error;
+            return { data: data || [], error: null };
+          } catch (error: any) {
+            console.error("Notifications fetch error:", error.message);
+            return { data: [], error };
+          }
+        };
+
         const [candidateResult, resultsResult, notificationResult] = await Promise.all([
-          supabase
-            .from('candidates')
-            .select('*')
-            .eq('id', user.id)
-            .single(),
-          supabase
-            .from('assessment_results')
-            .select('*')
-            .eq('candidate_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(5),
-          supabase
-            .from('activity_logs')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(10)
+          fetchCandidate(),
+          fetchResults(),
+          fetchNotifications()
         ]);
 
-        if (candidateResult.error && candidateResult.error.code !== 'PGRST116') {
-          throw new Error(`Candidate data fetch failed: ${candidateResult.error.message}`);
-        }
-        if (resultsResult.error) {
-            throw new Error(`Assessment results fetch failed: ${resultsResult.error.message}`);
-        }
-        if (notificationResult.error) {
-          console.error("Notifications fetch failed:", notificationResult.error.message);
+        if (candidateResult.error) {
+          if (candidateResult.error.code === 'PGRST116') {
+            console.log("User has no candidate record yet");
+          } else {
+            console.error("Candidate data fetch failed:", candidateResult.error.message);
+            throw new Error(`Candidate data fetch failed: ${candidateResult.error.message}`);
+          }
         }
 
         const fetchedCandidateData = candidateResult.data;
-        const assessmentResults = resultsResult.data || [];
-        const notifications = notificationResult.data || [];
+        const assessmentResults = resultsResult.data;
+        const notifications = notificationResult.data;
         
         const applicationSubmitted = 
             !!fetchedCandidateData?.resume && 
@@ -149,23 +187,27 @@ const CandidateDashboard = () => {
         
         const currentStatus = fetchedCandidateData?.status?.toLowerCase();
         if (!applicationSubmitted && (currentStatus === 'applied' || currentStatus === 'screening')) {
-      setTimeout(() => {
-        toast.info(
-          "Please complete your application to begin the hiring process",
-          {
-            action: {
-              label: "Complete Now",
-              onClick: () => navigate("/application"),
-            },
-            duration: 8000,
-          }
-        );
-      }, 1000);
-    }
+          setTimeout(() => {
+            toast.info(
+              "Please complete your application to begin the hiring process",
+              {
+                action: {
+                  label: "Complete Now",
+                  onClick: () => navigate("/application"),
+                },
+                duration: 8000,
+              }
+            );
+          }, 1000);
+        }
 
       } catch (error: any) {
         console.error("Error fetching non-training dashboard data:", error);
-        setDashboardState(prev => ({ ...prev, loading: false, error: error.message || "Failed to load dashboard data." }));
+        setDashboardState(prev => ({ 
+          ...prev, 
+          loading: false, 
+          error: error.message || "Failed to load dashboard data." 
+        }));
       } finally {
         setDashboardState(prev => ({ ...prev, loading: false }));
       }
@@ -176,7 +218,7 @@ const CandidateDashboard = () => {
     }
 
     if (user) {
-       console.log("Dashboard: Setting up realtime subscription for candidate:", user.id);
+      console.log("Dashboard: Setting up realtime subscription for candidate:", user.id);
       channel = supabase
         .channel(`candidate_updates_${user.id}`)
         .on<CandidateProfile>(
@@ -255,9 +297,11 @@ const CandidateDashboard = () => {
   if (isLoading) {
     return (
       <MainLayout>
-        <div className="flex justify-center items-center h-screen">
-          <Loader2 className="h-16 w-16 animate-spin text-primary" />
-        </div>
+        <Loading 
+          message="Loading your dashboard" 
+          subMessage="Please wait while we load your data" 
+          size="large" 
+        />
       </MainLayout>
     );
   }
@@ -269,6 +313,59 @@ const CandidateDashboard = () => {
            title="Error Loading Dashboard" 
            message={error} 
          />
+         <div className="container mx-auto px-4 py-8">
+           <Button onClick={() => window.location.reload()} variant="default">
+             Retry Loading Dashboard
+           </Button>
+         </div>
+      </MainLayout>
+    );
+  }
+
+  if (!dashboardState.candidateData) {
+    return (
+      <MainLayout>
+        <div className="container mx-auto px-4 py-8 space-y-8">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Candidate Dashboard</h1>
+            <p className="text-muted-foreground mt-2">
+              Welcome, {candidateName}
+            </p>
+          </div>
+          
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start">
+            <AlertCircle className="text-amber-500 h-5 w-5 mr-2 mt-0.5" />
+            <div>
+              <h3 className="font-medium text-amber-800">Application Required</h3>
+              <p className="text-sm text-amber-700 mt-1">
+                You need to complete your application to continue with the hiring process.
+              </p>
+              <Button 
+                size="sm" 
+                className="mt-3 bg-amber-600 hover:bg-amber-700"
+                asChild
+              >
+                <Link to="/application">
+                  Complete Application Now
+                </Link>
+              </Button>
+            </div>
+          </div>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Links</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Button variant="outline" className="w-full justify-start" asChild>
+                <Link to="/application">
+                  <FileText className="mr-2 h-4 w-4" />
+                  Start Application
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </MainLayout>
     );
   }
@@ -370,11 +467,11 @@ const CandidateDashboard = () => {
         }
     }
 
-        return (
+    return (
       <Badge className={`${badgeClass} hover:${badgeClass}`}> 
         {statusIcon} {statusText}
-          </Badge>
-        );
+      </Badge>
+    );
   };
 
   const showApplicationPrompt = 
@@ -388,7 +485,7 @@ const CandidateDashboard = () => {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Candidate Dashboard</h1>
           <p className="text-muted-foreground mt-2">
-              Welcome back, {profile?.name || 'Candidate'}
+              Welcome back, {candidateName}
           </p>
         </div>
 
@@ -590,6 +687,7 @@ const CandidateDashboard = () => {
                      {dashboardState.currentStep >= 5 ? (
                         <Link to="/sales-task">
                           <Briefcase className="mr-2 h-4 w-4" />
+                          Sales Task
                          </Link>
                       ) : (
                         <span className="flex items-center text-muted-foreground">

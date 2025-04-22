@@ -12,8 +12,8 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
       <header className="py-4 border-b border-border/30">
         <div className="container px-4 sm:px-6 lg:px-8 mx-auto">
           <Link to="/" className="flex items-center gap-2">
-            <img src="/favicon.ico" alt="HireSmart Logo" className="h-8 w-8" />
-            <span className="font-bold text-xl">HireSmart</span>
+            <img src="/favicon.ico" alt="WorkForce Logo" className="h-8 w-8" />
+            <span className="font-bold text-xl">WorkForce</span>
           </Link>
         </div>
       </header>
@@ -26,7 +26,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
         <div className="container px-4 sm:px-6 lg:px-8 mx-auto">
           <div className="flex flex-col sm:flex-row items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} Sales Hiring & Training System
+              © {new Date().getFullYear()} WorkForce - Sales Hiring & Training System
             </p>
             <div className="flex items-center space-x-4 mt-4 sm:mt-0">
               <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
