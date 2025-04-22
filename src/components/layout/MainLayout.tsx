@@ -1,6 +1,6 @@
-
 import React, { useState, useEffect } from "react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Users,
   BarChart3,
@@ -30,7 +30,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
-import { useMobile } from "@/hooks/use-mobile";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -330,7 +329,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           </div>
         </header>
       ) : (
-        // Desktop Navigation
         <div className="fixed z-30 w-64 border-r h-screen bg-background hidden lg:block">
           <div className="flex flex-col h-full">
             <div className="p-6 flex items-center gap-2">
@@ -449,7 +447,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         </div>
       )}
 
-      {/* Main Content */}
       <div className={`flex-1 ${isMobile ? "pt-16" : "lg:pl-64"}`}>
         <main className="container py-6 md:py-8 max-w-6xl">
           {children}
