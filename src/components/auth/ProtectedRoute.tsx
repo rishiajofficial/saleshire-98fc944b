@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/types';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import Loading from '@/components/ui/loading';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -18,6 +19,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { user, profile, isLoading } = useAuth();
   const location = useLocation();
   const [waitingForProfile, setWaitingForProfile] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   // Save current path for redirect after login
   useEffect(() => {
@@ -31,6 +33,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     if (user && !profile) {
       const timer = setTimeout(() => {
         setWaitingForProfile(false);
+        console.log("ProtectedRoute: Profile fetch timeout reached");
       }, 5000); // Wait 5 seconds max for profile
       
       return () => clearTimeout(timer);
@@ -39,14 +42,40 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     }
   }, [user, profile]);
   
+  // Handle errors from initial loads
+  useEffect(() => {
+    const handleErrors = async () => {
+      if (user && !profile && !waitingForProfile) {
+        // After timeout, if still no profile, try a direct fetch 
+        try {
+          console.log("ProtectedRoute: Attempting direct profile fetch");
+          
+          const { supabase } = await import('@/integrations/supabase/client');
+          
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+          
+          if (error) {
+            console.error("ProtectedRoute: Direct profile fetch error:", error.message);
+            setErrorMessage(error.message);
+          } else if (data) {
+            console.log("ProtectedRoute: Direct profile fetch succeeded, but AuthContext profile is missing. Using fallback access.");
+          }
+        } catch (err) {
+          console.error("ProtectedRoute: Error in direct profile fetch:", err);
+        }
+      }
+    };
+    
+    handleErrors();
+  }, [user, profile, waitingForProfile]);
+  
   // Show loading state
   if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen">
-        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Loading application...</p>
-      </div>
-    );
+    return <Loading message="Loading application..." />;
   }
   
   // If not logged in, redirect to login
@@ -56,16 +85,18 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   
   // If profile is not loaded yet but user is authenticated and still waiting
   if (!profile && waitingForProfile) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen">
-        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Loading profile data...</p>
-      </div>
-    );
+    return <Loading message="Loading profile data..." subMessage="Please wait while we load your profile information" />;
   }
   
   // If there's an error loading profile but user is authenticated (after timeout)
   if (!profile && !waitingForProfile) {
+    // Log detailed information about the state
+    console.log("ProtectedRoute: Using fallback access. Profile missing but user authenticated:", {
+      userId: user?.id,
+      errorMessage,
+      allowedRoles
+    });
+    
     // Show a fallback UI for profile loading error
     toast.error("Could not load profile data. Using basic access.");
     
