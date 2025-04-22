@@ -14,14 +14,20 @@ interface InterviewData {
   id: string;
   scheduled_at: string;
   status: string;
-  candidate_profile: {
+  candidate: {
     id: string;
-    name: string | null;
-    email: string | null;
+    profile: {
+      id: string;
+      name: string | null;
+      email: string | null;
+    } | null;
   } | null;
-  manager_profile: {
+  manager: {
     id: string;
-    name: string | null;
+    profile: {
+      id: string;
+      name: string | null;
+    } | null;
   } | null;
 }
 
@@ -72,7 +78,7 @@ const Interviews = () => {
 
   // Get status badge
   const getStatusBadge = (status: string) => {
-    const variants: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
+    const variants: { [key: string]: "default" | "secondary" | "destructive" | "outline" | "success" } = {
       scheduled: "outline",
       confirmed: "default",
       completed: "secondary",
