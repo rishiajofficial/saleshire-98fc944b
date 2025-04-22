@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ContentService from "@/services/contentService";
 
-// Simplified schema without time_limit, prevent_backtracking, and randomize_questions fields
+// Ensure title is required in the schema
 const formSchema = z.object({
   title: z.string().min(2, {
     message: "Title must be at least 2 characters.",
@@ -40,8 +40,20 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({
 
   const onSubmit = async (data: AssessmentFormValues) => {
     try {
-      // Update the assessment
-      const response = await ContentService.updateContent('assessment', assessmentId, data);
+      // Ensure title is provided (it should be because of zod validation, but let's be safe)
+      if (!data.title) {
+        toast.error("Title is required");
+        return;
+      }
+      
+      // Update the assessment with a properly typed object
+      const updateData = {
+        title: data.title, // This is now guaranteed to be a string
+        description: data.description || null,
+        difficulty: data.difficulty || null,
+      };
+      
+      const response = await ContentService.updateContent('assessment', assessmentId, updateData);
 
       if (!response.success) {
         throw new Error(response.error);
