@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -32,7 +31,7 @@ export const DesktopNav = ({
       <div className="flex flex-col h-full">
         <div className="p-6 flex items-center gap-2 justify-between">
           {isSidebarExpanded && (
-            <div className="font-bold text-lg">Hiring Portal</div>
+            <div className="font-bold text-lg">WorkForce</div>
           )}
           <Button 
             variant="ghost" 

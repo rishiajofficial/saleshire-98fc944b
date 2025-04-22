@@ -101,8 +101,45 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   onNavigate={(to) => navigate(to)}
                 />
               )}
-              <div className="font-bold text-lg">Hiring Portal</div>
+              <Link to={user ? `dashboard/${profile?.role}` : "/"} className="flex items-center">
+                <div className="font-bold text-lg">WorkForce</div>
+              </Link>
             </div>
+            {isCandidate && (
+              <nav className="flex items-center gap-4">
+                <Link 
+                  to="/dashboard/candidate" 
+                  className={`text-sm font-medium ${pathname === '/dashboard/candidate' ? 'text-primary' : 'text-gray-600 hover:text-gray-900'}`}
+                >
+                  Dashboard
+                </Link>
+                <Link 
+                  to="/training" 
+                  className={`text-sm font-medium ${pathname === '/training' ? 'text-primary' : 'text-gray-600 hover:text-gray-900'}`}
+                >
+                  Training
+                </Link>
+                <Link 
+                  to="/application" 
+                  className={`text-sm font-medium ${pathname === '/application' ? 'text-primary' : 'text-gray-600 hover:text-gray-900'}`}
+                >
+                  My Application
+                </Link>
+                <Link 
+                  to="/profile" 
+                  className={`text-sm font-medium ${pathname === '/profile' ? 'text-primary' : 'text-gray-600 hover:text-gray-900'}`}
+                >
+                  Profile
+                </Link>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={handleSignOut}
+                >
+                  Sign Out
+                </Button>
+              </nav>
+            )}
           </header>
         )}
         <main className="container py-6 md:py-8 max-w-6xl">
