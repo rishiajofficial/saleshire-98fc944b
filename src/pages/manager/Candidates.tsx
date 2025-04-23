@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,14 +40,21 @@ const Candidates = () => {
   } = useQuery<CandidateWithProfile[]>({
     queryKey: ['candidates', statusFilter],
     queryFn: async (): Promise<CandidateWithProfile[]> => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('candidates')
         .select(`
           *,
           profile:profiles!candidates_id_fkey(name, email)
         `)
-        .eq('status', statusFilter)
         .order('updated_at', { ascending: false });
+
+      if (statusFilter === "in progress") {
+        query = query.not('status', 'in', ['hired', 'rejected', 'archived']);
+      } else {
+        query = query.eq('status', statusFilter);
+      }
+      
+      const { data, error } = await query;
       
       if (error) {
         toast.error("Failed to fetch candidates: " + error.message);
