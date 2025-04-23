@@ -49,7 +49,10 @@ const Candidates = () => {
         .order('updated_at', { ascending: false });
 
       if (statusFilter === "in progress") {
-        query = query.not('status', 'in', ['hired', 'rejected', 'archived']);
+        // Exclude hired, rejected, and archived candidates
+        query = query.not('status', 'eq', 'hired')
+                    .not('status', 'eq', 'rejected')
+                    .not('status', 'eq', 'archived');
       } else {
         query = query.eq('status', statusFilter);
       }
