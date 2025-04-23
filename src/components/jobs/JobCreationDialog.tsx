@@ -1,9 +1,10 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus } from "lucide-react";
+import { Plus, PencilLine, Eye } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -19,118 +20,228 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+
+interface JobFormProps {
+  job?: any;
+  onSubmit: (values: any) => void;
+  assessments: { id: string; title: string }[];
+  trainingModules: { id: string; title: string }[];
+  mode: 'create' | 'edit' | 'view';
+}
+
+const JobForm: React.FC<JobFormProps> = ({
+  job,
+  onSubmit,
+  assessments,
+  trainingModules,
+  mode
+}) => {
+  const [form, setForm] = useState({
+    title: job?.title || "",
+    description: job?.description || "",
+    department: job?.department || "",
+    location: job?.location || "",
+    employment_type: job?.employment_type || "",
+    salary_range: job?.salary_range || "",
+    selectedAssessment: job?.assessment_id || "",
+    selectedTrainingModule: job?.training_module_id || "",
+  });
+
+  const isView = mode === "view";
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!isView) onSubmit(form);
+      }}
+      className="grid gap-4 py-2"
+    >
+      <div>
+        <Label htmlFor="title">Job Title</Label>
+        <Input
+          id="title"
+          value={form.title}
+          disabled={isView}
+          onChange={(e) => setForm({ ...form, title: e.target.value })}
+        />
+      </div>
+      <div>
+        <Label htmlFor="description">Description</Label>
+        <Textarea
+          id="description"
+          value={form.description}
+          disabled={isView}
+          onChange={(e) => setForm({ ...form, description: e.target.value })}
+        />
+      </div>
+      <div>
+        <Label htmlFor="department">Department</Label>
+        <Input
+          id="department"
+          value={form.department}
+          disabled={isView}
+          onChange={(e) => setForm({ ...form, department: e.target.value })}
+        />
+      </div>
+      <div>
+        <Label htmlFor="location">Location</Label>
+        <Input
+          id="location"
+          value={form.location}
+          disabled={isView}
+          onChange={(e) => setForm({ ...form, location: e.target.value })}
+        />
+      </div>
+      <div>
+        <Label htmlFor="employment_type">Employment Type</Label>
+        <Select
+          value={form.employment_type}
+          disabled={isView}
+          onValueChange={(value) => setForm({ ...form, employment_type: value })}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select employment type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Full-Time">Full-Time</SelectItem>
+            <SelectItem value="Part-Time">Part-Time</SelectItem>
+            <SelectItem value="Contract">Contract</SelectItem>
+            <SelectItem value="Internship">Internship</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label htmlFor="salary_range">Salary Range</Label>
+        <Input
+          id="salary_range"
+          value={form.salary_range}
+          disabled={isView}
+          onChange={(e) => setForm({ ...form, salary_range: e.target.value })}
+        />
+      </div>
+      <div>
+        <Label htmlFor="assessment">Required Assessment</Label>
+        <Select
+          value={form.selectedAssessment}
+          disabled={isView}
+          onValueChange={(value) => setForm({ ...form, selectedAssessment: value })}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select an assessment" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">None</SelectItem>
+            {assessments.map((assessment) => (
+              <SelectItem key={assessment.id} value={assessment.id}>
+                {assessment.title}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label htmlFor="training">Required Training Module</Label>
+        <Select
+          value={form.selectedTrainingModule}
+          disabled={isView}
+          onValueChange={(value) => setForm({ ...form, selectedTrainingModule: value })}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select a training module" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">None</SelectItem>
+            {trainingModules.map((module) => (
+              <SelectItem key={module.id} value={module.id}>
+                {module.title}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {!isView && (
+        <Button className="mt-2" type="submit">
+          {mode === "edit" ? "Update Job" : "Create Job"}
+        </Button>
+      )}
+    </form>
+  );
+};
 
 interface JobCreationDialogProps {
-  onJobCreated: (job: {
-    title: string;
-    description: string;
-    selectedAssessment?: string;
-    selectedTrainingModule?: string;
-  }) => void;
-  assessments: { id: string; title: string; }[];
-  trainingModules: { id: string; title: string; }[];
+  onJobCreated: (job: any) => void;
+  onJobUpdated?: (job: any) => void;
+  assessments: { id: string; title: string }[];
+  trainingModules: { id: string; title: string }[];
+  editingJob?: any;
+  mode?: "create" | "edit" | "view";
 }
 
 const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
   onJobCreated,
+  onJobUpdated,
   assessments,
   trainingModules,
+  editingJob,
+  mode = "create"
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [newJob, setNewJob] = useState({
-    title: "",
-    description: "",
-    selectedAssessment: "",
-    selectedTrainingModule: "",
-  });
 
-  const handleCreateJob = () => {
-    onJobCreated(newJob);
-    setDialogOpen(false);
-    setNewJob({
-      title: "",
-      description: "",
-      selectedAssessment: "",
-      selectedTrainingModule: "",
-    });
+  const handleOpen = () => setDialogOpen(true);
+  const handleClose = () => setDialogOpen(false);
+
+  const handleSubmit = (form: any) => {
+    if (mode === "edit" && onJobUpdated) {
+      onJobUpdated({ ...editingJob, ...form });
+    } else {
+      onJobCreated(form);
+    }
+    handleClose();
   };
 
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Create New Job
-        </Button>
+        {mode === "edit" ? (
+          <Button variant="outline" size="xs">
+            <PencilLine className="w-4 h-4 mr-1" /> Edit
+          </Button>
+        ) : mode === "view" ? (
+          <Button variant="ghost" size="xs">
+            <Eye className="w-4 h-4 mr-1" /> View
+          </Button>
+        ) : (
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Create New Job
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create New Job</DialogTitle>
+          <DialogTitle>
+            {mode === "edit"
+              ? "Edit Job"
+              : mode === "view"
+              ? "Job Details"
+              : "Create New Job"}
+          </DialogTitle>
           <DialogDescription>
-            Fill in the details below to create a new job posting.
+            {mode === "edit"
+              ? "Update the details for this job."
+              : mode === "view"
+              ? "Job details and requirements."
+              : "Fill in the details below to create a new job posting."}
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div>
-            <Label htmlFor="title">Job Title</Label>
-            <Input
-              id="title"
-              value={newJob.title}
-              onChange={(e) => setNewJob({ ...newJob, title: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={newJob.description}
-              onChange={(e) => setNewJob({ ...newJob, description: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label htmlFor="assessment">Required Assessment</Label>
-            <Select
-              value={newJob.selectedAssessment}
-              onValueChange={(value) => setNewJob({ ...newJob, selectedAssessment: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select an assessment" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                {assessments.map((assessment) => (
-                  <SelectItem key={assessment.id} value={assessment.id}>
-                    {assessment.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="training">Required Training Module</Label>
-            <Select
-              value={newJob.selectedTrainingModule}
-              onValueChange={(value) => setNewJob({ ...newJob, selectedTrainingModule: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a training module" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                {trainingModules.map((module) => (
-                  <SelectItem key={module.id} value={module.id}>
-                    {module.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button onClick={handleCreateJob} className="mt-2">
-            Create Job
-          </Button>
-        </div>
+        <JobForm
+          job={editingJob}
+          onSubmit={handleSubmit}
+          assessments={assessments}
+          trainingModules={trainingModules}
+          mode={mode}
+        />
       </DialogContent>
     </Dialog>
   );

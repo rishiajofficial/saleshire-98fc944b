@@ -9,7 +9,7 @@ import { useJobs } from "@/hooks/useJobs";
 import { toast } from "sonner";
 
 const JobManagement = () => {
-  const { jobs, isLoading, createJob, deleteJob } = useJobs();
+  const { jobs, isLoading, createJob, deleteJob, updateJob } = useJobs();
   const [assessments, setAssessments] = useState<{ id: string; title: string; }[]>([]);
   const [trainingModules, setTrainingModules] = useState<{ id: string; title: string; }[]>([]);
 
@@ -59,7 +59,13 @@ const JobManagement = () => {
             trainingModules={trainingModules}
           />
         </div>
-        <JobList jobs={jobs || []} onJobDeleted={deleteJob.mutate} />
+        <JobList
+          jobs={jobs || []}
+          onJobDeleted={deleteJob.mutate}
+          onJobUpdated={updateJob.mutate}
+          assessments={assessments}
+          trainingModules={trainingModules}
+        />
       </div>
     </MainLayout>
   );

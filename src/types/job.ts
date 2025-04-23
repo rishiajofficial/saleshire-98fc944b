@@ -3,7 +3,11 @@ export interface Job {
   id: string;
   title: string;
   description: string;
-  status: string; // Changed from 'active' | 'inactive' to string to match database value
+  status: string;
+  department?: string;
+  location?: string;
+  employment_type?: string; // e.g. Full-time, Part-time, Contract
+  salary_range?: string;
   created_at?: string;
   created_by?: string;
   updated_at?: string;
