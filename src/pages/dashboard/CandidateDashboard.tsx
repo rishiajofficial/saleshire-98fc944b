@@ -317,11 +317,11 @@ const CandidateDashboard = () => {
 
   const getCurrentStepName = () => {
     switch (dashboardState.currentStep) {
-      case 1: return "Application and Assessment";
-      case 2: return "HR Review and Interview";
-      case 3: return "Training";
+      case 1: return "Initial Application & Screening";
+      case 2: return "HR Review";
+      case 3: return "Skills Training";
       case 4: return "Manager Interview";
-      case 5: return "Paid Project/Sales Task";
+      case 5: return "Paid Project";
       case 6: return "Hired";
       case 7: return "Process Ended";
       default:
@@ -331,11 +331,11 @@ const CandidateDashboard = () => {
 
   const getCurrentStepDescription = () => {
     switch (dashboardState.currentStep) {
-      case 1: return "Complete your application and assessments to demonstrate your skills.";
-      case 2: return "Your application is being reviewed by HR. Prepare for an HR interview.";
-      case 3: return "Complete all training modules and pass the corresponding quizzes to move to the next step.";
-      case 4: return "Prepare for your upcoming interview with a regional manager.";
-      case 5: return "Complete your assigned sales tasks to demonstrate your skills in a real-world scenario.";
+      case 1: return "Complete your application and initial screening assessment.";
+      case 2: return "Your application is being reviewed by HR. They will evaluate your qualifications and screening results.";
+      case 3: return "Complete the required training modules and skill assessments.";
+      case 4: return "Prepare for your interview with a regional manager.";
+      case 5: return "Complete a paid project to demonstrate your skills in a real-world scenario.";
       case 6: return "Congratulations! You have been hired.";
       case 7: return "Thank you for your application. The process has concluded.";
       default:
@@ -380,6 +380,10 @@ const CandidateDashboard = () => {
   const showApplicationPrompt = 
     !dashboardState.applicationSubmitted && 
     (dashboardState.candidateData?.status?.toLowerCase() === 'applied' || dashboardState.candidateData?.status?.toLowerCase() === 'screening');
+
+  const canAccessTraining = dashboardState.candidateData?.status === 'hr_approved' || 
+                           dashboardState.candidateData?.status === 'training' ||
+                           dashboardState.currentStep >= 3;
 
   return (
     <MainLayout>
@@ -486,32 +490,50 @@ const CandidateDashboard = () => {
 
             <Card>
               <CardHeader>
-                  <CardTitle>Training Progress</CardTitle>
-                  <CardDescription>Complete modules to unlock the next steps.</CardDescription>
+                <CardTitle>Training Progress</CardTitle>
+                <CardDescription>
+                  {canAccessTraining 
+                    ? "Complete these modules to advance in the hiring process."
+                    : "Training modules will be available after HR reviews and approves your application."}
+                </CardDescription>
               </CardHeader>
-                <CardContent className="space-y-4">
-                  {trainingModules.map((module) => (
-                    <Link 
-                      to="/training"
-                      key={module.id} 
-                      className={`block p-4 border rounded-lg hover:bg-muted/50 ${module.locked ? 'opacity-60 pointer-events-none' : ''}`}
-                    >
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-medium">{module.title}</span>
-                        {getModuleStatusBadge(module.status)}
+              <CardContent className="space-y-4">
+                {!canAccessTraining ? (
+                  <Alert>
+                    <AlertTitle>Training Locked</AlertTitle>
+                    <AlertDescription>
+                      The training section will be unlocked after HR reviews and approves your application.
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <div className="space-y-4">
+                    {trainingModules.map((module) => (
+                      <Link 
+                        to="/training"
+                        key={module.id} 
+                        className={`block p-4 border rounded-lg hover:bg-muted/50 ${module.locked ? 'opacity-60 pointer-events-none' : ''}`}
+                      >
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="font-medium">{module.title}</span>
+                          {getModuleStatusBadge(module.status)}
                         </div>
                         <Progress value={module.progress} className="h-2" />
-                                  </Link>
-                  ))}
-                  {trainingModules.length === 0 && (
+                      </Link>
+                    ))}
+                    {trainingModules.length === 0 && (
                       <p className="text-center text-muted-foreground py-4">No training modules available yet.</p>
-                  )}
+                    )}
+                  </div>
+                )}
               </CardContent>
-                 <CardFooter>
-                    <Button onClick={() => navigate('/training')} disabled={isLoadingTraining}>
-                        Go to Training Center <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                </CardFooter>
+              <CardFooter>
+                <Button 
+                  onClick={() => navigate('/training')} 
+                  disabled={!canAccessTraining || isLoadingTraining}
+                >
+                  Go to Training Center <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </CardFooter>
             </Card>
           </div>
 
@@ -540,8 +562,8 @@ const CandidateDashboard = () => {
                         <div
                           key={log.id}
                           className={`p-3 rounded-lg border`}
-                    >
-                      <p className="text-sm font-medium">
+                        >
+                          <p className="text-sm font-medium">
                               {log.action.replace(/_/g, ' ')} - <span className="text-muted-foreground">{formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}</span>
                           </p>
                           {log.details && <p className="text-xs text-muted-foreground">{JSON.stringify(log.details)}</p>}

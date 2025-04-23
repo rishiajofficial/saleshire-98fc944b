@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,20 +18,33 @@ const ApplicationStepAssessment = ({ onBack, onComplete, jobId }: ApplicationSte
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasExistingApplication, setHasExistingApplication] = useState(false);
 
   useEffect(() => {
+    const checkExistingApplication = async () => {
+      try {
+        const { data: existingApplication, error: applicationError } = await supabase
+          .from('job_applications')
+          .select('*')
+          .eq('job_id', jobId)
+          .eq('candidate_id', (await supabase.auth.getUser()).data.user?.id)
+          .maybeSingle();
+
+        if (applicationError) throw applicationError;
+        setHasExistingApplication(!!existingApplication);
+      } catch (error) {
+        console.error("Error checking existing application:", error);
+      }
+    };
+
     const fetchJobAssessment = async () => {
       try {
         setIsLoading(true);
         setError(null);
         
-        console.log("Fetching assessment for job ID:", jobId);
-        
         // Check if jobId is valid
         if (!jobId || jobId === 'undefined') {
-          console.error("Invalid job ID provided:", jobId);
           setError("Cannot load assessment: Invalid job ID");
-          setIsLoading(false);
           return;
         }
         
@@ -41,20 +55,11 @@ const ApplicationStepAssessment = ({ onBack, onComplete, jobId }: ApplicationSte
           .eq('job_id', jobId)
           .maybeSingle();
           
-        if (jobAssessmentError) {
-          console.error("Error fetching job assessment linkage:", jobAssessmentError);
-          setError("Failed to check if job has an assessment.");
-          setIsLoading(false);
-          return;
-        }
-        
-        console.log("Job assessment link data:", jobAssessment);
+        if (jobAssessmentError) throw jobAssessmentError;
         
         // If there's no assessment linked to this job
         if (!jobAssessment) {
-          console.log("No assessment linked to job ID:", jobId);
           setAssessment(null);
-          setIsLoading(false);
           return;
         }
         
@@ -65,23 +70,17 @@ const ApplicationStepAssessment = ({ onBack, onComplete, jobId }: ApplicationSte
           .eq('id', jobAssessment.assessment_id)
           .single();
         
-        if (assessmentError) {
-          console.error("Error fetching assessment details:", assessmentError);
-          setError("Failed to load assessment details.");
-          setIsLoading(false);
-          return;
-        }
-        
-        console.log("Assessment data loaded:", assessmentData);
+        if (assessmentError) throw assessmentError;
         setAssessment(assessmentData);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error in fetchJobAssessment:", error);
-        setError("An unexpected error occurred. Please try again.");
+        setError("Failed to load assessment details.");
       } finally {
         setIsLoading(false);
       }
     };
     
+    checkExistingApplication();
     fetchJobAssessment();
   }, [jobId]);
   
@@ -93,19 +92,73 @@ const ApplicationStepAssessment = ({ onBack, onComplete, jobId }: ApplicationSte
     }
   };
   
-  const handleComplete = () => {
+  const handleComplete = async () => {
     setIsSubmitting(true);
     
-    // Here you would normally save the state of the application
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      // First check for existing application again
+      const { data: existingApplication } = await supabase
+        .from('job_applications')
+        .select('*')
+        .eq('job_id', jobId)
+        .eq('candidate_id', (await supabase.auth.getUser()).data.user?.id)
+        .maybeSingle();
+
+      if (existingApplication) {
+        toast.error("You have already applied for this position");
+        return;
+      }
+
+      // Create job application
+      const { error: applicationError } = await supabase
+        .from('job_applications')
+        .insert({
+          job_id: jobId,
+          candidate_id: (await supabase.auth.getUser()).data.user?.id,
+          status: 'applied'
+        });
+
+      if (applicationError) throw applicationError;
+
+      // Update candidate status
+      const { error: candidateError } = await supabase
+        .from('candidates')
+        .update({ 
+          status: 'screening',
+          current_step: 2 // Move to HR Review step
+        })
+        .eq('id', (await supabase.auth.getUser()).data.user?.id);
+
+      if (candidateError) throw candidateError;
+
+      toast.success("Application submitted successfully!");
       onComplete();
-    }, 1000);
+    } catch (error: any) {
+      console.error("Error submitting application:", error);
+      toast.error("Failed to submit application. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  if (hasExistingApplication) {
+    return (
+      <Alert variant="destructive">
+        <AlertTitle>Already Applied</AlertTitle>
+        <AlertDescription>
+          You have already submitted an application for this position.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
     <div className="mb-8">
-      <h2 className="text-xl font-semibold mb-3">Assessment</h2>
+      <h2 className="text-xl font-semibold mb-3">Initial Screening Assessment</h2>
+      <p className="text-muted-foreground mb-4">
+        This is an initial screening assessment to evaluate your basic qualifications. 
+        Additional training and assessments will be provided after HR review.
+      </p>
       
       {isLoading ? (
         <div className="flex justify-center items-center py-10">
@@ -142,7 +195,7 @@ const ApplicationStepAssessment = ({ onBack, onComplete, jobId }: ApplicationSte
         <Alert>
           <AlertTitle>No Assessment Required</AlertTitle>
           <AlertDescription>
-            This position doesn't require an assessment at this time. You can proceed with your application.
+            This position doesn't require an initial screening assessment.
           </AlertDescription>
         </Alert>
       )}
