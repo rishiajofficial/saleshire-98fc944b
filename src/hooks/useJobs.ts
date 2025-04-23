@@ -39,7 +39,7 @@ export function useJobs() {
 
       if (jobError) throw jobError;
 
-      if (newJob.selectedAssessment) {
+      if (newJob.selectedAssessment && newJob.selectedAssessment !== "none") {
         const { error: assessmentError } = await supabase
           .from('job_assessments')
           .insert({
@@ -49,7 +49,7 @@ export function useJobs() {
         if (assessmentError) throw assessmentError;
       }
 
-      if (newJob.selectedTrainingModule) {
+      if (newJob.selectedTrainingModule && newJob.selectedTrainingModule !== "none") {
         const { error: trainingError } = await supabase
           .from('job_training')
           .insert({

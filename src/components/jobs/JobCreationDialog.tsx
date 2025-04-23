@@ -43,8 +43,8 @@ const JobForm: React.FC<JobFormProps> = ({
     location: job?.location || "",
     employment_type: job?.employment_type || "",
     salary_range: job?.salary_range || "",
-    selectedAssessment: job?.assessment_id || "",
-    selectedTrainingModule: job?.training_module_id || "",
+    selectedAssessment: job?.assessment_id || "none",
+    selectedTrainingModule: job?.training_module_id || "none",
   });
 
   const isView = mode === "view";
@@ -131,7 +131,7 @@ const JobForm: React.FC<JobFormProps> = ({
             <SelectValue placeholder="Select an assessment" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">None</SelectItem>
+            <SelectItem value="none">None</SelectItem>
             {assessments.map((assessment) => (
               <SelectItem key={assessment.id} value={assessment.id}>
                 {assessment.title}
@@ -151,7 +151,7 @@ const JobForm: React.FC<JobFormProps> = ({
             <SelectValue placeholder="Select a training module" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">None</SelectItem>
+            <SelectItem value="none">None</SelectItem>
             {trainingModules.map((module) => (
               <SelectItem key={module.id} value={module.id}>
                 {module.title}
@@ -195,7 +195,13 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
     if (mode === "edit" && onJobUpdated) {
       onJobUpdated({ ...editingJob, ...form });
     } else if (onJobCreated) {
-      onJobCreated(form);
+      // Handle the case for "none" values to save as null or empty string
+      const processedForm = {
+        ...form,
+        selectedAssessment: form.selectedAssessment === "none" ? null : form.selectedAssessment,
+        selectedTrainingModule: form.selectedTrainingModule === "none" ? null : form.selectedTrainingModule
+      };
+      onJobCreated(processedForm);
     }
     handleClose();
   };
