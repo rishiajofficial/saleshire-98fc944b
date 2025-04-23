@@ -27,34 +27,54 @@ const ApplicationStepAssessment = ({ onBack, onComplete, jobId }: ApplicationSte
         
         console.log("Fetching assessment for job ID:", jobId);
         
-        // Fetch assessment associated with the job
-        const { data, error } = await supabase
-          .from('job_assessments')
-          .select(`
-            assessment_id,
-            assessments:assessment_id (
-              id,
-              title,
-              description,
-              difficulty
-            )
-          `)
-          .eq('job_id', jobId);
-          
-        if (error) {
-          console.error("Error fetching job assessment:", error);
-          setError("Failed to load assessment. Please try again.");
+        // Check if jobId is valid
+        if (!jobId || jobId === 'undefined') {
+          console.error("Invalid job ID provided:", jobId);
+          setError("Cannot load assessment: Invalid job ID");
+          setIsLoading(false);
           return;
         }
         
-        console.log("Job assessment data:", data);
-        
-        if (data && data.length > 0 && data[0]?.assessments) {
-          console.log("Setting assessment:", data[0].assessments);
-          setAssessment(data[0].assessments);
-        } else {
-          console.log("No assessment found for this job");
+        // First check if this job has an assessment
+        const { data: jobAssessment, error: jobAssessmentError } = await supabase
+          .from('job_assessments')
+          .select('assessment_id')
+          .eq('job_id', jobId)
+          .maybeSingle();
+          
+        if (jobAssessmentError) {
+          console.error("Error fetching job assessment linkage:", jobAssessmentError);
+          setError("Failed to check if job has an assessment.");
+          setIsLoading(false);
+          return;
         }
+        
+        console.log("Job assessment link data:", jobAssessment);
+        
+        // If there's no assessment linked to this job
+        if (!jobAssessment) {
+          console.log("No assessment linked to job ID:", jobId);
+          setAssessment(null);
+          setIsLoading(false);
+          return;
+        }
+        
+        // Now fetch the actual assessment details
+        const { data: assessmentData, error: assessmentError } = await supabase
+          .from('assessments')
+          .select('id, title, description, difficulty')
+          .eq('id', jobAssessment.assessment_id)
+          .single();
+        
+        if (assessmentError) {
+          console.error("Error fetching assessment details:", assessmentError);
+          setError("Failed to load assessment details.");
+          setIsLoading(false);
+          return;
+        }
+        
+        console.log("Assessment data loaded:", assessmentData);
+        setAssessment(assessmentData);
       } catch (error) {
         console.error("Error in fetchJobAssessment:", error);
         setError("An unexpected error occurred. Please try again.");
@@ -63,13 +83,7 @@ const ApplicationStepAssessment = ({ onBack, onComplete, jobId }: ApplicationSte
       }
     };
     
-    if (jobId) {
-      fetchJobAssessment();
-    } else {
-      console.error("No job ID provided");
-      setError("No job ID provided. Cannot load assessment.");
-      setIsLoading(false);
-    }
+    fetchJobAssessment();
   }, [jobId]);
   
   const handleTakeAssessment = () => {

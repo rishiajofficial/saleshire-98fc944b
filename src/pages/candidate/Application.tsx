@@ -43,19 +43,62 @@ const Application = () => {
   useEffect(() => {
     // Check if the user has already selected a job; if not, redirect to job openings
     const selectedJob = localStorage.getItem("selectedJob");
+    console.log("Selected job from localStorage:", selectedJob);
+    
     if (!selectedJob) {
+      console.log("No job selected, redirecting to job openings");
       navigate("/job-openings");
       return;
     }
 
-    const mockJobs = [
-      { id: "job-a", title: "Sales Executive" },
-      { id: "job-b", title: "Business Development Associate" },
-      { id: "job-c", title: "Field Sales Representative" },
-    ];
+    // Try to parse the selected job data
+    try {
+      // First attempt to parse as JSON
+      const jobData = JSON.parse(selectedJob);
+      console.log("Parsed job data:", jobData);
+      setJobDetails(jobData);
+    } catch (error) {
+      // If parsing fails, try to use it as a simple job ID
+      console.log("Could not parse job data as JSON, using as job ID");
+      
+      // For backwards compatibility, check if it's one of the mock jobs
+      const mockJobs = [
+        { id: "job-a", title: "Sales Executive" },
+        { id: "job-b", title: "Business Development Associate" },
+        { id: "job-c", title: "Field Sales Representative" },
+      ];
 
-    const found = mockJobs.find(j => j.id === selectedJob);
-    if (found) setJobDetails(found);
+      const found = mockJobs.find(j => j.id === selectedJob);
+      if (found) {
+        console.log("Found mock job:", found);
+        setJobDetails(found);
+      } else {
+        // If it's not a mock job, fetch the real job details from Supabase
+        const fetchJobDetails = async () => {
+          try {
+            const { data, error } = await supabase
+              .from('jobs')
+              .select('id, title')
+              .eq('id', selectedJob)
+              .single();
+              
+            if (error) {
+              console.error("Error fetching job details:", error);
+              return;
+            }
+            
+            if (data) {
+              console.log("Fetched job details:", data);
+              setJobDetails(data);
+            }
+          } catch (error) {
+            console.error("Error fetching job:", error);
+          }
+        };
+        
+        fetchJobDetails();
+      }
+    }
   }, [navigate]);
 
   useEffect(() => {
