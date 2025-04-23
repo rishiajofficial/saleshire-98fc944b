@@ -131,16 +131,22 @@ const Candidates = () => {
         throw new Error(error.message);
       }
       
-      // Log the archive action
-      await supabase.rpc('log_activity', {
-        user_id: user?.id || '', 
-        action: 'archive_candidate',
-        entity_type: 'candidates',
-        entity_id: id,
-        details: { status_change: 'archived' }
-      }).catch(error => {
+      // Log the archive action - fixed to properly handle the RPC call
+      try {
+        const { error: logError } = await supabase.rpc('log_activity', {
+          user_id: user?.id || '', 
+          action: 'archive_candidate',
+          entity_type: 'candidates',
+          entity_id: id,
+          details: { status_change: 'archived' }
+        });
+        
+        if (logError) {
+          console.error('Error logging activity:', logError);
+        }
+      } catch (error) {
         console.error('Error logging activity:', error);
-      });
+      }
       
       return id;
     },
