@@ -38,6 +38,15 @@ const JobManagement = () => {
     fetchAssessmentsAndTraining();
   }, []);
 
+  const handleCreateJob = async (jobData: any) => {
+    try {
+      await createJob.mutateAsync(jobData);
+    } catch (error: any) {
+      console.error("Failed to create job:", error);
+      toast.error(`Failed to create job: ${error.message || 'Unknown error'}`);
+    }
+  };
+
   if (isLoading) {
     return (
       <MainLayout>
@@ -54,7 +63,7 @@ const JobManagement = () => {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Job Management</h1>
           <JobCreationDialog
-            onJobCreated={createJob.mutate}
+            onJobCreated={handleCreateJob}
             assessments={assessments}
             trainingModules={trainingModules}
           />

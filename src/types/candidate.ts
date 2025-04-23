@@ -2,9 +2,11 @@
 import { Database } from "@/integrations/supabase/types";
 
 export type CandidateWithProfile = Database['public']['Tables']['candidates']['Row'] & {
-  profile?: {
+  profile: {
     name: string;
     email: string;
     role: string;
+    created_at?: string;
+    updated_at?: string;
   }
 };

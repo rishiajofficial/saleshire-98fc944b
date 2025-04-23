@@ -15,51 +15,73 @@ export function useJobs() {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching jobs:", error);
+        throw error;
+      }
       return data as Job[];
     }
   });
 
   const createJob = useMutation({
     mutationFn: async (newJob: any) => {
-      const { data: jobData, error: jobError } = await supabase
-        .from('jobs')
-        .insert({
-          title: newJob.title,
-          description: newJob.description,
-          department: newJob.department,
-          location: newJob.location,
-          employment_type: newJob.employment_type,
-          salary_range: newJob.salary_range,
-          created_by: (await supabase.auth.getUser()).data.user?.id,
-          status: 'active'
-        })
-        .select()
-        .single();
-
-      if (jobError) throw jobError;
-
-      if (newJob.selectedAssessment && newJob.selectedAssessment !== "none") {
-        const { error: assessmentError } = await supabase
-          .from('job_assessments')
+      try {
+        console.log("Creating job with data:", newJob);
+        
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError) throw userError;
+        
+        if (!userData.user) {
+          throw new Error('User not authenticated');
+        }
+        
+        const userId = userData.user.id;
+        
+        const { data: jobData, error: jobError } = await supabase
+          .from('jobs')
           .insert({
-            job_id: jobData.id,
-            assessment_id: newJob.selectedAssessment
-          });
-        if (assessmentError) throw assessmentError;
-      }
+            title: newJob.title,
+            description: newJob.description,
+            department: newJob.department,
+            location: newJob.location,
+            employment_type: newJob.employment_type,
+            salary_range: newJob.salary_range,
+            created_by: userId,
+            status: 'active'
+          })
+          .select()
+          .single();
 
-      if (newJob.selectedTrainingModule && newJob.selectedTrainingModule !== "none") {
-        const { error: trainingError } = await supabase
-          .from('job_training')
-          .insert({
-            job_id: jobData.id,
-            training_module_id: newJob.selectedTrainingModule
-          });
-        if (trainingError) throw trainingError;
-      }
+        if (jobError) {
+          console.error("Error creating job:", jobError);
+          throw jobError;
+        }
 
-      return jobData;
+        if (newJob.selectedAssessment && newJob.selectedAssessment !== "none") {
+          const { error: assessmentError } = await supabase
+            .from('job_assessments')
+            .insert({
+              job_id: jobData.id,
+              assessment_id: newJob.selectedAssessment
+            });
+          if (assessmentError) throw assessmentError;
+        }
+
+        if (newJob.selectedTrainingModule && newJob.selectedTrainingModule !== "none") {
+          const { error: trainingError } = await supabase
+            .from('job_training')
+            .insert({
+              job_id: jobData.id,
+              training_module_id: newJob.selectedTrainingModule
+            });
+          if (trainingError) throw trainingError;
+        }
+
+        return jobData;
+      } catch (error) {
+        console.error("Job creation error:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['jobs'] });

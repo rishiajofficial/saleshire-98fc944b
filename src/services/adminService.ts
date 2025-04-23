@@ -39,10 +39,30 @@ const AdminService = {
         throw new Error('User ID is required for update');
       }
       
-      return await BaseService.invokeFunction("admin-operations", {
-        operation: "updateUser",
-        data: userData
-      });
+      // First update the profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ 
+          name: userData.name,
+          role: userData.role
+        })
+        .eq('id', userData.id);
+      
+      if (profileError) throw profileError;
+      
+      // If email is being updated, use the admin operations function
+      if (userData.email) {
+        const emailResult = await BaseService.invokeFunction("admin-operations", {
+          operation: "updateUserEmail",
+          data: { userId: userData.id, email: userData.email }
+        });
+        
+        if (!emailResult.success) {
+          throw new Error(emailResult.error || 'Failed to update email');
+        }
+      }
+      
+      return { success: true };
     } catch (error: any) {
       console.error('Error updating user:', error.message);
       return { success: false, error: error.message };

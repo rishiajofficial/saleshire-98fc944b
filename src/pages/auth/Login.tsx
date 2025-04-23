@@ -70,7 +70,7 @@ const Login = () => {
       <div className="flex min-h-[calc(100vh-12rem)] items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold">Sign in to HireSmart</CardTitle>
+            <CardTitle className="text-2xl font-bold">Sign in to WorkForce</CardTitle>
             <CardDescription>
               Enter your email below to sign in to your account
             </CardDescription>

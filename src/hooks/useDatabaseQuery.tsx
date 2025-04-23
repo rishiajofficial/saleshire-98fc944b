@@ -206,13 +206,12 @@ const getStepFromStatus = (status?: string): number | undefined => {
 
 // Add a new function to update application status
 export const updateApplicationStatus = async (
-  candidateId: string, // Renamed from userId
+  candidateId: string, 
   applicationData: {
     status?: string;
     resume?: string | null;
     about_me_video?: string | null;
     sales_pitch_video?: string | null;
-    // Note: current_step is now derived, not passed directly
   }
 ) => {
   try {
@@ -230,7 +229,6 @@ export const updateApplicationStatus = async (
       // Ensure status is part of the payload if provided
       updatePayload.status = applicationData.status;
     }
-
 
     const { data, error } = await supabase
       .from('candidates')
@@ -315,4 +313,5 @@ export async function manageInterview(interview: {
   }
 }
 
+// Export the hook as default
 export default useDatabaseQuery;
