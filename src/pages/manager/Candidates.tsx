@@ -169,7 +169,7 @@ const Candidates = () => {
   };
 
   const handleDeleteCandidate = (id: string) => {
-    if (window.confirm("Are you sure you want to delete this candidate?")) {
+    if (window.confirm("Are you sure you want to archive this candidate?")) {
       deleteCandidateMutation.mutate(id);
     }
   };

@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Link } from "react-router-dom";
 import {
@@ -10,7 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Eye, Edit, Trash2 } from "lucide-react";
+import { Eye, Archive } from "lucide-react";
 import { CandidateWithProfile } from "@/types/candidate";
 
 interface CandidatesTableProps {
@@ -87,38 +86,26 @@ export const CandidatesTable: React.FC<CandidatesTableProps> = ({
                 {(userRole === "hr" ||
                   userRole === "admin" ||
                   userRole === "manager") && (
-                  <>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      title="View Details"
-                      className="h-8 w-8 text-gray-700 hover:text-blue-600"
-                      asChild
-                    >
-                      <Link to={`/candidates/${candidate.id}`}>
-                        <Eye className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      title="Edit"
-                      className="h-8 w-8 text-gray-700 hover:text-blue-600"
-                      asChild
-                    >
-                      <Link to={`/candidates/${candidate.id}/edit`}>
-                        <Edit className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                  </>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="View Details"
+                    className="h-8 w-8 text-gray-700 hover:text-blue-600"
+                    asChild
+                  >
+                    <Link to={`/candidates/${candidate.id}`}>
+                      <Eye className="h-4 w-4" />
+                    </Link>
+                  </Button>
                 )}
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => onDelete(candidate.id)}
-                  className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                  className="h-8 w-8 text-gray-500 hover:text-gray-600 hover:bg-gray-50"
+                  title="Archive Candidate"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Archive className="h-4 w-4" />
                 </Button>
               </div>
             </TableCell>
@@ -128,4 +115,3 @@ export const CandidatesTable: React.FC<CandidatesTableProps> = ({
     </Table>
   );
 };
-
