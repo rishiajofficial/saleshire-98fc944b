@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,9 +43,25 @@ const JobForm: React.FC<JobFormProps> = ({
     location: job?.location || "",
     employment_type: job?.employment_type || "",
     salary_range: job?.salary_range || "",
-    selectedAssessment: job?.assessment_id || "none",
-    selectedTrainingModule: job?.training_module_id || "none",
+    selectedAssessment: job?.selectedAssessment || "none",
+    selectedTrainingModule: job?.selectedTrainingModule || "none",
   });
+
+  // Update form when job changes
+  useEffect(() => {
+    if (job) {
+      setForm({
+        title: job.title || "",
+        description: job.description || "",
+        department: job.department || "",
+        location: job.location || "",
+        employment_type: job.employment_type || "",
+        salary_range: job.salary_range || "",
+        selectedAssessment: job.selectedAssessment || "none",
+        selectedTrainingModule: job.selectedTrainingModule || "none",
+      });
+    }
+  }, [job]);
 
   const isView = mode === "view";
 
@@ -176,6 +192,8 @@ interface JobCreationDialogProps {
   trainingModules: { id: string; title: string }[];
   editingJob?: any;
   mode?: "create" | "edit" | "view";
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
 const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
@@ -184,12 +202,24 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
   assessments,
   trainingModules,
   editingJob,
-  mode = "create"
+  mode = "create",
+  isOpen: externalIsOpen,
+  onClose
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  // Sync with external open state if provided
+  useEffect(() => {
+    if (externalIsOpen !== undefined) {
+      setDialogOpen(externalIsOpen);
+    }
+  }, [externalIsOpen]);
+
   const handleOpen = () => setDialogOpen(true);
-  const handleClose = () => setDialogOpen(false);
+  const handleClose = () => {
+    setDialogOpen(false);
+    if (onClose) onClose();
+  };
 
   const handleSubmit = (form: any) => {
     if (mode === "edit" && onJobUpdated) {
@@ -206,25 +236,34 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
     handleClose();
   };
 
-  return (
-    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-      <DialogTrigger asChild>
-        {mode === "edit" ? (
-          <Button variant="outline" size="sm">
+  const triggerButton = () => {
+    switch (mode) {
+      case "edit":
+        return (
+          <Button variant="outline" size="sm" onClick={handleOpen}>
             <PencilLine className="w-4 h-4 mr-1" /> Edit
           </Button>
-        ) : mode === "view" ? (
-          <Button variant="ghost" size="sm">
+        );
+      case "view":
+        return (
+          <Button variant="ghost" size="sm" onClick={handleOpen}>
             <Eye className="w-4 h-4 mr-1" /> View
           </Button>
-        ) : (
-          <Button>
+        );
+      default:
+        return (
+          <Button onClick={handleOpen}>
             <Plus className="mr-2 h-4 w-4" />
             Create New Job
           </Button>
-        )}
-      </DialogTrigger>
-      <DialogContent>
+        );
+    }
+  };
+
+  return (
+    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      {!externalIsOpen && <DialogTrigger asChild>{triggerButton()}</DialogTrigger>}
+      <DialogContent onEscapeKeyDown={handleClose} onInteractOutside={handleClose}>
         <DialogHeader>
           <DialogTitle>
             {mode === "edit"

@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import MainLayout from '@/components/layout/MainLayout';
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,7 +34,7 @@ const JobManagement = () => {
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetchAssessmentsAndTraining();
   }, []);
 
@@ -43,6 +43,15 @@ const JobManagement = () => {
       await createJob.mutateAsync(jobData);
     } catch (error: any) {
       console.error("Failed to create job:", error);
+      // Error is already handled in the mutation's onError
+    }
+  };
+
+  const handleUpdateJob = async (jobData: any) => {
+    try {
+      await updateJob.mutateAsync(jobData);
+    } catch (error: any) {
+      console.error("Failed to update job:", error);
       // Error is already handled in the mutation's onError
     }
   };
@@ -71,7 +80,7 @@ const JobManagement = () => {
         <JobList
           jobs={jobs || []}
           onJobDeleted={deleteJob.mutate}
-          onJobUpdated={updateJob.mutate}
+          onJobUpdated={handleUpdateJob}
           assessments={assessments}
           trainingModules={trainingModules}
         />

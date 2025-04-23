@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Trash2, PencilLine, Eye } from "lucide-react";
 import { Job } from "@/types/job";
 import JobCreationDialog from "./JobCreationDialog";
+import { supabase } from "@/integrations/supabase/client";
 
 interface JobListProps {
   jobs: Job[];
@@ -23,6 +24,40 @@ const JobList: React.FC<JobListProps> = ({
 }) => {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [viewMode, setViewMode] = useState<"view" | "edit" | null>(null);
+
+  // Fetch job-related assessment and training modules
+  const fetchJobRelatedData = async (job: Job) => {
+    // Fetch assessment
+    const { data: assessmentData } = await supabase
+      .from('job_assessments')
+      .select('assessment_id')
+      .eq('job_id', job.id)
+      .maybeSingle();
+    
+    // Fetch training module
+    const { data: trainingData } = await supabase
+      .from('job_training')
+      .select('training_module_id')
+      .eq('job_id', job.id)
+      .maybeSingle();
+    
+    // Return enhanced job object with assessment and training module IDs
+    return {
+      ...job,
+      selectedAssessment: assessmentData?.assessment_id || "none",
+      selectedTrainingModule: trainingData?.training_module_id || "none"
+    };
+  };
+
+  const handleViewOrEdit = async (job: Job, mode: "view" | "edit") => {
+    try {
+      const enhancedJob = await fetchJobRelatedData(job);
+      setSelectedJob(enhancedJob);
+      setViewMode(mode);
+    } catch (error) {
+      console.error("Error fetching job related data:", error);
+    }
+  };
 
   // Dummy function for onJobCreated prop
   const dummyOnJobCreated = () => {
@@ -47,21 +82,20 @@ const JobList: React.FC<JobListProps> = ({
                 <p className="text-xs text-gray-400">Salary: {job.salary_range || "N/A"}</p>
               </div>
               <div className="flex space-x-1">
-                <JobCreationDialog
-                  mode="view"
-                  editingJob={job}
-                  assessments={assessments}
-                  trainingModules={trainingModules}
-                  onJobCreated={dummyOnJobCreated}
-                />
-                <JobCreationDialog
-                  mode="edit"
-                  editingJob={job}
-                  onJobUpdated={(updatedJob) => onJobUpdated(updatedJob)}
-                  assessments={assessments}
-                  trainingModules={trainingModules}
-                  onJobCreated={dummyOnJobCreated}
-                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleViewOrEdit(job, "view")}
+                >
+                  <Eye className="h-4 w-4 mr-1" /> View
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleViewOrEdit(job, "edit")}
+                >
+                  <PencilLine className="h-4 w-4 mr-1" /> Edit
+                </Button>
                 <Button
                   variant="destructive"
                   size="icon"
@@ -77,6 +111,23 @@ const JobList: React.FC<JobListProps> = ({
           </CardContent>
         </Card>
       ))}
+
+      {/* View/Edit Dialog */}
+      {selectedJob && viewMode && (
+        <JobCreationDialog
+          mode={viewMode}
+          editingJob={selectedJob}
+          assessments={assessments}
+          trainingModules={trainingModules}
+          onJobCreated={dummyOnJobCreated}
+          onJobUpdated={onJobUpdated}
+          isOpen={true}
+          onClose={() => {
+            setSelectedJob(null);
+            setViewMode(null);
+          }}
+        />
+      )}
     </div>
   );
 };

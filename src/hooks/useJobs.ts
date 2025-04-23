@@ -104,15 +104,69 @@ export function useJobs() {
   });
 
   const updateJob = useMutation({
-    mutationFn: async (updateJob: any) => {
-      const { id, ...fields } = updateJob;
-      const { error } = await supabase
-        .from('jobs')
-        .update(fields)
-        .eq('id', id);
+    mutationFn: async (updateJobData: any) => {
+      try {
+        const { id, selectedAssessment, selectedTrainingModule, ...jobFields } = updateJobData;
+        
+        // 1. Update job basic fields
+        const { error: jobUpdateError } = await supabase
+          .from('jobs')
+          .update(jobFields)
+          .eq('id', id);
 
-      if (error) throw error;
-      return updateJob;
+        if (jobUpdateError) throw jobUpdateError;
+        
+        // 2. Handle assessment association
+        if (selectedAssessment) {
+          // First delete existing assessment associations
+          const { error: deleteAssessmentError } = await supabase
+            .from('job_assessments')
+            .delete()
+            .eq('job_id', id);
+            
+          if (deleteAssessmentError) throw deleteAssessmentError;
+          
+          // Then insert new assessment if not "none"
+          if (selectedAssessment !== "none") {
+            const { error: assessmentError } = await supabase
+              .from('job_assessments')
+              .insert({
+                job_id: id,
+                assessment_id: selectedAssessment
+              });
+            
+            if (assessmentError) throw assessmentError;
+          }
+        }
+        
+        // 3. Handle training module association
+        if (selectedTrainingModule) {
+          // First delete existing training module associations
+          const { error: deleteTrainingError } = await supabase
+            .from('job_training')
+            .delete()
+            .eq('job_id', id);
+            
+          if (deleteTrainingError) throw deleteTrainingError;
+          
+          // Then insert new training module if not "none"
+          if (selectedTrainingModule !== "none") {
+            const { error: trainingError } = await supabase
+              .from('job_training')
+              .insert({
+                job_id: id,
+                training_module_id: selectedTrainingModule
+              });
+            
+            if (trainingError) throw trainingError;
+          }
+        }
+        
+        return { id, ...jobFields };
+      } catch (error: any) {
+        console.error("Job update error:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
