@@ -11,10 +11,12 @@ import { CandidateWithProfile } from "@/types/candidate";
 import { AddCandidateDialog } from "@/components/candidates/AddCandidateDialog";
 import { CandidatesTable } from "@/components/candidates/CandidatesTable";
 import { CandidateHistoryDialog } from "@/components/candidates/CandidateHistoryDialog";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 const Candidates = () => {
   const { user, profile } = useAuth();
   const queryClient = useQueryClient();
+  const [statusFilter, setStatusFilter] = useState<string>("in progress");
 
   const [showAddCandidateDialog, setShowAddCandidateDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -35,7 +37,7 @@ const Candidates = () => {
     isLoading: isLoadingCandidates,
     error: candidatesError
   } = useQuery<CandidateWithProfile[]>({
-    queryKey: ['candidates'],
+    queryKey: ['candidates', statusFilter],
     queryFn: async (): Promise<CandidateWithProfile[]> => {
       const { data, error } = await supabase
         .from('candidates')
@@ -43,6 +45,7 @@ const Candidates = () => {
           *,
           profile:profiles!candidates_id_fkey(name, email)
         `)
+        .eq('status', statusFilter)
         .order('updated_at', { ascending: false });
       
       if (error) {
@@ -111,7 +114,7 @@ const Candidates = () => {
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('candidates')
-        .delete()
+        .update({ status: 'archived' })
         .eq('id', id);
       if (error) {
         throw new Error(error.message);
@@ -120,10 +123,10 @@ const Candidates = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['candidates'] });
-      toast.success("Candidate deleted successfully");
+      toast.success("Candidate archived successfully");
     },
     onError: (error) => {
-      toast.error("Failed to delete candidate: " + error.message);
+      toast.error("Failed to archive candidate: " + error.message);
     },
   });
 
@@ -194,7 +197,7 @@ const Candidates = () => {
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
@@ -204,6 +207,28 @@ const Candidates = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+          
+          <ToggleGroup 
+            type="single" 
+            value={statusFilter}
+            onValueChange={(value) => {
+              if (value) setStatusFilter(value);
+            }}
+            className="justify-start"
+          >
+            <ToggleGroupItem value="in progress" aria-label="Toggle in progress">
+              In Progress
+            </ToggleGroupItem>
+            <ToggleGroupItem value="hired" aria-label="Toggle hired">
+              Hired
+            </ToggleGroupItem>
+            <ToggleGroupItem value="rejected" aria-label="Toggle rejected">
+              Rejected
+            </ToggleGroupItem>
+            <ToggleGroupItem value="archived" aria-label="Toggle archived">
+              Archived
+            </ToggleGroupItem>
+          </ToggleGroup>
         </div>
 
         <div className="flex justify-between items-center">
@@ -249,10 +274,7 @@ const Candidates = () => {
 
         <CandidateHistoryDialog
           isOpen={showHistoryDialog}
-          onClose={() => {
-            setShowHistoryDialog(false);
-            setHistoryLogs([]);
-          }}
+          onClose={closeHistoryDialog}
           candidateName={historyCandidateName}
           isLoading={historyLoading}
           logs={historyLogs}
