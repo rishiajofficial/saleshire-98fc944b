@@ -5,6 +5,6 @@ export type CandidateWithProfile = Database['public']['Tables']['candidates']['R
   profile?: {
     name: string;
     email: string;
+    role: string;
   }
 };
-
