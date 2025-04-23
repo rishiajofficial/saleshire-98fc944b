@@ -498,6 +498,7 @@ export type Database = {
           id: string
           options: Json
           score: number | null
+          scores: Json | null
           section_id: string
           text: string
           time_limit: number | null
@@ -509,6 +510,7 @@ export type Database = {
           id?: string
           options: Json
           score?: number | null
+          scores?: Json | null
           section_id: string
           text: string
           time_limit?: number | null
@@ -520,6 +522,7 @@ export type Database = {
           id?: string
           options?: Json
           score?: number | null
+          scores?: Json | null
           section_id?: string
           text?: string
           time_limit?: number | null

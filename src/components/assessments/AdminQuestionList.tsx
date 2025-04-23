@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,10 +28,8 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
   const [addState, setAddState] = useState<Omit<Question, "id"> | null>(null);
   const [sectionId, setSectionId] = useState<string | null>(null);
 
-  // Fetch or create a default section for the assessment
   useEffect(() => {
     const fetchOrCreateSection = async () => {
-      // First try to find an existing section
       const { data: existingSections, error: fetchError } = await supabase
         .from("assessment_sections")
         .select("id")
@@ -44,13 +41,11 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
         return;
       }
 
-      // If a section exists, use it
       if (existingSections && existingSections.length > 0) {
         setSectionId(existingSections[0].id);
         return;
       }
 
-      // Otherwise create a default section
       const { data: newSection, error: createError } = await supabase
         .from("assessment_sections")
         .insert({
@@ -77,7 +72,6 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
     }
   }, [assessmentId]);
 
-  // Fetch questions
   useEffect(() => {
     const fetchQuestions = async () => {
       if (!sectionId) return;
@@ -110,7 +104,6 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
     if (sectionId) fetchQuestions();
   }, [sectionId, adding, editingId]);
 
-  // Initialize blank question
   const blankQuestion = (): Omit<Question, "id"> => ({
     text: "",
     options: ["", ""],
@@ -119,7 +112,6 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
     time_limit: null,
   });
 
-  // Handle edit/delete/add operations
   const handleEdit = (q: Question) => {
     setEditingId(q.id);
     setEditState({ ...q });
@@ -181,7 +173,7 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
         .update({
           text,
           options,
-          scores,
+          scores: scores || options.map(() => 1),
           correct_answer,
           section_id: sectionId
         })
@@ -210,7 +202,6 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
         if (error) throw error;
         toast.success("Question deleted successfully");
         
-        // Refresh the questions list
         setQuestions(questions.filter(q => q.id !== id));
       } catch (error: any) {
         console.error("Error deleting question:", error);
@@ -288,8 +279,9 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
         section_id: sectionId,
         text,
         options,
-        scores,
-        correct_answer
+        scores: scores || options.map(() => 1),
+        correct_answer,
+        time_limit: null
       });
       
       if (error) throw error;
