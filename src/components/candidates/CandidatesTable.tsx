@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link } from "react-router-dom";
 import {
@@ -57,6 +58,21 @@ export const CandidatesTable: React.FC<CandidatesTableProps> = ({
     );
   }
 
+  // Filter candidates to ensure only candidates with role 'candidate' are shown
+  const filteredCandidates = candidates.filter(
+    (candidate) => candidate.profile?.role === 'candidate'
+  );
+
+  if (filteredCandidates.length === 0) {
+    return (
+      <TableRow>
+        <TableCell colSpan={6} className="text-center py-8">
+          <p className="text-muted-foreground">No candidates found.</p>
+        </TableCell>
+      </TableRow>
+    );
+  }
+
   return (
     <Table>
       <TableHeader>
@@ -70,7 +86,7 @@ export const CandidatesTable: React.FC<CandidatesTableProps> = ({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {candidates.map((candidate) => (
+        {filteredCandidates.map((candidate) => (
           <TableRow key={candidate.id}>
             <TableCell>{candidate.profile?.name || "Unknown"}</TableCell>
             <TableCell>{candidate.profile?.email || "Unknown"}</TableCell>

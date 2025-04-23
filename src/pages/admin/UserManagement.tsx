@@ -56,7 +56,6 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-// Form validation schema
 const userFormSchema = z.object({
   name: z.string().min(2, {
     message: "Name must be at least 2 characters.",
@@ -82,7 +81,6 @@ const UserManagement = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Create form
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema),
     defaultValues: {
@@ -94,18 +92,15 @@ const UserManagement = () => {
     },
   });
 
-  // Fetch users from database
   const { data: fetchedUsers, isLoading: isLoadingUsers, refetch: refetchUsers } = useDatabaseQuery<any[]>(
     'profiles', 
     { order: ['created_at', { ascending: false }] }
   );
 
-  // Fetch candidate data
   const { data: fetchedCandidates, isLoading: isLoadingCandidates } = useDatabaseQuery<any[]>(
     'candidates'
   );
 
-  // Fetch manager data
   const { data: fetchedManagers, isLoading: isLoadingManagers } = useDatabaseQuery<any[]>(
     'managers'
   );
@@ -134,32 +129,29 @@ const UserManagement = () => {
     setIsLoading(false);
   };
 
-  // Process users for display
   const users = fetchedUsers ? fetchedUsers.map(user => {
-    // Find additional data for candidates and managers
     const candidateData = fetchedCandidates?.find(c => c.id === user.id);
     const managerData = fetchedManagers?.find(m => m.id === user.id);
+    
+    const cleanRole = typeof user.role === 'string' ? user.role.replace(/^0/, '') : user.role;
     
     return {
       id: user.id,
       name: user.name || 'Unnamed User',
       email: user.email,
-      role: user.role,
-      status: 'active', // Default to active since we don't have this field yet
+      role: cleanRole,
+      status: 'active',
       createdAt: user.created_at,
-      // Add role-specific data
-      ...(user.role === 'candidate' && candidateData ? {
+      ...(cleanRole === 'candidate' && candidateData ? {
         region: candidateData.region
       } : {}),
-      ...(user.role === 'manager' && managerData ? {
-        // We'll need to fetch this data differently, but for now:
+      ...(cleanRole === 'manager' && managerData ? {
         candidatesAssigned: 0,
-        regions: ['north'] // Placeholder
+        regions: ['north']
       } : {})
     };
   }) : [];
 
-  // Filter users based on search query
   const filteredUsers = users 
     ? users.filter(
         (user) =>
@@ -252,7 +244,6 @@ const UserManagement = () => {
   };
 
   const handleToggleUserStatus = async (userId: string, currentStatus: string) => {
-    // This is a placeholder - we don't currently have a status field in the profiles table
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
     
     try {
@@ -264,7 +255,6 @@ const UserManagement = () => {
     }
   };
 
-  // Show loading state if data is being fetched
   if (isLoadingUsers || isLoadingCandidates || isLoadingManagers) {
     return (
       <MainLayout>
@@ -293,7 +283,6 @@ const UserManagement = () => {
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Add New User */}
           <Card className="lg:col-span-1">
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -420,7 +409,6 @@ const UserManagement = () => {
             </CardContent>
           </Card>
 
-          {/* User Management Tips */}
           <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle>User Management Tips</CardTitle>
@@ -465,7 +453,6 @@ const UserManagement = () => {
           </Card>
         </div>
 
-        {/* Users Table */}
         <Card>
           <CardHeader className="pb-3">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center space-y-2 sm:space-y-0">
@@ -620,7 +607,6 @@ const UserManagement = () => {
         </Card>
       </div>
 
-      {/* Edit User Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -748,7 +734,6 @@ const UserManagement = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete User Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>

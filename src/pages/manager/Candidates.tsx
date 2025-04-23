@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -38,18 +37,21 @@ const Candidates = () => {
     isLoading: isLoadingCandidates,
     error: candidatesError
   } = useQuery<CandidateWithProfile[]>({
-    queryKey: ['candidates', statusFilter],
+    queryKey: ['candidates', statusFilter, user?.id],
     queryFn: async (): Promise<CandidateWithProfile[]> => {
       let query = supabase
         .from('candidates')
         .select(`
           *,
-          profile:profiles!candidates_id_fkey(name, email)
+          profile:profiles!candidates_id_fkey(name, email, role)
         `)
         .order('updated_at', { ascending: false });
 
+      if (profile?.role === 'manager' && user?.id) {
+        query = query.eq('assigned_manager', user.id);
+      }
+
       if (statusFilter === "in progress") {
-        // Exclude hired, rejected, and archived candidates
         query = query.not('status', 'eq', 'hired')
                     .not('status', 'eq', 'rejected')
                     .not('status', 'eq', 'archived');
@@ -131,7 +133,6 @@ const Candidates = () => {
         throw new Error(error.message);
       }
       
-      // Log the archive action - fixed to properly handle the RPC call
       try {
         const { error: logError } = await supabase.rpc('log_activity', {
           user_id: user?.id || '', 
@@ -208,10 +209,11 @@ const Candidates = () => {
 
   const filteredCandidates = fetchedCandidates?.filter(
     (candidate) =>
-      (candidate.profile?.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+      candidate.profile?.role === 'candidate' &&
+      ((candidate.profile?.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
       (candidate.profile?.email?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
       (candidate.phone?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-      (candidate.location?.toLowerCase() || "").includes(searchTerm.toLowerCase())
+      (candidate.location?.toLowerCase() || "").includes(searchTerm.toLowerCase()))
   ) || [];
 
   return (

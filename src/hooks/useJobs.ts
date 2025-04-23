@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Job } from "@/types/job";
@@ -93,20 +94,22 @@ export function useJobs() {
 
   const deleteJob = useMutation({
     mutationFn: async (jobId: string) => {
+      // Fixed delete function to delete jobs instead of archiving candidates
       const { error } = await supabase
-        .from('candidates')
-        .update({ status: 'archived' })
+        .from('jobs')
+        .delete()
         .eq('id', jobId);
 
       if (error) throw error;
+      return jobId;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['candidates'] });
-      toast.success('Candidate archived successfully');
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      toast.success('Job deleted successfully');
     },
     onError: (error) => {
-      console.error('Error archiving candidate:', error);
-      toast.error('Failed to archive candidate');
+      console.error('Error deleting job:', error);
+      toast.error('Failed to delete job');
     }
   });
 
