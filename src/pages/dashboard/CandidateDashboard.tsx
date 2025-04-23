@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Card,
   CardContent,
@@ -134,7 +135,7 @@ const CandidateDashboard = () => {
             !!fetchedCandidateData?.sales_pitch_video;
         
         const currentStep = fetchedCandidateData?.current_step ?? dashboardState.currentStep ?? (applicationSubmitted ? 1 : 0);
-
+        
         console.log("Dashboard: Setting non-training state from initial fetch or update");
         setDashboardState(prev => ({
           ...prev,
