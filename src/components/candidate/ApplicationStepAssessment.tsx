@@ -17,16 +17,21 @@ const ApplicationStepAssessment = ({ onBack, onComplete, jobId }: ApplicationSte
   const [assessment, setAssessment] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchJobAssessment = async () => {
       try {
         setIsLoading(true);
+        setError(null);
+        
+        console.log("Fetching assessment for job ID:", jobId);
         
         // Fetch assessment associated with the job
         const { data, error } = await supabase
           .from('job_assessments')
           .select(`
+            assessment_id,
             assessments:assessment_id (
               id,
               title,
@@ -34,19 +39,25 @@ const ApplicationStepAssessment = ({ onBack, onComplete, jobId }: ApplicationSte
               difficulty
             )
           `)
-          .eq('job_id', jobId)
-          .single();
+          .eq('job_id', jobId);
           
         if (error) {
           console.error("Error fetching job assessment:", error);
+          setError("Failed to load assessment. Please try again.");
           return;
         }
         
-        if (data?.assessments) {
-          setAssessment(data.assessments);
+        console.log("Job assessment data:", data);
+        
+        if (data && data.length > 0 && data[0]?.assessments) {
+          console.log("Setting assessment:", data[0].assessments);
+          setAssessment(data[0].assessments);
+        } else {
+          console.log("No assessment found for this job");
         }
       } catch (error) {
         console.error("Error in fetchJobAssessment:", error);
+        setError("An unexpected error occurred. Please try again.");
       } finally {
         setIsLoading(false);
       }
@@ -54,6 +65,10 @@ const ApplicationStepAssessment = ({ onBack, onComplete, jobId }: ApplicationSte
     
     if (jobId) {
       fetchJobAssessment();
+    } else {
+      console.error("No job ID provided");
+      setError("No job ID provided. Cannot load assessment.");
+      setIsLoading(false);
     }
   }, [jobId]);
   
@@ -84,6 +99,11 @@ const ApplicationStepAssessment = ({ onBack, onComplete, jobId }: ApplicationSte
         <div className="flex justify-center items-center py-10">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
+      ) : error ? (
+        <Alert variant="destructive">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       ) : assessment ? (
         <Card>
           <CardHeader>
@@ -124,7 +144,7 @@ const ApplicationStepAssessment = ({ onBack, onComplete, jobId }: ApplicationSte
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Submitting...
+              Complete Application
             </>
           ) : (
             "Complete Application"
