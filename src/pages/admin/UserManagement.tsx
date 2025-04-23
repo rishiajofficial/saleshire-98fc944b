@@ -64,9 +64,7 @@ const userFormSchema = z.object({
   email: z.string().email({
     message: "Please enter a valid email address.",
   }),
-  password: z.string().min(6, {
-    message: "Password must be at least 6 characters.",
-  }).optional(),
+  password: z.string().optional(),
   role: z.enum(["admin", "manager", "candidate", "hr", "director"]),
   region: z.string().optional(),
 });
