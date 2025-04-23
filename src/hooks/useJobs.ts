@@ -94,7 +94,6 @@ export function useJobs() {
 
   const deleteJob = useMutation({
     mutationFn: async (jobId: string) => {
-      // Fixed delete function to delete jobs instead of archiving candidates
       const { error } = await supabase
         .from('jobs')
         .delete()

@@ -1,3 +1,4 @@
+
 import {
   Users,
   BarChart3,
@@ -7,6 +8,7 @@ import {
   Video,
   Home,
   Briefcase,
+  Activity,
 } from "lucide-react";
 import { UserRole } from "@/types";
 
@@ -33,6 +35,24 @@ export const getNavItems = (role?: string): NavItem[] => [
       : "/dashboard/candidate",
     icon: <Home className="h-5 w-5" />,
     role: ["admin", "manager", "candidate", "hr", "director"],
+  },
+  {
+    label: "User Management",
+    href: "/users",
+    icon: <Users className="h-5 w-5" />,
+    role: ["admin"],
+  },
+  {
+    label: "Activity Log",
+    href: "/activity-log",
+    icon: <Activity className="h-5 w-5" />,
+    role: ["admin"],
+  },
+  {
+    label: "Training Management",
+    href: "/training-management",
+    icon: <BookOpen className="h-5 w-5" />,
+    role: ["admin"],
   },
   {
     label: "Candidates",
@@ -75,31 +95,5 @@ export const getNavItems = (role?: string): NavItem[] => [
     href: "/job-openings",
     icon: <FileText className="h-5 w-5" />,
     role: ["candidate"],
-  },
-  {
-    label: "Admin Tools",
-    href: "#",
-    icon: <Settings className="h-5 w-5" />,
-    role: ["admin"],
-    subitems: [
-      {
-        label: "User Management",
-        href: "/users",
-        icon: <Users className="h-5 w-5" />,
-        role: ["admin"],
-      },
-      {
-        label: "Activity Log",
-        href: "/activity-log",
-        icon: <FileText className="h-5 w-5" />,
-        role: ["admin"],
-      },
-      {
-        label: "Training Management",
-        href: "/training-management",
-        icon: <BookOpen className="h-5 w-5" />,
-        role: ["admin"],
-      },
-    ],
   },
 ];

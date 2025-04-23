@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -133,6 +134,7 @@ const UserManagement = () => {
     const candidateData = fetchedCandidates?.find(c => c.id === user.id);
     const managerData = fetchedManagers?.find(m => m.id === user.id);
     
+    // Remove any "0" prefix from the role
     const cleanRole = typeof user.role === 'string' ? user.role.replace(/^0/, '') : user.role;
     
     return {
@@ -183,6 +185,7 @@ const UserManagement = () => {
           toast.error(`Failed to create user: ${response.error}`);
         }
       } else if (formMode === 'edit' && userToEdit) {
+        // Make sure we update the auth email and profile email
         response = await AdminService.updateUser({
           id: userToEdit,
           name: values.name,
@@ -193,6 +196,12 @@ const UserManagement = () => {
         });
         
         if (response.success) {
+          // Also update the user's email in the auth.users table if email has changed
+          const existingUser = users.find(u => u.id === userToEdit);
+          if (existingUser && existingUser.email !== values.email) {
+            await AdminService.updateUserEmail(userToEdit, values.email);
+          }
+          
           toast.success(`User ${values.name} updated successfully`);
           setShowEditDialog(false);
           setUserToEdit(null);
@@ -238,20 +247,39 @@ const UserManagement = () => {
     }
   };
 
-  const initiateDeleteUser = (userId: string) => {
-    setUserToDelete(userId);
-    setShowDeleteDialog(true);
-  };
-
   const handleToggleUserStatus = async (userId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
     
     try {
-      toast.success(`User status changed to ${newStatus}`);
-      // We would update the database here if we had the status field
+      const response = await AdminService.updateUserStatus(userId, newStatus);
+      if (response.success) {
+        toast.success(`User status changed to ${newStatus}`);
+        // Update the local state to reflect the change
+        refetchUsers();
+      } else {
+        toast.error(`Failed to update status: ${response.error}`);
+      }
     } catch (error: any) {
       console.error('Error updating user status:', error.message);
       toast.error(`Failed to update status: ${error.message}`);
+    }
+  };
+
+  // Function to get the color class for a given role
+  const getRoleColorClass = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return "bg-purple-100 text-purple-800";
+      case 'hr':
+        return "bg-yellow-100 text-yellow-800";
+      case 'manager':
+        return "bg-blue-100 text-blue-800";
+      case 'candidate':
+        return "bg-green-100 text-green-800";
+      case 'director':
+        return "bg-orange-100 text-orange-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -401,7 +429,7 @@ const UserManagement = () => {
                   
                   <div className="pt-2">
                     <Button type="submit" className="w-full" disabled={isLoading}>
-                      {isLoading ? "Creating User..." : "Create User"}
+                      {isLoading ? "Creating User..." : formMode === 'create' ? "Create User" : "Update User"}
                     </Button>
                   </div>
                 </form>
@@ -421,7 +449,7 @@ const UserManagement = () => {
                 <div className="p-4 border rounded-lg">
                   <h3 className="font-medium mb-2">User Roles</h3>
                   <p className="text-sm text-muted-foreground mb-2">
-                    The system has three types of roles with different permissions:
+                    The system has five types of roles with different permissions:
                   </p>
                   <ul className="text-sm space-y-2">
                     <li className="flex items-center">
@@ -431,6 +459,14 @@ const UserManagement = () => {
                     <li className="flex items-center">
                       <Badge className="bg-blue-100 text-blue-800 mr-2">Manager</Badge>
                       <span>Access to candidate management, interviews, and regional reporting</span>
+                    </li>
+                    <li className="flex items-center">
+                      <Badge className="bg-yellow-100 text-yellow-800 mr-2">HR</Badge>
+                      <span>Access to job management, assessments, and full candidate data</span>
+                    </li>
+                    <li className="flex items-center">
+                      <Badge className="bg-orange-100 text-orange-800 mr-2">Director</Badge>
+                      <span>Access to analytics, job management, and oversight of managers</span>
                     </li>
                     <li className="flex items-center">
                       <Badge className="bg-green-100 text-green-800 mr-2">Candidate</Badge>
@@ -519,19 +555,7 @@ const UserManagement = () => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            className={`${
-                              user.role === "admin"
-                                ? "bg-purple-100 text-purple-800"
-                                : user.role === "manager"
-                                ? "bg-blue-100 text-blue-800"
-                                : user.role === "green"
-                                ? "bg-green-100 text-green-800"
-                                : user.role === "hr"
-                                ? "bg-orange-100 text-orange-800"
-                                : "bg-yellow-100 text-yellow-800"
-                            }`}
-                          >
+                          <Badge className={getRoleColorClass(user.role)}>
                             {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
                           </Badge>
                           {user.role === "manager" && user.candidatesAssigned && (
@@ -584,17 +608,18 @@ const UserManagement = () => {
                             >
                               <PenLine className="h-4 w-4" />
                             </Button>
-                            {user.role !== "admin" && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
-                                title="Delete User"
-                                onClick={() => initiateDeleteUser(user.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                              title="Delete User"
+                              onClick={() => {
+                                setUserToDelete(user.id);
+                                setShowDeleteDialog(true);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -604,15 +629,55 @@ const UserManagement = () => {
               </Table>
             </div>
           </CardContent>
+          <CardFooter>
+            <Button variant="outline" size="sm" className="ml-auto" onClick={() => refetchUsers()}>
+              Refresh Data
+            </Button>
+          </CardFooter>
         </Card>
       </div>
 
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="sm:max-w-[425px]">
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-500" />
+              Confirm Deletion
+            </DialogTitle>
             <DialogDescription>
-              Update user information and permissions
+              Are you sure you want to delete this user? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={isLoading}
+            >
+              {isLoading ? "Deleting..." : "Delete User"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FilePenLine className="h-5 w-5" />
+              Edit User
+            </DialogTitle>
+            <DialogDescription>
+              Update user details and permissions
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
@@ -672,6 +737,7 @@ const UserManagement = () => {
                       <FormLabel>Role</FormLabel>
                       <Select 
                         onValueChange={field.onChange} 
+                        defaultValue={field.value}
                         value={field.value}
                       >
                         <FormControl>
@@ -697,9 +763,10 @@ const UserManagement = () => {
                   name="region"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Region</FormLabel>
+                      <FormLabel>Region (For Managers & Candidates)</FormLabel>
                       <Select 
                         onValueChange={field.onChange} 
+                        defaultValue={field.value}
                         value={field.value}
                       >
                         <FormControl>
@@ -720,7 +787,7 @@ const UserManagement = () => {
                   )}
                 />
                 
-                <DialogFooter className="pt-2">
+                <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => setShowEditDialog(false)}>
                     Cancel
                   </Button>
@@ -731,41 +798,6 @@ const UserManagement = () => {
               </form>
             </Form>
           </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this user account? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <div className="p-3 bg-red-50 text-red-600 rounded-lg flex items-start">
-              <AlertCircle className="h-5 w-5 mr-3 mt-0.5 flex-shrink-0" />
-              <p className="text-sm">
-                Deleting this user will remove all their data from the system, including application history and assessment results.
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowDeleteDialog(false)}
-              disabled={isLoading}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmDelete}
-              disabled={isLoading}
-            >
-              {isLoading ? "Deleting..." : "Delete User"}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </MainLayout>
