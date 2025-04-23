@@ -1,9 +1,11 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { FileText, Upload, Video, X } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSupabaseStorage } from '@/hooks/useSupabaseStorage';
 
@@ -32,6 +34,11 @@ const ApplicationStepUploads = ({
   
   const [uploadingAboutVideo, setUploadingAboutVideo] = useState(false);
   const [uploadingSalesVideo, setUploadingSalesVideo] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({
+    resume: 0,
+    aboutMe: 0,
+    salesPitch: 0
+  });
   
   const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0 || !user) {
@@ -41,6 +48,8 @@ const ApplicationStepUploads = ({
     const fileExtension = file.name.split('.').pop();
     const filePath = `${user.id}/resume.${fileExtension}`;
     
+    setUploadProgress(prev => ({ ...prev, resume: 10 }));
+    
     const publicUrl = await uploadResume(file, filePath);
     
     if (publicUrl) {
@@ -48,11 +57,13 @@ const ApplicationStepUploads = ({
         ...applicationData,
         resume: publicUrl
       });
+      setUploadProgress(prev => ({ ...prev, resume: 100 }));
       toast({
         title: "Resume uploaded",
         description: "Your resume has been uploaded successfully.",
       });
     } else {
+      setUploadProgress(prev => ({ ...prev, resume: 0 }));
       e.target.value = '';
     }
   };
@@ -68,6 +79,8 @@ const ApplicationStepUploads = ({
     const setUploading = type === "aboutMe" ? setUploadingAboutVideo : setUploadingSalesVideo;
     
     setUploading(true);
+    setUploadProgress(prev => ({ ...prev, [type]: 10 }));
+    
     const publicUrl = await uploadVideo(file, filePath);
     setUploading(false);
     
@@ -76,11 +89,13 @@ const ApplicationStepUploads = ({
         ...applicationData,
         [fieldName]: publicUrl
       });
+      setUploadProgress(prev => ({ ...prev, [type]: 100 }));
       toast({
         title: "Video uploaded",
         description: `Your ${type === "aboutMe" ? "about me" : "sales pitch"} video has been uploaded successfully.`,
       });
     } else {
+      setUploadProgress(prev => ({ ...prev, [type]: 0 }));
       e.target.value = '';
     }
   };
@@ -90,6 +105,7 @@ const ApplicationStepUploads = ({
       ...applicationData,
       [type]: null
     });
+    setUploadProgress(prev => ({ ...prev, [type === "resume" ? "resume" : type === "aboutMeVideo" ? "aboutMe" : "salesPitch"]: 0 }));
     
     toast({
       title: "File removed",
@@ -98,16 +114,26 @@ const ApplicationStepUploads = ({
   };
   
   const validateBeforeNext = () => {
-    if (!applicationData.resume || !applicationData.aboutMeVideo || !applicationData.salesPitchVideo) {
+    if (!applicationData.resume && !applicationData.aboutMeVideo && !applicationData.salesPitchVideo) {
       toast({
-        title: "Missing files",
-        description: "Please upload all required files before proceeding.",
-        variant: "destructive",
+        description: "You haven't uploaded any files. You can still proceed, but we recommend uploading at least one file to support your application.",
+        duration: 5000,
       });
-      return;
     }
-    
     onNext();
+  };
+
+  const renderUploadProgress = (progress: number) => {
+    if (progress === 0) return null;
+    
+    return (
+      <div className="mt-2">
+        <Progress value={progress} className="w-full" />
+        <p className="text-xs text-gray-500 mt-1">
+          {progress < 100 ? "Uploading..." : "Upload complete"}
+        </p>
+      </div>
+    );
   };
 
   return (
@@ -141,7 +167,7 @@ const ApplicationStepUploads = ({
             </div>
           ) : (
             <div>
-              <Label htmlFor="resumeUpload">Upload your Resume</Label>
+              <Label htmlFor="resumeUpload">Upload your Resume (Optional)</Label>
               <div className="text-xs text-gray-600 mb-2">
                 Please upload your latest resume in PDF or DOCX format.
               </div>
@@ -167,11 +193,13 @@ const ApplicationStepUploads = ({
                   />
                 </label>
               </div>
+              {renderUploadProgress(uploadProgress.resume)}
             </div>
           )}
         </CardContent>
       </Card>
 
+      {/* About Me Video Card - Similar structure with progress */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center">
@@ -201,7 +229,7 @@ const ApplicationStepUploads = ({
             </div>
           ) : (
             <div>
-              <Label htmlFor="aboutMeUpload">Upload About Me Video</Label>
+              <Label htmlFor="aboutMeUpload">Upload About Me Video (Optional)</Label>
               <div className="text-xs text-gray-600 mb-2">
                 Briefly introduce yourself and your interests in this short (~1 minute) video.
               </div>
@@ -227,11 +255,13 @@ const ApplicationStepUploads = ({
                   />
                 </label>
               </div>
+              {renderUploadProgress(uploadProgress.aboutMe)}
             </div>
           )}
         </CardContent>
       </Card>
 
+      {/* Sales Pitch Video Card - Similar structure with progress */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center">
@@ -261,7 +291,7 @@ const ApplicationStepUploads = ({
             </div>
           ) : (
             <div>
-              <Label htmlFor="salesPitchUpload">Upload Sales Pitch Video</Label>
+              <Label htmlFor="salesPitchUpload">Upload Sales Pitch Video (Optional)</Label>
               <div className="text-xs text-gray-600 mb-2">
                 Record a short sales pitch (up to 2 minutes) demonstrating your selling skills, confidence and personality.
               </div>
@@ -287,6 +317,7 @@ const ApplicationStepUploads = ({
                   />
                 </label>
               </div>
+              {renderUploadProgress(uploadProgress.salesPitch)}
             </div>
           )}
         </CardContent>

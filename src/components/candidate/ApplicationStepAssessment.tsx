@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -87,7 +86,6 @@ const ApplicationStepAssessment = ({ onBack, onComplete, jobId }: ApplicationSte
   }, [jobId]);
   
   const handleTakeAssessment = () => {
-    // Redirect to assessment page with the right ID
     if (assessment?.id) {
       window.location.href = `/training/assessment/${assessment.id}`;
     } else {
@@ -135,7 +133,7 @@ const ApplicationStepAssessment = ({ onBack, onComplete, jobId }: ApplicationSte
                 Take Assessment
               </Button>
               <div className="text-xs text-gray-500 italic">
-                Note: You can also complete the assessment later from your dashboard.
+                Note: You can complete the assessment later from your dashboard.
               </div>
             </div>
           </CardContent>
@@ -152,16 +150,16 @@ const ApplicationStepAssessment = ({ onBack, onComplete, jobId }: ApplicationSte
       <div className="flex justify-between mt-8">
         <Button onClick={onBack} variant="outline">Back</Button>
         <Button 
-          onClick={handleComplete} 
+          onClick={handleComplete}
           disabled={isSubmitting}
         >
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Complete Application
+              Submit Application
             </>
           ) : (
-            "Complete Application"
+            "Submit Application"
           )}
         </Button>
       </div>
