@@ -8,7 +8,7 @@ import { Database } from '@/integrations/supabase/types';
 export type TableName = 'activity_logs' | 'assessment_results' | 'assessment_sections' | 
                         'assessments' | 'candidates' | 'interviews' | 'manager_regions' | 
                         'managers' | 'profiles' | 'questions' | 'sales_tasks' | 'shops' | 
-                        'training_modules' | 'videos';
+                        'training_modules' | 'videos' | 'job_applications';
 
 export function useDatabaseQuery<T = any>(
   tableName: TableName,
@@ -182,21 +182,21 @@ const getStepFromStatus = (status?: string): number | undefined => {
   const lowerStatus = status.toLowerCase();
   switch (lowerStatus) {
     case "applied":
-    case "screening":
+    case "application_in_progress":
       return 1; // Application Step
     case "hr_review":
       return 2; // HR Review Step
-    case "hr_approved": // This status signifies transition TO training/assessment
+    case "hr_approved":
     case "training":
       return 3; // Training/Assessment Step
-    case "interview":
-    case "final_interview":
-      return 4; // Interview Step (Now Step 4)
-    case "sales_task":
-      return 5; // Sales Task Step (Now Step 5)
+    case "manager_interview":
+      return 4; // Interview Step
+    case "paid_project":
+      return 5; // Paid Project Step
     case "hired":
       return 6; // Hired Step
     case "rejected":
+    case "archived":
       return 7; // Process Ended/Rejected Step
     default:
       // Return undefined to avoid accidentally changing step for unknown statuses
@@ -229,18 +229,19 @@ export const updateApplicationStatus = async (
       // Ensure status is part of the payload if provided
       updatePayload.status = applicationData.status;
     }
+    
+    console.log("Updating candidate status with payload:", updatePayload);
 
     const { data, error } = await supabase
       .from('candidates')
-      .update(updatePayload) // Use the combined payload
-      .eq('id', candidateId) // Use renamed parameter
-      .select() // Add select to return updated record
-      .single();
+      .update(updatePayload)
+      .eq('id', candidateId)
+      .select();
 
     if (error) throw error;
-    if (!data) throw new Error('No candidate found with that ID');
+    if (!data || data.length === 0) throw new Error('No candidate found with that ID');
 
-    return { data, error: null };
+    return { data: data[0], error: null };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error occurred';
     console.error("Update error:", message);

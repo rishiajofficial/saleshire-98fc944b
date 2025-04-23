@@ -45,12 +45,14 @@ import {
   Phone,
   MapPin,
   Mail,
+  AlertCircle,
 } from "lucide-react";
 import useDatabaseQuery, { updateApplicationStatus, manageInterview } from "@/hooks/useDatabaseQuery";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tables } from "@/integrations/supabase/types";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; 
 
 // Define types based on Supabase schema
 type Profile = Tables<'profiles'>;
@@ -278,39 +280,78 @@ const CandidateDetail = () => {
     setIsUpdatingStatus(true);
     try {
       if (!id) throw new Error("Candidate ID is missing");
-      const { data, error } = await updateApplicationStatus(id, { status: applicationStatus });
-      if (error) throw error;
-    if (!data) throw new Error("Failed to update status");
-
-    // Optimistically update local candidate state
-    const updatedData = { 
-      ...candidate, 
-      status: applicationStatus,
-      profile: candidate?.profile 
-    };
-    
-    // Update local state with type assertion
-    setCandidate(updatedData as Candidate);
-
-    toast({
-      title: "Success",
-      description: "Application status updated successfully",
-    });
-
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error 
-      ? error.message 
-      : "Failed to update application status";
       
-    toast({
-      variant: "destructive",
-      title: "Error",
-      description: errorMessage,
-    });
-  } finally {
-    setIsUpdatingStatus(false);
-  }
-};
+      console.log("Attempting to update status to:", applicationStatus);
+      const { data, error } = await updateApplicationStatus(id, { status: applicationStatus });
+      
+      if (error) {
+        console.error("Error updating status:", error);
+        throw error;
+      }
+      if (!data) {
+        console.error("No data returned from update");
+        throw new Error("Failed to update status");
+      }
+
+      // Optimistically update local candidate state
+      const updatedData = { 
+        ...candidate, 
+        status: applicationStatus,
+        current_step: getStepFromStatus(applicationStatus),
+        profile: candidate?.profile 
+      };
+      
+      // Update local state with type assertion
+      setCandidate(updatedData as any);
+
+      toast({
+        title: "Success",
+        description: "Application status updated successfully",
+      });
+
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : "Failed to update application status";
+      
+      console.error("Status update error:", errorMessage);
+      
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: errorMessage,
+      });
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  // Helper function to get step number from status (same as in useDatabaseQuery)
+  const getStepFromStatus = (status?: string): number => {
+    if (!status) return 0;
+    const lowerStatus = status.toLowerCase();
+    switch (lowerStatus) {
+      case "applied":
+      case "application_in_progress":
+        return 1; // Application Step
+      case "hr_review":
+        return 2; // HR Review Step
+      case "hr_approved":
+      case "training":
+        return 3; // Training/Assessment Step
+      case "manager_interview":
+        return 4; // Interview Step
+      case "paid_project":
+        return 5; // Paid Project Step
+      case "hired":
+        return 6; // Hired Step
+      case "rejected":
+      case "archived":
+        return 7; // Process Ended/Rejected Step
+      default:
+        return 0;
+    }
+  };
 
   // State for interview management
   const [interviewAction, setInterviewAction] = useState<'create' | 'update' | 'cancel'>('create');
@@ -414,38 +455,37 @@ const CandidateDetail = () => {
 
   // Get status badge component based on status string
   const getStatusBadge = (status: string) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case "applied":
+      case "application_in_progress":
         return (
           <Badge className="bg-blue-100 text-blue-800">
-            Applied
+            Application in Progress
           </Badge>
         );
-      case "screening":
       case "hr_review":
         return (
           <Badge className="bg-yellow-100 text-yellow-800">
-            <Clock className="mr-1 h-3 w-3" /> Screening
+            <Clock className="mr-1 h-3 w-3" /> HR Review
           </Badge>
         );
       case "hr_approved":
       case "training":
         return (
           <Badge className="bg-purple-100 text-purple-800">
-            Training
+            Training Phase
           </Badge>
         );
-      case "sales_task":
-        return (
-          <Badge className="bg-orange-100 text-orange-800">
-            Sales Task
-          </Badge>
-        );
-      case "final_interview":
-      case "interview":
+      case "manager_interview":
         return (
           <Badge className="bg-green-100 text-green-800">
-            Interview
+            Manager Interview
+          </Badge>
+        );
+      case "paid_project":
+        return (
+          <Badge className="bg-orange-100 text-orange-800">
+            Paid Project
           </Badge>
         );
       case "hired":
@@ -455,13 +495,18 @@ const CandidateDetail = () => {
           </Badge>
         );
       case "rejected":
+      case "archived":
         return (
           <Badge className="bg-red-100 text-red-800">
-            <XCircle className="mr-1 h-3 w-3" /> Rejected
+            <XCircle className="mr-1 h-3 w-3" /> {status === "archived" ? "Archived" : "Rejected"}
           </Badge>
         );
       default:
-        return null;
+        return (
+          <Badge variant="outline">
+            {status || "Unknown"}
+          </Badge>
+        );
     }
   };
 
@@ -546,6 +591,52 @@ const CandidateDetail = () => {
     }
   };
 
+  const renderStatusUpdateSection = () => (
+    <Card>
+      <CardHeader>
+        <CardTitle>Application Status</CardTitle>
+        <CardDescription>
+          Update the candidate's application status
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label>Status</Label>
+            <Select 
+              value={applicationStatus} 
+              onValueChange={(value: string) => setApplicationStatus(value)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="application_in_progress">Application in Progress</SelectItem>
+                <SelectItem value="hr_review">HR Review</SelectItem>
+                <SelectItem value="hr_approved">HR Approved</SelectItem>
+                <SelectItem value="training">Training Phase</SelectItem>
+                <SelectItem value="manager_interview">Manager Interview</SelectItem>
+                <SelectItem value="paid_project">Paid Project</SelectItem>
+                <SelectItem value="hired">Hired</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+                <SelectItem value="archived">Archived</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Button onClick={handleStatusUpdate} disabled={isUpdatingStatus} className="mt-6">
+              {isUpdatingStatus ? "Updating..." : "Update Status"}
+            </Button>
+          </div>
+          <div>
+            <div className="text-sm font-medium mb-2">Current Status:</div>
+            {getStatusBadge(candidateData.status || '')}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   if (isLoading) {
     return (
       <MainLayout>
@@ -598,6 +689,15 @@ const CandidateDetail = () => {
             </Link>
           </Button>
         </div>
+
+        {/* Error alert for debugging if needed */}
+        {candidateError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{candidateError.message}</AlertDescription>
+          </Alert>
+        )}
 
         <Card>
           <CardHeader>
@@ -653,50 +753,7 @@ const CandidateDetail = () => {
 
             <Separator />
 
-             {/* Status Update Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Application Status</CardTitle>
-            <CardDescription>
-              Update the candidate's application status
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label>Status</Label>
-                <Select 
-                  value={applicationStatus} 
-                  onValueChange={(value: string) => setApplicationStatus(value)}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="applied">Applied</SelectItem>
-                    <SelectItem value="screening">Screening</SelectItem>
-                    <SelectItem value="hr_review">HR Review</SelectItem>
-                    <SelectItem value="hr_approved">HR Approved</SelectItem>
-                    <SelectItem value="training">Training</SelectItem>
-                    <SelectItem value="sales_task">Sales Task</SelectItem>
-                    <SelectItem value="interview">Interview</SelectItem>
-                    <SelectItem value="final_interview">Final Interview</SelectItem>
-                    <SelectItem value="hired">Hired</SelectItem>
-                    <SelectItem value="rejected">Rejected</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Button onClick={handleStatusUpdate} disabled={isUpdatingStatus}>
-                  {isUpdatingStatus ? "Updating..." : "Update Status"}
-                </Button>
-              </div>
-              <div>
-                     {getStatusBadge(candidateData.status)}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            {renderStatusUpdateSection()}
 
              {/* Manager Assignment Card for HR */}
              {userRole === 'hr' && (
@@ -932,163 +989,4 @@ const CandidateDetail = () => {
                 </Popover>
               </div>
               <div>
-                <Label>Status</Label>
-                <Select 
-                  value={interviewStatus} 
-                  onValueChange={(value: 'scheduled' | 'confirmed' | 'completed' | 'cancelled') => setInterviewStatus(value)}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="scheduled">Scheduled</SelectItem>
-                    <SelectItem value="confirmed">Confirmed</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Notes</Label>
-                <Textarea value={interviewNotes} onChange={(e) => setInterviewNotes(e.target.value)} />
-              </div>
-              <div>
-                <Button onClick={handleInterviewManagement} disabled={isManagingInterview}>
-                  {isManagingInterview ? "Managing..." : "Manage Interview"}
-                </Button>
-              </div>
-            </div>
-               </CardContent>
-             </Card>
-             )}
-
-             {(user?.role === 'hr' || user?.role === 'manager') && (
-               <Card>
-                 <CardHeader>
-                   <CardTitle>Assessment & Quiz Results</CardTitle>
-                   <CardDescription>
-                     Scores for submitted tests and quizzes.
-                   </CardDescription>
-                 </CardHeader>
-                 <CardContent>
-                   {isLoadingResults ? (
-                     <p>Loading results...</p>
-                   ) : assessmentResults && assessmentResults.length > 0 ? (
-                     <Table>
-                       <TableHeader>
-                         <TableRow>
-                           <TableHead>Assessment/Quiz</TableHead>
-                           <TableHead>Score</TableHead>
-                           <TableHead>Status</TableHead>
-                           <TableHead>Completed On</TableHead>
-                         </TableRow>
-                       </TableHeader>
-                       <TableBody>
-                         {assessmentResults.map((result) => (
-                           <TableRow key={result.id}>
-                             <TableCell>{result.assessment?.title || 'N/A'}</TableCell>
-                             <TableCell>{result.score}%</TableCell>
-                             <TableCell>
-                               {result.completed ? (
-                                 <Badge className="bg-green-100 text-green-800">Completed</Badge>
-                               ) : (
-                                 <Badge variant="outline">In Progress</Badge>
-                               )}
-                             </TableCell>
-                             <TableCell>{result.completed_at ? formatDate(result.completed_at) : '-'}</TableCell>
-                           </TableRow>
-                         ))}
-                       </TableBody>
-                     </Table>
-                   ) : (
-                     <p className="text-sm text-muted-foreground">No assessment or quiz results found.</p>
-                   )}
-                 </CardContent>
-               </Card>
-             )}
-
-             {(user?.role === 'hr' || user?.role === 'manager') && candidate && (candidate.about_me_video || candidate.sales_pitch_video) && (
-               <Card>
-                 <CardHeader>
-                   <CardTitle>Video Submissions</CardTitle>
-                   <CardDescription>
-                     Review the candidate's submitted videos.
-                   </CardDescription>
-                 </CardHeader>
-                 <CardContent className="space-y-4">
-                    <div>
-                      <Label className="font-medium">About Me Video</Label>
-                      <VideoDisplay url={candidate.about_me_video} title="About Me Video" />
-                    </div>
-                    <div>
-                      <Label className="font-medium">Sales Pitch Video</Label>
-                      <VideoDisplay url={candidate.sales_pitch_video} title="Sales Pitch Video" />
-                    </div>
-                 </CardContent>
-               </Card>
-             )}
-
-             {user?.role === 'manager' && 
-              candidate &&
-              (candidate.status === 'final_interview' || candidate.status === 'sales_task' || candidate.status === 'hired' || candidate.status === 'rejected') && (
-               <Card>
-                 <CardHeader>
-                   <CardTitle>Paid Project Assignment & Status</CardTitle>
-                   <CardDescription>
-                     Assign the paid project and update its final status.
-                   </CardDescription>
-                 </CardHeader>
-                 <CardContent className="space-y-4">
-                   {projectStatus === 'not_started' && candidate.status === 'final_interview' && (
-                      <Button 
-                        onClick={handleAssignProject} 
-                        disabled={isUpdatingProject}
-                      >
-                        {isUpdatingProject ? "Assigning..." : "Assign Paid Project"}
-                      </Button>
-                   )}
-
-                   {projectStatus === 'assigned' && (
-                     <div className="flex items-center gap-4">
-                       <Badge variant="outline">Project Assigned</Badge>
-                       <Select 
-                          onValueChange={(value: 'completed_success' | 'rejected' | 'failed') => {
-                            handleUpdateProjectOutcome(value);
-                          }}
-                          disabled={isUpdatingProject}
-                       >
-                         <SelectTrigger className="w-[220px]">
-                           <SelectValue placeholder="Update Project Outcome..." />
-                         </SelectTrigger>
-                         <SelectContent>
-                           <SelectItem value="completed_success">Completed Successfully (Hire)</SelectItem>
-                           <SelectItem value="rejected">Rejected</SelectItem>
-                           <SelectItem value="failed">Failed</SelectItem>                      
-                         </SelectContent>
-                       </Select>
-                        {isUpdatingProject && <span className="text-sm text-muted-foreground">Updating...</span>}
-                     </div>
-                   )}
-
-                   {projectStatus === 'completed_success' && (
-                      <Badge className="bg-green-100 text-green-800">
-                        <CheckCircle className="mr-1 h-3 w-3" /> Project Completed (Hired)
-                      </Badge>
-                   )}
-                    {(projectStatus === 'rejected' || projectStatus === 'failed') && (
-                      <Badge className="bg-red-100 text-red-800">
-                        <XCircle className="mr-1 h-3 w-3" /> Project Not Passed (Rejected)
-                      </Badge>
-                   )}
-
-                 </CardContent>
-               </Card>
-             )}
-          </CardContent>
-        </Card>
-      </div>
-    </MainLayout>
-  );
-};
-
-export default CandidateDetail;
+                <Label>Status

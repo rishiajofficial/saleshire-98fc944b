@@ -284,7 +284,7 @@ const CandidateDashboard = () => {
         return 3;
       case "managerInterview":
         return 4;
-      case "salesTask":
+      case "paidProject":
         return 5;
       default:
         return 0;
@@ -318,9 +318,9 @@ const CandidateDashboard = () => {
 
   const getCurrentStepName = () => {
     switch (dashboardState.currentStep) {
-      case 1: return "Initial Application & Screening";
+      case 1: return "Application in Progress";
       case 2: return "HR Review";
-      case 3: return "Skills Training";
+      case 3: return "Training Phase";
       case 4: return "Manager Interview";
       case 5: return "Paid Project";
       case 6: return "Hired";
@@ -356,26 +356,26 @@ const CandidateDashboard = () => {
         statusText = "Hired";
         statusIcon = <CheckCircle2 className="mr-1 h-3 w-3" />;
         badgeClass = "bg-green-100 text-green-800";
-    } else if (candidateStatus === 'rejected') {
-        statusText = "Not Selected";
+    } else if (candidateStatus === 'rejected' || candidateStatus === 'archived') {
+        statusText = candidateStatus === 'archived' ? "Archived" : "Not Selected";
         statusIcon = <XCircle className="mr-1 h-3 w-3" />;
         badgeClass = "bg-red-100 text-red-800";
     } else {
         switch (currentStep) {
-            case 1: statusText = "Application Phase"; badgeClass = "bg-blue-100 text-blue-800"; break;
-            case 2: statusText = "HR Review Phase"; badgeClass = "bg-blue-100 text-blue-800"; break;
-            case 3: statusText = "Training Phase"; badgeClass = "bg-blue-100 text-blue-800"; break;
-            case 4: statusText = "Manager Interview Phase"; badgeClass = "bg-blue-100 text-blue-800"; break;
-            case 5: statusText = "Sales Task Phase"; badgeClass = "bg-orange-100 text-orange-800"; break;
+            case 1: statusText = "Application in Progress"; badgeClass = "bg-blue-100 text-blue-800"; break;
+            case 2: statusText = "HR Review Phase"; badgeClass = "bg-yellow-100 text-yellow-800"; break;
+            case 3: statusText = "Training Phase"; badgeClass = "bg-purple-100 text-purple-800"; break;
+            case 4: statusText = "Manager Interview Phase"; badgeClass = "bg-green-100 text-green-800"; break;
+            case 5: statusText = "Paid Project Phase"; badgeClass = "bg-orange-100 text-orange-800"; break;
             default: statusText = "Applied"; badgeClass = "bg-gray-100 text-gray-800";
         }
     }
 
-        return (
+    return (
       <Badge className={`${badgeClass} hover:${badgeClass}`}> 
         {statusIcon} {statusText}
-          </Badge>
-        );
+      </Badge>
+    );
   };
 
   const showApplicationPrompt = 
@@ -433,7 +433,7 @@ const CandidateDashboard = () => {
                       <div className="w-full absolute top-4 left-0 right-0">
                       <div className="h-1 bg-secondary w-full"></div>
                     </div>
-                    {["application", "hrReview", "training", "managerInterview", "salesTask"].map(
+                    {["application", "hrReview", "training", "managerInterview", "paidProject"].map(
                         (stepKey, index) => {
                           const stepNumber = getStepNumber(stepKey);
                           let status = 'pending';
@@ -446,6 +446,14 @@ const CandidateDashboard = () => {
                           } else {
                               status = 'pending';
                           }
+
+                          const stepDisplayNames = {
+                            application: "Application",
+                            hrReview: "HR Review",
+                            training: "Training",
+                            managerInterview: "Manager Interview",
+                            paidProject: "Paid Project"
+                          };
 
                           return (
                         <div
@@ -472,13 +480,13 @@ const CandidateDashboard = () => {
                           </div>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p className="capitalize">
-                                    {stepKey.replace(/([A-Z])/g, ' $1')} ({status})
+                                  <p>
+                                    {stepDisplayNames[stepKey as keyof typeof stepDisplayNames]} ({status})
                                   </p>
                                 </TooltipContent>
                               </Tooltip>
-                            <p className={`mt-2 text-xs font-medium ${status !== 'pending' ? 'text-foreground' : 'text-muted-foreground'} capitalize`}>
-                                {stepKey.replace(/([A-Z])/g, ' $1')} 
+                            <p className={`mt-2 text-xs font-medium ${status !== 'pending' ? 'text-foreground' : 'text-muted-foreground'}`}>
+                                {stepDisplayNames[stepKey as keyof typeof stepDisplayNames]}
                             </p>
                           </div>
                         );

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -39,9 +38,9 @@ const Application = () => {
 
   const [currentStep, setCurrentStep] = useState(1);
   const [jobDetails, setJobDetails] = useState<{ id: string, title: string } | null>(null);
+  const [hasAppliedBefore, setHasAppliedBefore] = useState(false);
 
   useEffect(() => {
-    // Check if the user has already selected a job; if not, redirect to job openings
     const selectedJob = localStorage.getItem("selectedJob");
     console.log("Selected job from localStorage:", selectedJob);
     
@@ -51,17 +50,13 @@ const Application = () => {
       return;
     }
 
-    // Try to parse the selected job data
     try {
-      // First attempt to parse as JSON
       const jobData = JSON.parse(selectedJob);
       console.log("Parsed job data:", jobData);
       setJobDetails(jobData);
     } catch (error) {
-      // If parsing fails, try to use it as a simple job ID
       console.log("Could not parse job data as JSON, using as job ID");
       
-      // For backwards compatibility, check if it's one of the mock jobs
       const mockJobs = [
         { id: "job-a", title: "Sales Executive" },
         { id: "job-b", title: "Business Development Associate" },
@@ -73,7 +68,6 @@ const Application = () => {
         console.log("Found mock job:", found);
         setJobDetails(found);
       } else {
-        // If it's not a mock job, fetch the real job details from Supabase
         const fetchJobDetails = async () => {
           try {
             const { data, error } = await supabase
@@ -130,13 +124,26 @@ const Application = () => {
             setIsSubmitted(true);
           }
         }
+        
+        if (jobDetails?.id) {
+          const { data: applicationData, error: applicationError } = await supabase
+            .from("job_applications")
+            .select("*")
+            .eq("candidate_id", user.id)
+            .eq("job_id", jobDetails.id)
+            .single();
+            
+          if (!applicationError && applicationData) {
+            setHasAppliedBefore(true);
+          }
+        }
       } catch (error) {
         console.error("Error in fetchApplicationData:", error);
       }
     };
 
     fetchApplicationData();
-  }, [user]);
+  }, [user, jobDetails?.id]);
 
   const handleNext = () => setCurrentStep((step) => Math.min(step + 1, steps.length));
   const handleBack = () => setCurrentStep((step) => Math.max(step - 1, 1));
@@ -151,28 +158,60 @@ const Application = () => {
       return;
     }
 
+    if (hasAppliedBefore) {
+      toast({
+        title: "Already Applied",
+        description: "You have already applied for this position.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      const { error } = await supabase
+      const { error: candidateError } = await supabase
         .from("candidates")
         .update({
           resume: applicationData.resume,
           about_me_video: applicationData.aboutMeVideo,
           sales_pitch_video: applicationData.salesPitchVideo,
-          status: 'applied'
+          status: 'hr_review',
+          current_step: 2
         })
         .eq("id", user.id);
 
-      if (error) throw error;
+      if (candidateError) throw candidateError;
+      
+      if (jobDetails?.id) {
+        const { error: applicationError } = await supabase
+          .from("job_applications")
+          .insert({
+            candidate_id: user.id,
+            job_id: jobDetails.id,
+            status: 'hr_review'
+          });
+          
+        if (applicationError) {
+          if (applicationError.code === '23505') {
+            toast({
+              title: "Already Applied",
+              description: "You have already applied for this position.",
+              variant: "destructive",
+            });
+            return;
+          } else {
+            throw applicationError;
+          }
+        }
+      }
 
       toast({
         title: "Application submitted",
-        description: "Your application has been submitted successfully.",
+        description: "Your application has been submitted successfully and is now under HR review.",
       });
 
       setIsSubmitted(true);
       navigate("/dashboard/candidate");
       
-      // Clean up the job selection from localStorage
       localStorage.removeItem("selectedJob");
     } catch (error: any) {
       toast({
@@ -185,9 +224,10 @@ const Application = () => {
 
   const showApplicationRequiredAlert = 
     candidateStatus && 
-    ["applied", "screening"].includes(candidateStatus.toLowerCase());
+    ["application_in_progress", "applied"].includes(candidateStatus.toLowerCase());
 
-  const showApplicationSubmittedAlert = isSubmitted;
+  const showApplicationSubmittedAlert = isSubmitted || 
+    (candidateStatus && ["hr_review", "hr_approved", "training", "manager_interview", "paid_project"].includes(candidateStatus.toLowerCase()));
 
   return (
     <MainLayout>
@@ -203,6 +243,21 @@ const Application = () => {
           </div>
         )}
 
+        {hasAppliedBefore && (
+          <Alert className="mb-4 bg-yellow-50 border-yellow-200">
+            <AlertCircle className="h-4 w-4 text-yellow-600" />
+            <AlertTitle>Already Applied</AlertTitle>
+            <AlertDescription>
+              You have already applied for this position. You can view your application status in your dashboard.
+            </AlertDescription>
+            <div className="mt-2">
+              <Button size="sm" onClick={() => navigate("/dashboard/candidate")}>
+                View Application Status
+              </Button>
+            </div>
+          </Alert>
+        )}
+
         <div className="flex gap-4 mb-8">
           {steps.map(s => (
             <div key={s.id} className={`flex-1 flex flex-col items-center`}>
@@ -214,29 +269,33 @@ const Application = () => {
           ))}
         </div>
 
-        {currentStep === 1 && (
-          <ApplicationStepProfile 
-            onNext={handleNext}
-            profileData={profileData}
-            setProfileData={setProfileData}
-          />
-        )}
+        {!hasAppliedBefore && (
+          <>
+            {currentStep === 1 && (
+              <ApplicationStepProfile 
+                onNext={handleNext}
+                profileData={profileData}
+                setProfileData={setProfileData}
+              />
+            )}
 
-        {currentStep === 2 && (
-          <ApplicationStepUploads 
-            onNext={handleNext}
-            onBack={handleBack}
-            applicationData={applicationData}
-            setApplicationData={setApplicationData}
-          />
-        )}
+            {currentStep === 2 && (
+              <ApplicationStepUploads 
+                onNext={handleNext}
+                onBack={handleBack}
+                applicationData={applicationData}
+                setApplicationData={setApplicationData}
+              />
+            )}
 
-        {currentStep === 3 && jobDetails && (
-          <ApplicationStepAssessment
-            onBack={handleBack}
-            onComplete={handleComplete}
-            jobId={jobDetails.id}
-          />
+            {currentStep === 3 && jobDetails && (
+              <ApplicationStepAssessment
+                onBack={handleBack}
+                onComplete={handleComplete}
+                jobId={jobDetails.id}
+              />
+            )}
+          </>
         )}
 
         {showApplicationSubmittedAlert ? (
