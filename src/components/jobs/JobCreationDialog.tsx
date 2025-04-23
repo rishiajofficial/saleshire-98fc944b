@@ -170,7 +170,7 @@ const JobForm: React.FC<JobFormProps> = ({
 };
 
 interface JobCreationDialogProps {
-  onJobCreated: (job: any) => void;
+  onJobCreated?: (job: any) => void;
   onJobUpdated?: (job: any) => void;
   assessments: { id: string; title: string }[];
   trainingModules: { id: string; title: string }[];
@@ -194,7 +194,7 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
   const handleSubmit = (form: any) => {
     if (mode === "edit" && onJobUpdated) {
       onJobUpdated({ ...editingJob, ...form });
-    } else {
+    } else if (onJobCreated) {
       onJobCreated(form);
     }
     handleClose();
@@ -204,11 +204,11 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       <DialogTrigger asChild>
         {mode === "edit" ? (
-          <Button variant="outline" size="xs">
+          <Button variant="outline" size="sm">
             <PencilLine className="w-4 h-4 mr-1" /> Edit
           </Button>
         ) : mode === "view" ? (
-          <Button variant="ghost" size="xs">
+          <Button variant="ghost" size="sm">
             <Eye className="w-4 h-4 mr-1" /> View
           </Button>
         ) : (

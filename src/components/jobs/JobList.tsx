@@ -24,6 +24,12 @@ const JobList: React.FC<JobListProps> = ({
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [viewMode, setViewMode] = useState<"view" | "edit" | null>(null);
 
+  // Dummy function for onJobCreated prop
+  const dummyOnJobCreated = () => {
+    // This is not used but needed to satisfy the type requirements
+    console.log("This function is not used for view/edit dialogs");
+  };
+
   return (
     <div className="grid gap-6">
       {jobs.map((job) => (
@@ -46,6 +52,7 @@ const JobList: React.FC<JobListProps> = ({
                   editingJob={job}
                   assessments={assessments}
                   trainingModules={trainingModules}
+                  onJobCreated={dummyOnJobCreated}
                 />
                 <JobCreationDialog
                   mode="edit"
@@ -53,6 +60,7 @@ const JobList: React.FC<JobListProps> = ({
                   onJobUpdated={(updatedJob) => onJobUpdated(updatedJob)}
                   assessments={assessments}
                   trainingModules={trainingModules}
+                  onJobCreated={dummyOnJobCreated}
                 />
                 <Button
                   variant="destructive"
