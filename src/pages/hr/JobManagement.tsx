@@ -30,7 +30,7 @@ const JobManagement = () => {
       setTrainingModules(trainingResult.data || []);
     } catch (error: any) {
       console.error('Error fetching assessments and training:', error);
-      toast.error('Failed to load assessments and training modules');
+      toast.error(`Failed to load assessments and training modules: ${error.message || 'Unknown error'}`);
     }
   };
 
@@ -43,7 +43,7 @@ const JobManagement = () => {
       await createJob.mutateAsync(jobData);
     } catch (error: any) {
       console.error("Failed to create job:", error);
-      toast.error(`Failed to create job: ${error.message || 'Unknown error'}`);
+      // Error is already handled in the mutation's onError
     }
   };
 

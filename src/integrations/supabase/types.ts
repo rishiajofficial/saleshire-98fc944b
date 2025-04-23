@@ -377,8 +377,12 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string
+          department: string | null
           description: string
+          employment_type: string | null
           id: string
+          location: string | null
+          salary_range: string | null
           status: string
           title: string
           updated_at: string
@@ -386,8 +390,12 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by: string
+          department?: string | null
           description: string
+          employment_type?: string | null
           id?: string
+          location?: string | null
+          salary_range?: string | null
           status?: string
           title: string
           updated_at?: string
@@ -395,8 +403,12 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string
+          department?: string | null
           description?: string
+          employment_type?: string | null
           id?: string
+          location?: string | null
+          salary_range?: string | null
           status?: string
           title?: string
           updated_at?: string

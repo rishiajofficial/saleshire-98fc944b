@@ -57,6 +57,7 @@ export function useJobs() {
           throw jobError;
         }
 
+        // Handle assessment association if selected
         if (newJob.selectedAssessment && newJob.selectedAssessment !== "none") {
           const { error: assessmentError } = await supabase
             .from('job_assessments')
@@ -64,9 +65,14 @@ export function useJobs() {
               job_id: jobData.id,
               assessment_id: newJob.selectedAssessment
             });
-          if (assessmentError) throw assessmentError;
+          
+          if (assessmentError) {
+            console.error("Error associating assessment:", assessmentError);
+            throw assessmentError;
+          }
         }
 
+        // Handle training module association if selected
         if (newJob.selectedTrainingModule && newJob.selectedTrainingModule !== "none") {
           const { error: trainingError } = await supabase
             .from('job_training')
@@ -74,11 +80,15 @@ export function useJobs() {
               job_id: jobData.id,
               training_module_id: newJob.selectedTrainingModule
             });
-          if (trainingError) throw trainingError;
+          
+          if (trainingError) {
+            console.error("Error associating training module:", trainingError);
+            throw trainingError;
+          }
         }
 
         return jobData;
-      } catch (error) {
+      } catch (error: any) {
         console.error("Job creation error:", error);
         throw error;
       }
@@ -87,9 +97,9 @@ export function useJobs() {
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
       toast.success('Job created successfully');
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Error creating job:', error);
-      toast.error('Failed to create job');
+      toast.error(`Failed to create job: ${error.message || 'Unknown error'}`);
     }
   });
 
@@ -108,9 +118,9 @@ export function useJobs() {
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
       toast.success('Job updated successfully');
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Error updating job:', error);
-      toast.error('Failed to update job');
+      toast.error(`Failed to update job: ${error.message || 'Unknown error'}`);
     }
   });
 
@@ -128,9 +138,9 @@ export function useJobs() {
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
       toast.success('Job deleted successfully');
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Error deleting job:', error);
-      toast.error('Failed to delete job');
+      toast.error(`Failed to delete job: ${error.message || 'Unknown error'}`);
     }
   });
 
