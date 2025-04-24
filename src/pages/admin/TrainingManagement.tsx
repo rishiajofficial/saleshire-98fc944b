@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,7 +29,8 @@ const TrainingManagement = () => {
 
   const handleCreateCategory = async () => {
     const response = await ContentService.createTrainingCategory({
-      ...newCategory,
+      title: newCategory.name,
+      description: newCategory.description,
       createdBy: null // Replace with actual user ID
     });
 

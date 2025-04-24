@@ -3,7 +3,7 @@ import React from "react";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import useDatabaseQuery from "@/hooks/useDatabaseQuery";
+import { useDatabaseQuery } from "@/hooks/useDatabaseQuery";
 import Loading from "@/components/ui/loading";
 import ErrorMessage from "@/components/ui/error-message";
 import { BarChart3, Award, Users, Clock } from "lucide-react";

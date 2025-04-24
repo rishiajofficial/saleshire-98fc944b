@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -60,9 +61,6 @@ export const useTrainingProgress = (): UseTrainingProgressReturn => {
     // Ensure user context is loaded before fetching
     if (!user?.id) {
       // If no user ID yet, don't treat as error, just wait.
-      // Keep loading true if it was already true.
-      // console.log("Hook: Waiting for user ID...");
-      // setIsLoading(true); // Keep loading until user ID is available
       return;
     }
 
@@ -75,7 +73,7 @@ export const useTrainingProgress = (): UseTrainingProgressReturn => {
       const [moduleResult, videoResult, completedResult] = await Promise.all([
         supabase
           .from('training_modules')
-          .select('*, quiz_id')
+          .select('*') // Modified this to select all columns without specifying quiz_id
           .order('created_at', { ascending: true }),
         supabase
           .from('videos')
@@ -92,9 +90,9 @@ export const useTrainingProgress = (): UseTrainingProgressReturn => {
       if (videoResult.error) throw new Error(`Videos fetch failed: ${videoResult.error.message}`);
       if (completedResult.error) throw new Error(`Completed results fetch failed: ${completedResult.error.message}`);
 
-      const moduleDefinitions = moduleResult.data;
-      const videoData = videoResult.data;
-      const completedResultsData = completedResult.data;
+      const moduleDefinitions = moduleResult.data || [];
+      const videoData = videoResult.data || [];
+      const completedResultsData = completedResult.data || [];
 
       console.log("Hook: Fetched Module Definitions:", moduleDefinitions);
       console.log("Hook: Fetched Video Data:", videoData);
@@ -124,7 +122,8 @@ export const useTrainingProgress = (): UseTrainingProgressReturn => {
           }
 
           const videosForModule = moduleVideoMap[moduleKey] || [];
-          const associatedQuizId = modDef.quiz_id;
+          // Handle quiz_id safely, checking if it exists on the object
+          const associatedQuizId = 'quiz_id' in modDef ? modDef.quiz_id : null;
           const isModuleComplete = associatedQuizId ? completedAssessmentIds.has(associatedQuizId) : false;
           const moduleProg = isModuleComplete ? 100 : 0;
           const locked = !previousModuleCompleted;
@@ -174,9 +173,6 @@ export const useTrainingProgress = (): UseTrainingProgressReturn => {
       console.error("Hook: Error fetching training data:", error);
       setError(error.message || "Failed to load training data.");
       toast.error("Failed to load training data: " + error.message);
-      // Optionally keep stale data on error:
-      // setTrainingModules([]); // Clear data on error?
-      // setProgress({ product: 0, sales: 0, relationship: 0, overall: 0 });
     } finally {
       setIsLoading(false);
       console.log("Hook: Fetch complete. isLoading:", false);
