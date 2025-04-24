@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -42,7 +41,6 @@ const Quiz = () => {
   const [score, setScore] = useState(0);
   const [quizAccess, setQuizAccess] = useState(false);
 
-  // Check if user has watched all videos in this module
   const { data: accessData, isLoading: checkingAccess } = useQuery({
     queryKey: ['quizAccess', moduleId, user?.id],
     queryFn: async () => {
@@ -75,7 +73,6 @@ const Quiz = () => {
     enabled: !!user && !!moduleId
   });
 
-  // Use effect to handle quiz access
   React.useEffect(() => {
     if (accessData) {
       setQuizAccess(accessData.canAccess);
@@ -86,12 +83,10 @@ const Quiz = () => {
     }
   }, [accessData, moduleId, navigate]);
 
-  // Fetch quiz questions
   const { data: quizData, isLoading: loadingQuiz } = useQuery({
     queryKey: ['quizQuestions', moduleId],
     queryFn: async () => {
       try {
-        // First get the module to find the associated quiz_id
         const { data: moduleData, error: moduleError } = await supabase
           .from('training_modules')
           .select('quiz_id')
@@ -108,7 +103,6 @@ const Quiz = () => {
           return getQuizQuestions();
         }
         
-        // Try to fetch actual quiz questions from the assessment
         try {
           const { data: assessmentData, error: assessmentError } = await supabase
             .from('assessments')
@@ -129,7 +123,6 @@ const Quiz = () => {
             return getQuizQuestions(); // Fallback to mock data
           }
           
-          // Get questions from the first section
           const { data: questionsData, error: questionsError } = await supabase
             .from('questions')
             .select('*')
@@ -141,7 +134,6 @@ const Quiz = () => {
             return getQuizQuestions(); // Fallback to mock data
           }
           
-          // Format questions to match our interface
           return questionsData.map(q => ({
             id: q.id,
             text: q.text,
@@ -160,7 +152,6 @@ const Quiz = () => {
     enabled: !!moduleId && quizAccess
   });
 
-  // Mock quiz data based on module
   const getQuizQuestions = () => {
     switch (moduleId) {
       case "product":
@@ -342,7 +333,6 @@ const Quiz = () => {
     }
   };
 
-  // Get questions for the quiz
   const questions = quizData || [];
   const currentQuestion = questions[currentQuestionIndex];
 
@@ -366,7 +356,6 @@ const Quiz = () => {
   };
 
   const handleSubmit = async () => {
-    // Check if all questions are answered
     if (Object.keys(answers).length < questions.length) {
       toast.error("Please answer all questions before submitting");
       return;
@@ -374,7 +363,6 @@ const Quiz = () => {
 
     setIsSubmitting(true);
 
-    // Calculate score
     let correctAnswers = 0;
     questions.forEach((question, index) => {
       const answerIndex = "ABCD".indexOf(question.correctAnswer);
@@ -395,7 +383,6 @@ const Quiz = () => {
       });
     }
 
-    // Show results
     setTimeout(() => {
       setIsSubmitting(false);
       setQuizCompleted(true);
@@ -465,7 +452,7 @@ const Quiz = () => {
   }
 
   return (
-    <MainLayout>
+    <MainLayout title="Training Quiz">
       <div className="max-w-3xl mx-auto py-8">
         <div className="mb-6">
           <h1 className="text-3xl font-bold tracking-tight">{getModuleTitle()} Quiz</h1>

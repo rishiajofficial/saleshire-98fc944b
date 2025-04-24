@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,11 +10,12 @@ import { DesktopNav } from "./navigation/desktop-nav";
 
 interface MainLayoutProps {
   children: React.ReactNode;
+  title?: string;
 }
 
 const SIDEBAR_STATE_KEY = "sidebar-expanded";
 
-const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
+const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
   const { user, profile, signOut } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -29,6 +29,38 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   
   const [activeDropdowns, setActiveDropdowns] = useState<string[]>([]);
   const isCandidate = profile?.role === 'candidate';
+
+  useEffect(() => {
+    let pageTitle = "Workforce";
+
+    if (title) {
+      pageTitle = title;
+    } else {
+      const path = location.pathname;
+      if (path.includes("/dashboard")) {
+        const role = path.split("/dashboard/")[1];
+        switch (role) {
+          case "candidate":
+            pageTitle = "Candidate Dashboard";
+            break;
+          case "admin":
+            pageTitle = "Admin Dashboard";
+            break;
+          case "manager":
+            pageTitle = "Manager Dashboard";
+            break;
+          case "hr":
+            pageTitle = "HR Dashboard";
+            break;
+          case "director":
+            pageTitle = "Director Dashboard";
+            break;
+        }
+      }
+    }
+
+    document.title = pageTitle;
+  }, [location.pathname, title]);
 
   useEffect(() => {
     setIsOpen(false);
