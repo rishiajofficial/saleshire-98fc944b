@@ -1,11 +1,9 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Database } from '@/integrations/supabase/types';
 
-// Define valid table names as a literal union type
 export type TableName = 'activity_logs' | 'assessment_results' | 'assessment_sections' | 
                         'assessments' | 'candidates' | 'interviews' | 'manager_regions' | 
                         'managers' | 'profiles' | 'questions' | 'sales_tasks' | 'shops' | 
@@ -38,24 +36,17 @@ export function useDatabaseQuery<T = any>(
     try {
       setIsLoading(true);
       
-      // Only run query if user is logged in
       if (!user) {
         setIsLoading(false);
         return;
       }
       
-      // Create the base query - cast to any for now to resolve TS errors with query chaining
       let query: any = supabase.from(tableName);
       
-      // Handle joins if provided
       if (options.join && options.join.length > 0) {
-        // For joins, we need to use select with specific columns
         const selectColumns = options.columns || '*';
-        
-        // Create the query with joins
         query = query.select(selectColumns, { 
           count: 'exact',
-          // Add foreign tables to fetch related data
           ...options.join.reduce((acc, join) => {
             acc[join.table] = {
               columns: join.columns || '*',
@@ -64,43 +55,35 @@ export function useDatabaseQuery<T = any>(
           }, {} as Record<string, {columns: string}>)
         });
       } else {
-        // If no joins, use the standard select
         query = query.select(options.columns || '*');
       }
       
-      // Apply filter if provided
       if (options.filter) {
         Object.entries(options.filter).forEach(([key, value]) => {
           query = query.eq(key, value);
         });
       }
       
-      // Apply eq filter if provided
       if (options.eq) {
         query = query.eq(options.eq[0], options.eq[1]);
       }
       
-      // Apply in filter if provided
       if (options.in) {
         query = query.in(options.in[0], options.in[1]);
       }
       
-      // Apply order if provided
       if (options.order) {
         query = query.order(options.order[0], { ascending: options.order[1].ascending });
       }
       
-      // Apply limit if provided
       if (options.limit) {
         query = query.limit(options.limit);
       }
       
-      // Apply range if provided
       if (options.range) {
         query = query.range(options.range[0], options.range[1]);
       }
       
-      // Get single result if specified
       if (options.single) {
         const { data: result, error } = await query.single();
         
@@ -126,12 +109,10 @@ export function useDatabaseQuery<T = any>(
       JSON.stringify(options.range), JSON.stringify(options.join), 
       user?.id]);
 
-  // Initial data fetch
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // Return the refetch function along with data, error, and isLoading
   return { data, error, isLoading, refetch: fetchData };
 }
 
@@ -144,13 +125,10 @@ export function useRealTimeSubscription<T = any>(
   const { user } = useAuth();
   
   useEffect(() => {
-    // Only set up subscription if user is logged in
     if (!user) return;
     
-    // Create a channel to listen for changes
     const channel = supabase
       .channel('schema-db-changes')
-      // Use type assertion to fix the type error with postgres_changes
       .on(
         'postgres_changes' as any,
         {
@@ -159,7 +137,6 @@ export function useRealTimeSubscription<T = any>(
           table: tableName
         },
         (payload) => {
-          // Access the data in the payload safely, checking first if 'new' exists
           if (payload && 'new' in payload) {
             setData(payload.new as T);
             if (callback) callback(payload);
@@ -168,7 +145,6 @@ export function useRealTimeSubscription<T = any>(
       )
       .subscribe();
       
-    // Clean up subscription on unmount
     return () => {
       void supabase.removeChannel(channel);
     };
@@ -177,36 +153,33 @@ export function useRealTimeSubscription<T = any>(
   return { data };
 }
 
-// Helper function to map status to current_step (returns number)
 const getStepFromStatus = (status?: string): number | undefined => {
   if (!status) return undefined;
   const lowerStatus = status.toLowerCase();
   switch (lowerStatus) {
     case "applied":
     case "application_in_progress":
-      return 1; // Application Step
+      return 1;
     case "hr_review":
-      return 2; // HR Review Step
+      return 2;
     case "hr_approved":
     case "training":
-      return 3; // Training/Assessment Step
+      return 3;
     case "manager_interview":
-      return 4; // Interview Step
+      return 4;
     case "paid_project":
     case "sales_task":
-      return 5; // Paid Project Step
+      return 5;
     case "hired":
-      return 6; // Hired Step
+      return 6;
     case "rejected":
     case "archived":
-      return 7; // Process Ended/Rejected Step
+      return 7;
     default:
-      // Return undefined to avoid accidentally changing step for unknown statuses
       return undefined;
   }
 };
 
-// Add a new function to update application status
 export const updateApplicationStatus = async (
   candidateId: string, 
   applicationData: {
@@ -217,24 +190,10 @@ export const updateApplicationStatus = async (
   }
 ) => {
   try {
-    // Prepare the data to update
     const updatePayload: Partial<Database['public']['Tables']['candidates']['Row']> = {
-      ...applicationData, // Include other fields like resume, videos
+      ...applicationData,
     };
 
-    // If status is being updated, derive and add the current_step
-    if (applicationData.status) {
-      const newStep = getStepFromStatus(applicationData.status);
-      if (newStep) {
-        updatePayload.current_step = newStep;
-      }
-      // Ensure status is part of the payload if provided
-      updatePayload.status = applicationData.status;
-    }
-    
-    console.log("Updating candidate status with payload:", updatePayload);
-
-    // Define the list of valid statuses that exist in the database constraint
     const validStatuses = [
       'applied',
       'hr_review', 
@@ -248,17 +207,22 @@ export const updateApplicationStatus = async (
       'archived'
     ];
     
-    // Map common display statuses to valid database statuses
-    // This handles any mismatch between UI display values and actual database values
-    if (updatePayload.status) {
-      if (updatePayload.status === 'application_in_progress') {
-        updatePayload.status = 'applied';
+    if (applicationData.status) {
+      const normalizedStatus = applicationData.status.toLowerCase();
+      if (!validStatuses.includes(normalizedStatus)) {
+        throw new Error(`Invalid status: ${applicationData.status}. Allowed statuses are: ${validStatuses.join(', ')}`);
       }
-      
-      if (!validStatuses.includes(updatePayload.status)) {
-        throw new Error(`Invalid status value: ${updatePayload.status}`);
+      updatePayload.status = normalizedStatus;
+    }
+
+    if (updatePayload.status) {
+      const newStep = getStepFromStatus(updatePayload.status);
+      if (newStep) {
+        updatePayload.current_step = newStep;
       }
     }
+    
+    console.log("Updating candidate status with payload:", updatePayload);
 
     const { data, error } = await supabase
       .from('candidates')
@@ -277,13 +241,15 @@ export const updateApplicationStatus = async (
 
     return { data: data[0], error: null };
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown error occurred';
-    console.error("Update error:", message);
+    const message = error instanceof Error 
+      ? error.message 
+      : 'Unknown error occurred while updating status';
+    
+    console.error("Update status error:", message);
     return { data: null, error: new Error(message) };
   }
 };
 
-// Add a new function to manage interviews
 export async function manageInterview(interview: {
   id?: string;
   candidate_id: string;
@@ -297,7 +263,6 @@ export async function manageInterview(interview: {
     let result;
     
     if (interview.action === 'create') {
-      // Create new interview
       const { data, error } = await supabase
         .from('interviews')
         .insert({
@@ -313,7 +278,6 @@ export async function manageInterview(interview: {
       result = { data, error: null };
     } 
     else if (interview.action === 'update' && interview.id) {
-      // Update existing interview
       const { data, error } = await supabase
         .from('interviews')
         .update({
@@ -328,7 +292,6 @@ export async function manageInterview(interview: {
       result = { data, error: null };
     } 
     else if (interview.action === 'cancel' && interview.id) {
-      // Cancel interview
       const { data, error } = await supabase
         .from('interviews')
         .update({
@@ -348,5 +311,4 @@ export async function manageInterview(interview: {
   }
 }
 
-// Export the hook as default
 export default useDatabaseQuery;
