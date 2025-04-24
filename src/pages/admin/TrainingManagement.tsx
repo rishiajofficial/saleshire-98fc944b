@@ -235,8 +235,8 @@ const TrainingManagement = () => {
 
   const { 
     data: fetchedCategories,
-    isLoading: loadingCategories,
-    error: categoriesError
+    isLoading: isCategoriesLoading,
+    error: fetchCategoriesError
   } = useQuery<Database['public']['Tables']['module_categories']['Row'][]>({
     queryKey: ['moduleCategories'],
     queryFn: async (): Promise<Database['public']['Tables']['module_categories']['Row'][]> => {
@@ -254,9 +254,10 @@ const TrainingManagement = () => {
   });
 
   const { 
-    data: trainingCategories,
-    isLoading: loadingCategories,
-    error: categoriesError
+    trainingCategories,
+    isLoading: isTrainingCategoriesLoading,
+    error: trainingCategoriesError,
+    deleteCategory
   } = useModuleCategories();
 
   const createVideoMutation = useMutation({
@@ -367,19 +368,6 @@ const TrainingManagement = () => {
       toast.error(`Failed to delete ${variables.contentType}: ${error.message}`);
     },
   });
-
-  const deleteCategory = async (categoryId: string) => {
-    const { error } = await supabase
-      .from('module_categories')
-      .delete()
-      .eq('id', categoryId);
-    
-    if (error) {
-      throw new Error(error.message);
-    }
-    queryClient.invalidateQueries({ queryKey: ['moduleCategories'] });
-    toast.success("Category deleted successfully");
-  };
 
   const handleAddQuiz = () => {
     if (!newQuizTitle || !newQuizModule) { 
@@ -875,165 +863,4 @@ const TrainingManagement = () => {
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end space-x-1">
-                                <Button variant="ghost" size="icon" className="h-8 w-8" title="Edit Quiz/Module" onClick={() => handleEditQuizClick(module)}>
-                                  <PenLine className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
-                                  title="Delete Quiz/Module"
-                                  onClick={() => handleDeleteContent('Module', module.id)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={3} className="text-center py-8">
-                            <p className="text-muted-foreground">{searchTerm ? "No quizzes found matching search." : "No quizzes created yet."}</p>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Dialog open={showEditQuizDialog} onOpenChange={setShowEditQuizDialog}>
-              <DialogContent className="sm:max-w-[550px]">
-                <DialogHeader>
-                  <DialogTitle>Edit Training Quiz</DialogTitle>
-                  <DialogDescription>
-                    Modify the details of this training quiz.
-                  </DialogDescription>
-                </DialogHeader>
-                {editingQuiz && (
-                  <div className="grid gap-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-quiz-title">Quiz Title</Label>
-                      <Input id="edit-quiz-title" value={editQuizTitle} onChange={(e) => setEditQuizTitle(e.target.value)} required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-quiz-description">Description</Label>
-                      <Textarea id="edit-quiz-description" value={editQuizDescription} onChange={(e) => setEditQuizDescription(e.target.value)} required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-quiz-module">Training Category</Label>
-                      <Select value={editQuizModule} onValueChange={setEditQuizModule}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {trainingCategories.map(category => (
-                            <SelectItem key={category.id} value={category.name}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-quiz-id">Associated Assessment</Label>
-                      <Select 
-                        value={editQuizId || "none"} 
-                        onValueChange={(val) => setEditQuizId(val === "none" ? null : val)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select assessment" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">None (No Assessment)</SelectItem>
-                          {assessments.map(assessment => (
-                            <SelectItem key={assessment.id} value={assessment.id}>
-                              {assessment.title}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                )}
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setShowEditQuizDialog(false)}>Cancel</Button>
-                  <Button type="button" onClick={handleUpdateQuiz} disabled={updateQuizMutation.isPending}>
-                    {updateQuizMutation.isPending ? "Saving..." : "Save Changes"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </TabsContent>
-
-          <TabsContent value="categories" className="space-y-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-2xl font-bold">Module Categories</h2>
-                <p className="text-muted-foreground">Manage categories for organizing training content</p>
-              </div>
-            </div>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead className="hidden md:table-cell">Created</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {loadingCategories ? (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center py-8">Loading categories...</TableCell>
-                        </TableRow>
-                      ) : fetchedCategories.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center py-8">
-                            <p className="text-muted-foreground">No categories created yet.</p>
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        fetchedCategories.map((category) => (
-                          <TableRow key={category.id}>
-                            <TableCell className="font-medium">{category.name}</TableCell>
-                            <TableCell>{category.description || "No description"}</TableCell>
-                            <TableCell className="hidden md:table-cell">
-                              {new Date(category.created_at).toLocaleDateString()}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
-                                onClick={() => {
-                                  if (window.confirm("Are you sure you want to delete this category?")) {
-                                    deleteCategory(category.id);
-                                  }
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </MainLayout>
-  );
-};
-
-export default TrainingManagement;
+                                <Button variant="ghost" size="icon" className="h-8 w
