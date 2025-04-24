@@ -8,14 +8,15 @@ import { useToast } from "@/components/ui/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Tables } from "@/integrations/supabase/types";
 import { CandidateInfo } from "@/components/candidates/CandidateInfo";
 import { StatusUpdateSection } from "@/components/candidates/StatusUpdateSection";
 import { ManagerAssignment } from "@/components/candidates/ManagerAssignment";
 import { InterviewScheduling } from "@/components/candidates/InterviewScheduling";
 import { StatusBadge } from "@/components/candidates/StatusBadge";
+import { ProjectStatusSection } from "@/components/candidates/ProjectStatusSection";
+import { AssessmentResultsSection } from "@/components/candidates/AssessmentResultsSection";
 import { updateApplicationStatus, manageInterview } from "@/hooks/useDatabaseQuery";
-import { Candidate, AssessmentResult, ManagerProfile } from "@/types/candidate";
+import { Candidate, AssessmentResult, ManagerProfile } from '@/types/candidate';
 
 const CandidateDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -491,10 +492,7 @@ const CandidateDetail = () => {
               applicationStatus={applicationStatus}
               isUpdatingStatus={isUpdatingStatus}
               candidateData={candidateData}
-              onStatusChange={(value: string) => {
-                setStatusUpdateError(null);
-                setApplicationStatus(value);
-              }}
+              onStatusChange={setApplicationStatus}
               onStatusUpdate={handleStatusUpdate}
               errorMessage={statusUpdateError || undefined}
             />
@@ -549,6 +547,20 @@ const CandidateDetail = () => {
                 onSubmit={handleInterviewManagement}
               />
             )}
+
+            <ProjectStatusSection
+              candidate={candidate}
+              projectStatus={projectStatus}
+              isUpdatingProject={isUpdatingProject}
+              onAssignProject={handleAssignProject}
+              onUpdateProjectOutcome={handleUpdateProjectOutcome}
+            />
+
+            <AssessmentResultsSection
+              assessmentResults={assessmentResults}
+              isLoadingResults={isLoadingResults}
+              formatDate={formatDate}
+            />
           </>
         )}
       </div>
