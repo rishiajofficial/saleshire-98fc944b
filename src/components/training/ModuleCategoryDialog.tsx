@@ -42,7 +42,7 @@ const ModuleCategoryDialog: React.FC<ModuleCategoryDialogProps> = ({ onCategoryC
 
       if (error) throw error;
 
-      toast.success("Category created successfully");
+      toast.success("Training category created successfully");
       setShowDialog(false);
       setName("");
       setDescription("");
@@ -58,12 +58,12 @@ const ModuleCategoryDialog: React.FC<ModuleCategoryDialogProps> = ({ onCategoryC
     <Dialog open={showDialog} onOpenChange={setShowDialog}>
       <DialogTrigger asChild>
         <Button size="sm">
-          <Plus className="h-4 w-4 mr-2" /> Add Category
+          <Plus className="h-4 w-4 mr-2" /> Add Training Category
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add New Module Category</DialogTitle>
+          <DialogTitle>Add New Training Category</DialogTitle>
           <DialogDescription>
             Create a new category for organizing training modules and videos
           </DialogDescription>

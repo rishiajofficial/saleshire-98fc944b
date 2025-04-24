@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-export interface ModuleCategory {
+export interface TrainingCategory {
   id: string;
   name: string;
   description: string | null;
@@ -14,12 +14,12 @@ export const useModuleCategories = () => {
   const queryClient = useQueryClient();
 
   const {
-    data: categories,
+    data: trainingCategories,
     isLoading,
     error
   } = useQuery({
-    queryKey: ['moduleCategories'],
-    queryFn: async (): Promise<ModuleCategory[]> => {
+    queryKey: ['trainingCategories'],
+    queryFn: async (): Promise<TrainingCategory[]> => {
       const { data, error } = await supabase
         .from('module_categories')
         .select('*')
@@ -40,7 +40,7 @@ export const useModuleCategories = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['moduleCategories'] });
+      queryClient.invalidateQueries({ queryKey: ['trainingCategories'] });
       toast.success("Category deleted successfully");
     },
     onError: (error: any) => {
@@ -49,7 +49,7 @@ export const useModuleCategories = () => {
   });
 
   return {
-    categories: categories || [],
+    trainingCategories: trainingCategories || [],
     isLoading,
     error,
     deleteCategory: deleteCategory.mutate

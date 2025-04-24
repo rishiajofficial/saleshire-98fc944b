@@ -253,6 +253,12 @@ const TrainingManagement = () => {
     enabled: !!user,
   });
 
+  const { 
+    data: trainingCategories,
+    isLoading: loadingCategories,
+    error: categoriesError
+  } = useModuleCategories();
+
   const createVideoMutation = useMutation({
     mutationFn: async (newVideoData: Omit<Video, 'id' | 'created_at'>) => { 
       const { data, error } = await supabase
@@ -464,7 +470,7 @@ const TrainingManagement = () => {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="container mx-auto py-8">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Training Management</h1>
@@ -489,14 +495,14 @@ const TrainingManagement = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="videos" value={activeTab} onValueChange={setActiveTab}>
+        <Tabs defaultValue="modules" value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid grid-cols-3 w-full md:w-[400px]">
-            <TabsTrigger value="videos">Training Videos</TabsTrigger>
+            <TabsTrigger value="modules">Training Videos</TabsTrigger>
             <TabsTrigger value="quizzes">Quizzes</TabsTrigger>
             <TabsTrigger value="categories">Categories</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="videos" className="space-y-6">
+          <TabsContent value="modules" className="space-y-6">
             <div className="flex justify-between items-center">
               <div>
                 <h2 className="text-2xl font-bold">Training Videos</h2>
@@ -535,15 +541,17 @@ const TrainingManagement = () => {
                                 value={newVideoDescription} onChange={(e) => setNewVideoDescription(e.target.value)} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="module">Module</Label>
+                      <Label htmlFor="module">Training Category</Label>
                       <Select value={newVideoModule} onValueChange={setNewVideoModule}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select module" />
+                          <SelectValue placeholder="Select category" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="product">Product Knowledge</SelectItem>
-                          <SelectItem value="sales">Sales Techniques</SelectItem>
-                          <SelectItem value="relationship">Relationship Building</SelectItem>
+                          {trainingCategories.map(category => (
+                            <SelectItem key={category.id} value={category.name}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -738,15 +746,17 @@ const TrainingManagement = () => {
                       <Textarea id="edit-description" value={editVideoDescription} onChange={(e) => setEditVideoDescription(e.target.value)} required />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="edit-module">Module</Label>
+                      <Label htmlFor="edit-module">Training Category</Label>
                       <Select value={editVideoModule} onValueChange={setEditVideoModule}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select module" />
+                          <SelectValue placeholder="Select category" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="product">Product Knowledge</SelectItem>
-                          <SelectItem value="sales">Sales Techniques</SelectItem>
-                          <SelectItem value="relationship">Relationship Building</SelectItem>
+                          {trainingCategories.map(category => (
+                            <SelectItem key={category.id} value={category.name}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -801,15 +811,17 @@ const TrainingManagement = () => {
                                 value={newQuizDescription} onChange={(e) => setNewQuizDescription(e.target.value)}/>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="quizModule">Module</Label>
+                      <Label htmlFor="quizModule">Training Category</Label>
                       <Select value={newQuizModule} onValueChange={setNewQuizModule}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select module" />
+                          <SelectValue placeholder="Select category" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="product">Product Knowledge</SelectItem>
-                          <SelectItem value="sales">Sales Techniques</SelectItem>
-                          <SelectItem value="relationship">Relationship Building</SelectItem>
+                          {trainingCategories.map(category => (
+                            <SelectItem key={category.id} value={category.name}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -911,15 +923,17 @@ const TrainingManagement = () => {
                       <Textarea id="edit-quiz-description" value={editQuizDescription} onChange={(e) => setEditQuizDescription(e.target.value)} required />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="edit-quiz-module">Module</Label>
+                      <Label htmlFor="edit-quiz-module">Training Category</Label>
                       <Select value={editQuizModule} onValueChange={setEditQuizModule}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select module" />
+                          <SelectValue placeholder="Select category" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="product">Product Knowledge</SelectItem>
-                          <SelectItem value="sales">Sales Techniques</SelectItem>
-                          <SelectItem value="relationship">Relationship Building</SelectItem>
+                          {trainingCategories.map(category => (
+                            <SelectItem key={category.id} value={category.name}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
