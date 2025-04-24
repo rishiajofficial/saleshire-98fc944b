@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -11,12 +12,21 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTrainingStore } from "@/hooks/useTrainingStore";
 import { Loader2, RefreshCw, ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
+import { toast } from "sonner";
 
 interface Question {
   id: string;
   text: string;
   options: string[];
   correctAnswer: string;
+}
+
+interface QuizResult {
+  module: string;
+  score: number;
+  total_questions: number;
+  passed: boolean;
+  answers: Record<string, string>;
 }
 
 const Quiz = () => {

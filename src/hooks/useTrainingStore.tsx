@@ -61,7 +61,10 @@ export const useTrainingStore = (moduleId?: string) => {
         .insert({
           user_id: user.id,
           module: moduleId,
-          ...results,
+          score: results.score,
+          total_questions: results.total_questions,
+          passed: results.passed,
+          answers: results.answers,
           completed_at: new Date().toISOString()
         });
 
