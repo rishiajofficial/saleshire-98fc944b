@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -801,6 +802,7 @@ const CandidateDetail = () => {
                 </Card>
              )}
 
+             {/* HR Interview Scheduling */}
              {(userRole === 'hr' || userRole === 'admin' || userRole === 'director') && candidate && (
                 <Card>
                   <CardHeader>
@@ -905,11 +907,18 @@ const CandidateDetail = () => {
 
                       <div>
                         <Label>Notes</Label>
-                        <Textarea value={interviewNotes} onChange={(e) => setInterviewNotes(e.target.value)} />
+                        <Textarea 
+                          value={interviewNotes} 
+                          onChange={(e) => setInterviewNotes(e.target.value)} 
+                          placeholder="Add interview notes or instructions for the candidate"
+                        />
                       </div>
 
                       <div>
-                        <Button onClick={handleInterviewManagement} disabled={isManagingInterview}>
+                        <Button 
+                          onClick={handleInterviewManagement} 
+                          disabled={isManagingInterview}
+                        >
                           {isManagingInterview ? "Managing..." : "Manage Interview"}
                         </Button>
                       </div>
@@ -989,4 +998,45 @@ const CandidateDetail = () => {
                        </Popover>
                      </div>
                      <div>
-                       <Label>Status
+                       <Label>Status</Label>
+                       <Select 
+                         value={interviewStatus} 
+                         onValueChange={(value: 'scheduled' | 'confirmed' | 'completed' | 'cancelled') => setInterviewStatus(value)}
+                       >
+                         <SelectTrigger className="w-[180px]">
+                           <SelectValue placeholder="Select status" />
+                         </SelectTrigger>
+                         <SelectContent>
+                           <SelectItem value="scheduled">Scheduled</SelectItem>
+                           <SelectItem value="confirmed">Confirmed</SelectItem>
+                           <SelectItem value="completed">Completed</SelectItem>
+                           <SelectItem value="cancelled">Cancelled</SelectItem>
+                         </SelectContent>
+                       </Select>
+                     </div>
+                     <div>
+                       <Label>Notes</Label>
+                       <Textarea 
+                         value={interviewNotes} 
+                         onChange={(e) => setInterviewNotes(e.target.value)} 
+                         placeholder="Add interview notes or instructions for the candidate"
+                       />
+                     </div>
+                     <div>
+                       <Button 
+                         onClick={handleInterviewManagement} 
+                         disabled={isManagingInterview}
+                       >
+                         {isManagingInterview ? "Managing..." : "Manage Interview"}
+                       </Button>
+                     </div>
+                   </div>
+                 </CardContent>
+               </Card>
+             )}
+      </div>
+    </MainLayout>
+  );
+};
+
+export default CandidateDetail;
