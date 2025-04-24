@@ -1,156 +1,60 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useTrainingStore } from "@/hooks/useTrainingStore";
-import { Loader2, RefreshCw, ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import MainLayout from "@/components/layout/MainLayout";
+import { QuizStart } from "@/components/quiz/QuizStart";
+import { QuizQuestion } from "@/components/quiz/QuizQuestion";
+import { QuizResults } from "@/components/quiz/QuizResults";
+import { useQuiz } from "@/hooks/useQuiz";
 import { toast } from "sonner";
-
-interface Question {
-  id: string;
-  text: string;
-  options: string[];
-  correctAnswer: string;
-}
-
-interface QuizResult {
-  module: string;
-  score: number;
-  total_questions: number;
-  passed: boolean;
-  answers: Record<string, string>;
-}
 
 const Quiz = () => {
   const { moduleId } = useParams<{ moduleId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { submitQuizResults } = useTrainingStore(moduleId);
-  
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [quizCompleted, setQuizCompleted] = useState(false);
-  const [score, setScore] = useState(0);
   const [quizAccess, setQuizAccess] = useState(false);
-
-  const { data: accessData, isLoading: checkingAccess } = useQuery({
-    queryKey: ['quizAccess', moduleId, user?.id],
-    queryFn: async () => {
-      if (!user || !moduleId) return { canAccess: false };
-      
-      try {
-        const [videosResult, progressResult] = await Promise.all([
-          supabase.from('videos').select('id').eq('module', moduleId),
-          supabase.from('training_progress')
-            .select('video_id')
-            .eq('user_id', user.id)
-            .eq('module', moduleId)
-            .eq('completed', true)
-        ]);
-
-        if (videosResult.error) throw videosResult.error;
-        const videos = videosResult.data || [];
-        
-        const progress = progressResult.data || [];
-        const watchedVideoIds = progress.map(p => p.video_id);
-        
-        return {
-          canAccess: videos.length === 0 || videos.every(v => watchedVideoIds.includes(v.id))
-        };
-      } catch (error) {
-        console.error("Error checking quiz access:", error);
-        return { canAccess: false };
-      }
-    },
-    enabled: !!user && !!moduleId
-  });
-
-  React.useEffect(() => {
-    if (accessData) {
-      setQuizAccess(accessData.canAccess);
-      if (!accessData.canAccess) {
-        toast.error("You need to watch all videos in this module first");
-        navigate(`/training/module/${moduleId}`);
-      }
-    }
-  }, [accessData, moduleId, navigate]);
+  const [assessmentStarted, setAssessmentStarted] = useState(false);
+  const { user } = useAuth();
 
   const { data: quizData, isLoading: loadingQuiz } = useQuery({
     queryKey: ['quizQuestions', moduleId],
-    queryFn: async () => {
-      try {
-        const { data: moduleData, error: moduleError } = await supabase
-          .from('training_modules')
-          .select('quiz_id')
-          .eq('module', moduleId)
-          .single();
-        
-        if (moduleError) {
-          console.log("No specific quiz found for module, using mock data");
-          return getQuizQuestions();
-        }
-        
-        if (!moduleData?.quiz_id) {
-          console.log("No quiz_id assigned to module, using mock data");
-          return getQuizQuestions();
-        }
-        
-        try {
-          const { data: assessmentData, error: assessmentError } = await supabase
-            .from('assessments')
-            .select('id')
-            .eq('id', moduleData.quiz_id)
-            .single();
-            
-          if (assessmentError) throw assessmentError;
-          
-          const { data: sectionsData, error: sectionsError } = await supabase
-            .from('assessment_sections')
-            .select('id')
-            .eq('assessment_id', assessmentData.id);
-            
-          if (sectionsError) throw sectionsError;
-          
-          if (!sectionsData || sectionsData.length === 0) {
-            return getQuizQuestions(); // Fallback to mock data
-          }
-          
-          const { data: questionsData, error: questionsError } = await supabase
-            .from('questions')
-            .select('*')
-            .eq('section_id', sectionsData[0].id);
-            
-          if (questionsError) throw questionsError;
-          
-          if (!questionsData || questionsData.length === 0) {
-            return getQuizQuestions(); // Fallback to mock data
-          }
-          
-          return questionsData.map(q => ({
-            id: q.id,
-            text: q.text,
-            options: q.options as string[],
-            correctAnswer: String.fromCharCode(65 + (q.correct_answer as number))
-          }));
-        } catch (error) {
-          console.error("Error fetching quiz questions:", error);
-          return getQuizQuestions(); // Fallback to mock data
-        }
-      } catch (error) {
-        console.error("Error in quizQuestions query:", error);
-        return getQuizQuestions();
-      }
-    },
+    queryFn: () => getQuizQuestions(),
     enabled: !!moduleId && quizAccess
   });
+
+  const {
+    currentQuestionIndex,
+    selectedAnswer,
+    answers,
+    isSubmitting,
+    quizCompleted,
+    score,
+    timeRemaining,
+    handleAnswerChange,
+    handleSubmitAnswer,
+    resetQuiz,
+    startTimer
+  } = useQuiz(quizData || [], moduleId || '');
+
+  useEffect(() => {
+    if (assessmentStarted) {
+      startTimer();
+    }
+  }, [assessmentStarted, startTimer]);
+
+  const getModuleTitle = () => {
+    switch (moduleId) {
+      case "product":
+        return "Product Knowledge";
+      case "sales":
+        return "Sales Techniques";
+      case "retailer":
+        return "Retailer Relationships";
+      default:
+        return moduleId ? moduleId.charAt(0).toUpperCase() + moduleId.slice(1) : "Quiz";
+    }
+  };
 
   const getQuizQuestions = () => {
     switch (moduleId) {
@@ -333,83 +237,7 @@ const Quiz = () => {
     }
   };
 
-  const questions = quizData || [];
-  const currentQuestion = questions[currentQuestionIndex];
-
-  const handleAnswerChange = (value: string) => {
-    setAnswers({
-      ...answers,
-      [currentQuestionIndex]: value
-    });
-  };
-
-  const handleNext = () => {
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-    }
-  };
-
-  const handlePrevious = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1);
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (Object.keys(answers).length < questions.length) {
-      toast.error("Please answer all questions before submitting");
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    let correctAnswers = 0;
-    questions.forEach((question, index) => {
-      const answerIndex = "ABCD".indexOf(question.correctAnswer);
-      if (answers[index] === question.options[answerIndex]) {
-        correctAnswers++;
-      }
-    });
-
-    const percentageScore = Math.round((correctAnswers / questions.length) * 100);
-    const passed = percentageScore >= 70;
-
-    if (user) {
-      await submitQuizResults({
-        score: percentageScore,
-        total_questions: questions.length,
-        passed,
-        answers
-      });
-    }
-
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setQuizCompleted(true);
-      setScore(percentageScore);
-
-      if (percentageScore >= 70) {
-        toast.success("Congratulations! You passed the quiz.");
-      } else {
-        toast.error("You didn't pass the quiz. You can try again.");
-      }
-    }, 1500);
-  };
-
-  const getModuleTitle = () => {
-    switch (moduleId) {
-      case "product":
-        return "Product Knowledge";
-      case "sales":
-        return "Sales Techniques";
-      case "retailer":
-        return "Retailer Relationships";
-      default:
-        return moduleId ? moduleId.charAt(0).toUpperCase() + moduleId.slice(1) : "Quiz";
-    }
-  };
-
-  if (checkingAccess || loadingQuiz) {
+  if (loadingQuiz) {
     return (
       <MainLayout>
         <div className="flex justify-center items-center h-screen">
@@ -435,24 +263,8 @@ const Quiz = () => {
     );
   }
 
-  if (questions.length === 0) {
-    return (
-      <MainLayout>
-        <div className="max-w-3xl mx-auto py-8">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">No Quiz Available</h1>
-            <p className="mb-4">There are currently no quiz questions available for this module.</p>
-            <Button onClick={() => navigate(`/training/module/${moduleId}`)}>
-              Return to Module
-            </Button>
-          </div>
-        </div>
-      </MainLayout>
-    );
-  }
-
   return (
-    <MainLayout title="Training Quiz">
+    <MainLayout title={`${getModuleTitle()} Quiz`}>
       <div className="max-w-3xl mx-auto py-8">
         <div className="mb-6">
           <h1 className="text-3xl font-bold tracking-tight">{getModuleTitle()} Quiz</h1>
@@ -461,156 +273,31 @@ const Quiz = () => {
           </p>
         </div>
 
-        {!quizCompleted ? (
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle>Question {currentQuestionIndex + 1} of {questions.length}</CardTitle>
-                <span className="text-sm text-muted-foreground">
-                  {Object.keys(answers).length} of {questions.length} answered
-                </span>
-              </div>
-              <Progress 
-                value={(currentQuestionIndex + 1) / questions.length * 100} 
-                className="h-2 mt-2" 
-              />
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div className="text-lg font-medium">
-                  {currentQuestion?.text}
-                </div>
-                
-                <RadioGroup 
-                  value={answers[currentQuestionIndex] || ""}
-                  onValueChange={handleAnswerChange}
-                  className="space-y-3"
-                >
-                  {currentQuestion?.options.map((option, index) => (
-                    <div key={index} className="flex items-center space-x-2">
-                      <RadioGroupItem 
-                        value={option} 
-                        id={`option-${index}`} 
-                      />
-                      <Label htmlFor={`option-${index}`} className="font-normal">
-                        {option}
-                      </Label>
-                    </div>
-                  ))}
-                </RadioGroup>
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-between border-t pt-6">
-              <Button
-                variant="outline"
-                onClick={handlePrevious}
-                disabled={currentQuestionIndex === 0}
-              >
-                Previous
-              </Button>
-              
-              <div className="flex gap-2">
-                {currentQuestionIndex < questions.length - 1 ? (
-                  <Button onClick={handleNext} disabled={!answers[currentQuestionIndex]}>
-                    Next Question
-                  </Button>
-                ) : (
-                  <Button 
-                    onClick={handleSubmit}
-                    disabled={Object.keys(answers).length < questions.length || isSubmitting}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                        Submitting...
-                      </>
-                    ) : (
-                      "Submit Quiz"
-                    )}
-                  </Button>
-                )}
-              </div>
-            </CardFooter>
-          </Card>
+        {!assessmentStarted ? (
+          <QuizStart
+            title={getModuleTitle()}
+            description="Test your knowledge of this module"
+            onStart={() => setAssessmentStarted(true)}
+          />
+        ) : quizCompleted ? (
+          <QuizResults 
+            score={score} 
+            onRetry={resetQuiz} 
+          />
         ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-center">Quiz Results</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex justify-center">
-                {score >= 70 ? (
-                  <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center">
-                    <CheckCircle2 className="h-10 w-10 text-green-600" />
-                  </div>
-                ) : (
-                  <div className="w-20 h-20 rounded-full bg-red-100 flex items-center justify-center">
-                    <AlertCircle className="h-10 w-10 text-red-600" />
-                  </div>
-                )}
-              </div>
-              
-              <div className="text-center space-y-2">
-                <h2 className="text-2xl font-bold">
-                  {score >= 70 ? "Congratulations!" : "Almost There!"}
-                </h2>
-                <p className="text-muted-foreground">
-                  {score >= 70 
-                    ? "You've successfully completed this module." 
-                    : "You need to score at least 70% to pass this module."}
-                </p>
-              </div>
-              
-              <div className="text-center">
-                <div className="text-3xl font-bold">
-                  {score}%
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Your Score
-                </p>
-              </div>
-              
-              <div className="border-t pt-6">
-                <h3 className="font-medium mb-2">Key Takeaways:</h3>
-                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                  <li>Review the module content again to reinforce your knowledge</li>
-                  <li>Practice applying the concepts in real-world scenarios</li>
-                  <li>Ask your trainer if you have any specific questions</li>
-                </ul>
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              {score < 70 ? (
-                <Button 
-                  onClick={() => {
-                    setQuizCompleted(false);
-                    setCurrentQuestionIndex(0);
-                    setAnswers({});
-                  }}
-                  variant="outline"
-                >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Retry Quiz
-                </Button>
-              ) : (
-                <Button 
-                  variant="outline" 
-                  onClick={() => navigate('/training')}
-                >
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back to Training
-                </Button>
-              )}
-              
-              <Button 
-                onClick={() => navigate('/dashboard/candidate')}
-                variant={score >= 70 ? "default" : "outline"}
-              >
-                Go to Dashboard
-              </Button>
-            </CardFooter>
-          </Card>
+          quizData && quizData[currentQuestionIndex] && (
+            <QuizQuestion
+              currentQuestion={quizData[currentQuestionIndex]}
+              currentQuestionIndex={currentQuestionIndex}
+              totalQuestions={quizData.length}
+              timeRemaining={timeRemaining}
+              selectedAnswer={selectedAnswer}
+              onAnswerChange={handleAnswerChange}
+              onSubmit={handleSubmitAnswer}
+              isSubmitting={isSubmitting}
+              answeredCount={Object.keys(answers).length}
+            />
+          )
         )}
       </div>
     </MainLayout>
