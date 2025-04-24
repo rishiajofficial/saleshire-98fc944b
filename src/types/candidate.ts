@@ -1,12 +1,12 @@
 
-import { Database } from "@/integrations/supabase/types";
+import { Tables } from "@/integrations/supabase/types";
 
-export type CandidateWithProfile = Database['public']['Tables']['candidates']['Row'] & {
-  profile: {
-    name: string;
-    email: string;
-    role: string;
-    created_at?: string;
-    updated_at?: string;
-  }
+export type Profile = Tables<'profiles'>;
+export type Candidate = Tables<'candidates'> & { 
+  profile: Pick<Profile, 'name' | 'email'> | null 
 };
+export type AssessmentResult = Tables<'assessment_results'> & { 
+  assessment: Pick<Tables<'assessments'>, 'title'> | null 
+};
+export type ManagerProfile = Pick<Profile, 'id' | 'name'>;
+

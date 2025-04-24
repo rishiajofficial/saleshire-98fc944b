@@ -1,4 +1,6 @@
 
+import { Video } from "lucide-react";
+
 interface VideoDisplayProps {
   url: string | null | undefined;
   title: string;
@@ -22,3 +24,4 @@ export const VideoDisplay = ({ url, title }: VideoDisplayProps) => {
     </div>
   );
 };
+

@@ -2,9 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,11 +14,7 @@ import { StatusUpdateSection } from "@/components/candidates/StatusUpdateSection
 import { ManagerAssignment } from "@/components/candidates/ManagerAssignment";
 import { InterviewScheduling } from "@/components/candidates/InterviewScheduling";
 import { updateApplicationStatus, manageInterview } from "@/hooks/useDatabaseQuery";
-
-// Define types based on Supabase schema
-type Profile = Tables<'profiles'>;
-type Candidate = Tables<'candidates'> & { profile: Pick<Profile, 'name' | 'email'> | null };
-type ManagerProfile = Pick<Profile, 'id' | 'name'>;
+import { Candidate, AssessmentResult } from "@/types/candidate";
 
 const CandidateDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -34,10 +29,8 @@ const CandidateDetail = () => {
   const [selectedManager, setSelectedManager] = useState<string>("");
   const [isAssigningManager, setIsAssigningManager] = useState(false);
 
-  // Get the user's role from the profile, defaulting to empty string if not available
   const userRole = profile?.role || '';
 
-  // Log the user object and profile from AuthContext
   console.log("[CandidateDetail] User object:", user);
   console.log("[CandidateDetail] Profile object:", profile);
   console.log("[CandidateDetail] User role:", userRole);
@@ -104,14 +97,12 @@ const CandidateDetail = () => {
     enabled: !!profile && (profile.role === 'hr' || profile.role === 'admin' || profile.role === 'director' || profile.role === 'authenticated'),
   });
 
-  // Log managers data
   console.log("[CandidateDetail] Managers data:", managers);
 
-  // State for application status update
   const [applicationStatus, setApplicationStatus] = useState('');
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isUpdatingInfo,setIsUpdatingInfo] = useState(false);
-  // Update applicationStatus when candidate data loads
+
   useEffect(() => {
     if (candidateData) {
       setApplicationStatus(candidateData.status || '');
@@ -122,7 +113,6 @@ const CandidateDetail = () => {
       setLocation(candidateData.location || '');
       setRegion(candidateData.region || '');
       setSelectedManager(candidateData.assigned_manager || "");
-      // Log candidate state after it's set
       console.log("[CandidateDetail] Candidate state set:", candidateData);
     } else {
       setApplicationStatus('');
@@ -137,7 +127,6 @@ const CandidateDetail = () => {
     }
   }, [candidateData]);
 
-  // Handle assigning manager (HR action)
   const handleAssignManager = async () => {
     if (!id || !selectedManager) {
       toast({
@@ -156,7 +145,6 @@ const CandidateDetail = () => {
 
       if (error) throw error;
 
-      // Optimistically update local state
       setCandidate((prev: any) => ({ ...prev, assigned_manager: selectedManager }));
 
       toast({
@@ -174,7 +162,6 @@ const CandidateDetail = () => {
     }
   };
 
-  // Handle editing candidate information
   const handleUpdateCandidate = async () => {
     try {
       if (!id) throw new Error("Candidate ID is missing");
@@ -195,7 +182,6 @@ const CandidateDetail = () => {
         throw error;
       }
 
-      // Optimistically update the local state
       const updatedCandidate = { ...candidate,  phone, location, region };
       setCandidate(updatedCandidate);
 
@@ -215,7 +201,6 @@ const CandidateDetail = () => {
     }
   };
 
-  // Update application status
   const handleStatusUpdate = async () => {
     setIsUpdatingStatus(true);
     try {
@@ -233,7 +218,6 @@ const CandidateDetail = () => {
         throw new Error("Failed to update status");
       }
 
-      // Optimistically update local candidate state
       const updatedData = { 
         ...candidate, 
         status: applicationStatus,
@@ -241,7 +225,6 @@ const CandidateDetail = () => {
         profile: candidate?.profile 
       };
       
-      // Update local state with type assertion
       setCandidate(updatedData as any);
 
       toast({
@@ -266,7 +249,6 @@ const CandidateDetail = () => {
     }
   };
 
-  // Helper function to get step number from status (same as in useDatabaseQuery)
   const getStepFromStatus = (status?: string): number => {
     if (!status) return 0;
     const lowerStatus = status.toLowerCase();
@@ -293,7 +275,6 @@ const CandidateDetail = () => {
     }
   };
 
-  // State for interview management
   const [interviewAction, setInterviewAction] = useState<'create' | 'update' | 'cancel'>('create');
   const [interviewId, setInterviewId] = useState<string | null>(null);
   const [interviewCandidateId, setInterviewCandidateId] = useState(id || '');
@@ -303,11 +284,9 @@ const CandidateDetail = () => {
   const [interviewNotes, setInterviewNotes] = useState('');
   const [isManagingInterview, setIsManagingInterview] = useState(false);
 
-  // State for Project Status update (Manager action)
   const [projectStatus, setProjectStatus] = useState<'not_started' | 'assigned' | 'completed_success' | 'rejected' | 'failed'>('not_started');
   const [isUpdatingProject, setIsUpdatingProject] = useState(false);
 
-  // Fetch Assessment Results for this candidate
   const { data: assessmentResults, isLoading: isLoadingResults } = useQuery<AssessmentResult[]>({
     queryKey: ['candidateAssessmentResults', id],
     queryFn: async (): Promise<AssessmentResult[]> => {
@@ -334,31 +313,26 @@ const CandidateDetail = () => {
     enabled: !!id,
   });
 
-  // Log assessment results
   console.log("[CandidateDetail] Assessment Results data:", assessmentResults);
 
-  // Effect to set default manager ID when role is manager
   useEffect(() => {
     if (user?.role === 'manager') {
       setInterviewManagerId(user.id || '');
     }
   }, [user]);
 
-  // Effect to set initial project status based on candidate status
-   useEffect(() => {
+  useEffect(() => {
     if (candidate?.status === 'sales_task') {
       setProjectStatus('assigned');
     } else if (candidate?.status === 'hired') {
       setProjectStatus('completed_success');
     } else if (candidate?.status === 'rejected') {
-      // Need a way to differentiate rejection reason if needed
       setProjectStatus('rejected'); 
     } else {
       setProjectStatus('not_started');
     }
   }, [candidate?.status]);
 
-  // Manage interview
   const handleInterviewManagement = async () => {
     setIsManagingInterview(true);
     try {
@@ -393,7 +367,6 @@ const CandidateDetail = () => {
     }
   };
 
-  // Get status badge component based on status string
   const getStatusBadge = (status: string) => {
     switch (status?.toLowerCase()) {
       case "applied":
@@ -450,26 +423,22 @@ const CandidateDetail = () => {
     }
   };
 
-  // Format date for display
   const formatDate = (dateString: string) => {
     if (!dateString) return "N/A";
     const date = new Date(dateString);
     return date.toLocaleDateString();
   };
 
-  // Assign paid project (Manager action)
   const handleAssignProject = async () => {
     setIsUpdatingProject(true);
     try {
       if (!id) throw new Error("Candidate ID is missing");
-      // Update candidate status to 'sales_task'
       const { data, error } = await updateApplicationStatus(id, { status: 'sales_task' });
       if (error) throw error;
       if (!data) throw new Error("Failed to assign project");
 
-      // Optimistically update local state
       setCandidate((prev: any) => ({ ...prev, status: 'sales_task' }));
-      setProjectStatus('assigned'); // Update local project state
+      setProjectStatus('assigned');
 
       toast({
         title: "Success",
@@ -488,7 +457,6 @@ const CandidateDetail = () => {
     }
   };
 
-   // Update project outcome (Manager action)
   const handleUpdateProjectOutcome = async (outcome: 'completed_success' | 'rejected' | 'failed') => {
     setIsUpdatingProject(true);
     let finalStatus: string;
@@ -505,14 +473,12 @@ const CandidateDetail = () => {
 
     try {
       if (!id) throw new Error("Candidate ID is missing");
-      // Update candidate status based on outcome
       const { data, error } = await updateApplicationStatus(id, { status: finalStatus });
       if (error) throw error;
       if (!data) throw new Error("Failed to update project outcome");
 
-      // Optimistically update local state
       setCandidate((prev: any) => ({ ...prev, status: finalStatus }));
-      setProjectStatus(outcome); // Update local project state
+      setProjectStatus(outcome);
 
       toast({
         title: "Success",
