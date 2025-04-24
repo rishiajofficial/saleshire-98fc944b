@@ -14,7 +14,7 @@ import { StatusUpdateSection } from "@/components/candidates/StatusUpdateSection
 import { ManagerAssignment } from "@/components/candidates/ManagerAssignment";
 import { InterviewScheduling } from "@/components/candidates/InterviewScheduling";
 import { updateApplicationStatus, manageInterview } from "@/hooks/useDatabaseQuery";
-import { Candidate, AssessmentResult } from "@/types/candidate";
+import { Candidate, AssessmentResult, ManagerProfile } from "@/types/candidate";
 
 const CandidateDetail = () => {
   const { id } = useParams<{ id: string }>();

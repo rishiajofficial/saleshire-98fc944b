@@ -9,6 +9,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import ApplicationStepProfile from "@/components/candidate/ApplicationStepProfile";
 import ApplicationStepUploads from "@/components/candidate/ApplicationStepUploads";
 import ApplicationStepAssessment from "@/components/candidate/ApplicationStepAssessment";
+import { AlertCircle } from "lucide-react";
 
 const steps = [
   { id: 1, label: "Profile Info" },
