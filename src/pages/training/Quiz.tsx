@@ -377,7 +377,7 @@ const Quiz = () => {
     if (user) {
       await submitQuizResults({
         score: percentageScore,
-        total: questions.length,
+        total_questions: questions.length,
         passed,
         answers
       });
