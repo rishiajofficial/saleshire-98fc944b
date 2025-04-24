@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -30,6 +29,7 @@ const CandidateDetail = () => {
   const [region, setRegion] = useState('');
   const [selectedManager, setSelectedManager] = useState<string>("");
   const [isAssigningManager, setIsAssigningManager] = useState(false);
+  const [statusUpdateError, setStatusUpdateError] = useState<string | null>(null);
 
   const userRole = profile?.role || '';
 
@@ -205,6 +205,7 @@ const CandidateDetail = () => {
 
   const handleStatusUpdate = async () => {
     setIsUpdatingStatus(true);
+    setStatusUpdateError(null);
     try {
       if (!id) throw new Error("Candidate ID is missing");
       
@@ -213,10 +214,12 @@ const CandidateDetail = () => {
       
       if (error) {
         console.error("Error updating status:", error);
+        setStatusUpdateError(error.message);
         throw error;
       }
       if (!data) {
         console.error("No data returned from update");
+        setStatusUpdateError("Failed to update status - no data returned");
         throw new Error("Failed to update status");
       }
 
@@ -240,6 +243,7 @@ const CandidateDetail = () => {
         : "Failed to update application status";
       
       console.error("Status update error:", errorMessage);
+      setStatusUpdateError(errorMessage);
       
       toast({
         variant: "destructive",
@@ -369,9 +373,6 @@ const CandidateDetail = () => {
     }
   };
 
-  // This getStatusBadge function is no longer needed since we'll use the StatusBadge component
-  // Removing it to avoid duplicate code
-
   const formatDate = (dateString: string) => {
     if (!dateString) return "N/A";
     const date = new Date(dateString);
@@ -490,8 +491,12 @@ const CandidateDetail = () => {
               applicationStatus={applicationStatus}
               isUpdatingStatus={isUpdatingStatus}
               candidateData={candidateData}
-              onStatusChange={(value: string) => setApplicationStatus(value)}
+              onStatusChange={(value: string) => {
+                setStatusUpdateError(null);
+                setApplicationStatus(value);
+              }}
               onStatusUpdate={handleStatusUpdate}
+              errorMessage={statusUpdateError || undefined}
             />
 
             {userRole === 'hr' && (

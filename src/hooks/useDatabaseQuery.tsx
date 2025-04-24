@@ -234,15 +234,30 @@ export const updateApplicationStatus = async (
     
     console.log("Updating candidate status with payload:", updatePayload);
 
-    // Make sure we're not passing invalid values for the status field
+    // Define the list of valid statuses that exist in the database constraint
     const validStatuses = [
-      'applied', 'application_in_progress', 'hr_review', 
-      'hr_approved', 'training', 'manager_interview', 
-      'paid_project', 'sales_task', 'hired', 'rejected', 'archived'
+      'applied',
+      'hr_review', 
+      'hr_approved', 
+      'training', 
+      'manager_interview', 
+      'paid_project', 
+      'sales_task',
+      'hired', 
+      'rejected', 
+      'archived'
     ];
     
-    if (updatePayload.status && !validStatuses.includes(updatePayload.status)) {
-      throw new Error(`Invalid status value: ${updatePayload.status}`);
+    // Map common display statuses to valid database statuses
+    // This handles any mismatch between UI display values and actual database values
+    if (updatePayload.status) {
+      if (updatePayload.status === 'application_in_progress') {
+        updatePayload.status = 'applied';
+      }
+      
+      if (!validStatuses.includes(updatePayload.status)) {
+        throw new Error(`Invalid status value: ${updatePayload.status}`);
+      }
     }
 
     const { data, error } = await supabase

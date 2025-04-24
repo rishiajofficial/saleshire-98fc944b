@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -38,6 +38,13 @@ export const StatusUpdateSection = ({
   onStatusUpdate,
   errorMessage
 }: StatusUpdateSectionProps) => {
+  const [statusError, setStatusError] = useState<string | null>(null);
+  
+  const handleStatusChange = (value: string) => {
+    setStatusError(null);
+    onStatusChange(value);
+  };
+  
   return (
     <Card>
       <CardHeader>
@@ -47,10 +54,10 @@ export const StatusUpdateSection = ({
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-6">
-        {errorMessage && (
+        {(errorMessage || statusError) && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{errorMessage}</AlertDescription>
+            <AlertDescription>{errorMessage || statusError}</AlertDescription>
           </Alert>
         )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -58,13 +65,13 @@ export const StatusUpdateSection = ({
             <Label>Status</Label>
             <Select 
               value={applicationStatus} 
-              onValueChange={onStatusChange}
+              onValueChange={handleStatusChange}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="application_in_progress">Application in Progress (Step 1)</SelectItem>
+                <SelectItem value="applied">Application in Progress (Step 1)</SelectItem>
                 <SelectItem value="hr_review">HR Review (Step 2)</SelectItem>
                 <SelectItem value="hr_approved">HR Approved (Step 3)</SelectItem>
                 <SelectItem value="training">Training Phase (Step 3)</SelectItem>
