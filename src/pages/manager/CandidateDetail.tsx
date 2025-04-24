@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -13,6 +14,7 @@ import { CandidateInfo } from "@/components/candidates/CandidateInfo";
 import { StatusUpdateSection } from "@/components/candidates/StatusUpdateSection";
 import { ManagerAssignment } from "@/components/candidates/ManagerAssignment";
 import { InterviewScheduling } from "@/components/candidates/InterviewScheduling";
+import { StatusBadge } from "@/components/candidates/StatusBadge";
 import { updateApplicationStatus, manageInterview } from "@/hooks/useDatabaseQuery";
 import { Candidate, AssessmentResult, ManagerProfile } from "@/types/candidate";
 
@@ -367,61 +369,8 @@ const CandidateDetail = () => {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case "applied":
-      case "application_in_progress":
-        return (
-          <Badge className="bg-blue-100 text-blue-800">
-            Application in Progress
-          </Badge>
-        );
-      case "hr_review":
-        return (
-          <Badge className="bg-yellow-100 text-yellow-800">
-            <Clock className="mr-1 h-3 w-3" /> HR Review
-          </Badge>
-        );
-      case "hr_approved":
-      case "training":
-        return (
-          <Badge className="bg-purple-100 text-purple-800">
-            Training Phase
-          </Badge>
-        );
-      case "manager_interview":
-        return (
-          <Badge className="bg-green-100 text-green-800">
-            Manager Interview
-          </Badge>
-        );
-      case "paid_project":
-        return (
-          <Badge className="bg-orange-100 text-orange-800">
-            Paid Project
-          </Badge>
-        );
-      case "hired":
-        return (
-          <Badge className="bg-green-100 text-green-800">
-            <CheckCircle className="mr-1 h-3 w-3" /> Hired
-          </Badge>
-        );
-      case "rejected":
-      case "archived":
-        return (
-          <Badge className="bg-red-100 text-red-800">
-            <XCircle className="mr-1 h-3 w-3" /> {status === "archived" ? "Archived" : "Rejected"}
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="outline">
-            {status || "Unknown"}
-          </Badge>
-        );
-    }
-  };
+  // This getStatusBadge function is no longer needed since we'll use the StatusBadge component
+  // Removing it to avoid duplicate code
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "N/A";
