@@ -2,86 +2,24 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Calendar } from "@/components/ui/calendar";
-import { CalendarRange } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { ArrowRight } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  CheckCircle,
-  XCircle,
-  ArrowRight,
-  Clock,
-  FileText,
-  Video,
-  Phone,
-  MapPin,
-  Mail,
-  AlertCircle,
-} from "lucide-react";
-import useDatabaseQuery, { updateApplicationStatus, manageInterview } from "@/hooks/useDatabaseQuery";
-import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; 
 import { CandidateInfo } from "@/components/candidates/CandidateInfo";
 import { StatusUpdateSection } from "@/components/candidates/StatusUpdateSection";
+import { ManagerAssignment } from "@/components/candidates/ManagerAssignment";
+import { InterviewScheduling } from "@/components/candidates/InterviewScheduling";
+import { updateApplicationStatus, manageInterview } from "@/hooks/useDatabaseQuery";
 
 // Define types based on Supabase schema
 type Profile = Tables<'profiles'>;
 type Candidate = Tables<'candidates'> & { profile: Pick<Profile, 'name' | 'email'> | null };
-type AssessmentResult = Tables<'assessment_results'> & { assessment: Pick<Tables<'assessments'>, 'title'> | null };
 type ManagerProfile = Pick<Profile, 'id' | 'name'>;
-
-// Helper component to render video link or player
-const VideoDisplay = ({ url, title }: { url: string | null | undefined, title: string }) => {
-  if (!url) {
-    return <p className="text-sm text-muted-foreground">No {title} submitted.</p>;
-  }
-
-  // Simple link for now, could be replaced with an embedded player
-  return (
-    <div>
-      <a 
-        href={url} 
-        target="_blank" 
-        rel="noopener noreferrer" 
-        className="text-sm text-primary hover:underline flex items-center gap-1"
-      >
-        <Video className="h-4 w-4" /> Watch {title}
-      </a>
-    </div>
-  );
-};
 
 const CandidateDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -593,88 +531,6 @@ const CandidateDetail = () => {
     }
   };
 
-  const renderStatusUpdateSection = () => (
-    <Card>
-      <CardHeader>
-        <CardTitle>Application Status</CardTitle>
-        <CardDescription>
-          Update the candidate's application status
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label>Status</Label>
-            <Select 
-              value={applicationStatus} 
-              onValueChange={(value: string) => setApplicationStatus(value)}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="application_in_progress">Application in Progress</SelectItem>
-                <SelectItem value="hr_review">HR Review</SelectItem>
-                <SelectItem value="hr_approved">HR Approved</SelectItem>
-                <SelectItem value="training">Training Phase</SelectItem>
-                <SelectItem value="manager_interview">Manager Interview</SelectItem>
-                <SelectItem value="paid_project">Paid Project</SelectItem>
-                <SelectItem value="hired">Hired</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-                <SelectItem value="archived">Archived</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Button onClick={handleStatusUpdate} disabled={isUpdatingStatus} className="mt-6">
-              {isUpdatingStatus ? "Updating..." : "Update Status"}
-            </Button>
-          </div>
-          <div>
-            <div className="text-sm font-medium mb-2">Current Status:</div>
-            {candidateData && getStatusBadge(candidateData.status || '')}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
-  if (isLoading) {
-    return (
-      <MainLayout>
-        <div className="flex items-center justify-center h-[50vh]">
-          <p className="text-lg text-muted-foreground">Loading candidate details...</p>
-        </div>
-      </MainLayout>
-    );
-  }
-
-  if (!candidateData) {
-    return (
-      <MainLayout>
-        <div className="flex items-center justify-center h-[50vh]">
-          <p className="text-lg text-muted-foreground">
-            {candidateError ? `Error: ${candidateError.message}` : "Candidate not found."}
-          </p>
-        </div>
-      </MainLayout>
-    );
-  }
-
-  // Add this check: Ensure candidate state is populated before rendering content
-  if (!candidate) {
-    return (
-      <MainLayout>
-        <div className="flex items-center justify-center h-[50vh]">
-          <p className="text-lg text-muted-foreground">Initializing candidate data...</p>
-        </div>
-      </MainLayout>
-    );
-  }
-
-  // Log candidate state just before rendering
-  console.log("[CandidateDetail] Candidate state before render:", candidate);
-
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -692,7 +548,6 @@ const CandidateDetail = () => {
           </Button>
         </div>
 
-        {/* Error alert for debugging if needed */}
         {candidateError && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
@@ -724,287 +579,61 @@ const CandidateDetail = () => {
               onStatusUpdate={handleStatusUpdate}
             />
 
-             {/* Manager Assignment Card for HR */}
-             {userRole === 'hr' && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Manager Assignment</CardTitle>
-                    <CardDescription>
-                      Assign a Sales Manager to this candidate.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label>Assign Manager</Label>
-                      <Select 
-                        value={selectedManager} 
-                        onValueChange={setSelectedManager}
-                        disabled={isLoadingManagers || isAssigningManager}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select a manager..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {isLoadingManagers ? (
-                            <SelectItem value="loading" disabled>Loading...</SelectItem>
-                          ) : ( 
-                            managers?.map((manager) => (
-                              <SelectItem key={manager.id} value={manager.id}>
-                                {manager.name}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Button 
-                        onClick={handleAssignManager} 
-                        disabled={!selectedManager || isAssigningManager || candidateData?.assigned_manager === selectedManager}
-                        className="mt-6"
-                      >
-                        {isAssigningManager ? "Assigning..." : "Assign Manager"}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-             )}
+            {userRole === 'hr' && (
+              <ManagerAssignment
+                selectedManager={selectedManager}
+                managers={managers}
+                isLoadingManagers={isLoadingManagers}
+                isAssigningManager={isAssigningManager}
+                candidateAssignedManager={candidateData?.assigned_manager}
+                onManagerSelect={setSelectedManager}
+                onAssignManager={handleAssignManager}
+              />
+            )}
 
-             {/* HR Interview Scheduling */}
-             {(userRole === 'hr' || userRole === 'admin' || userRole === 'director') && candidate && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Schedule Interview</CardTitle>
-                    <CardDescription>
-                      Schedule or update an interview for the candidate
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="grid gap-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label>Action</Label>
-                        <Select 
-                          value={interviewAction} 
-                          onValueChange={(value: 'create' | 'update' | 'cancel') => setInterviewAction(value)}
-                        >
-                          <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Select action" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="create">Create</SelectItem>
-                            <SelectItem value="update">Update</SelectItem>
-                            <SelectItem value="cancel">Cancel</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                         
-                      <div>
-                        <Label>Manager</Label>
-                        <Select 
-                          value={interviewManagerId} 
-                          onValueChange={setInterviewManagerId}
-                          disabled={isLoadingManagers || isManagingInterview}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select interviewing manager..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {isLoadingManagers ? (
-                              <SelectItem value="loading" disabled>Loading managers...</SelectItem>
-                            ) : ( 
-                              managers?.map((manager) => (
-                                <SelectItem key={manager.id} value={manager.id}>
-                                  {manager.name}
-                                </SelectItem>
-                              ))
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </div>
+            {(userRole === 'hr' || userRole === 'admin' || userRole === 'director') && candidate && (
+              <InterviewScheduling
+                interviewAction={interviewAction}
+                interviewManagerId={interviewManagerId}
+                interviewScheduledAt={interviewScheduledAt}
+                interviewStatus={interviewStatus}
+                interviewNotes={interviewNotes}
+                isManagingInterview={isManagingInterview}
+                managers={managers}
+                isLoadingManagers={isLoadingManagers}
+                onActionChange={setInterviewAction}
+                onManagerChange={setInterviewManagerId}
+                onDateChange={setInterviewScheduledAt}
+                onStatusChange={setInterviewStatus}
+                onNotesChange={setInterviewNotes}
+                onSubmit={handleInterviewManagement}
+              />
+            )}
 
-                      <div>
-                        <Label>Scheduled At</Label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-[240px] justify-start text-left font-normal",
-                                !interviewScheduledAt && "text-muted-foreground"
-                              )}
-                            >
-                              <CalendarRange className="mr-2 h-4 w-4" />
-                              {interviewScheduledAt ? (
-                                format(interviewScheduledAt, "PPP")
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={interviewScheduledAt}
-                              onSelect={setInterviewScheduledAt}
-                              disabled={(date) =>
-                                date < new Date()
-                              }
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-
-                      <div>
-                        <Label>Status</Label>
-                        <Select 
-                          value={interviewStatus} 
-                          onValueChange={(value: 'scheduled' | 'confirmed' | 'completed' | 'cancelled') => setInterviewStatus(value)}
-                        >
-                          <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="scheduled">Scheduled</SelectItem>
-                            <SelectItem value="confirmed">Confirmed</SelectItem>
-                            <SelectItem value="completed">Completed</SelectItem>
-                            <SelectItem value="cancelled">Cancelled</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div>
-                        <Label>Notes</Label>
-                        <Textarea 
-                          value={interviewNotes} 
-                          onChange={(e) => setInterviewNotes(e.target.value)} 
-                          placeholder="Add interview notes or instructions for the candidate"
-                        />
-                      </div>
-
-                      <div>
-                        <Button 
-                          onClick={handleInterviewManagement} 
-                          disabled={isManagingInterview}
-                        >
-                          {isManagingInterview ? "Managing..." : "Manage Interview"}
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-             )}
-
-             {/* Schedule Final Interview Card for Manager */}
-             {userRole === 'manager' && 
+            {userRole === 'manager' && 
               candidate &&
               (candidate.status === 'hr_approved' || candidate.status === 'training' || candidate.status === 'final_interview' || candidate.status === 'interview') && (
-               <Card>
-                 <CardHeader>
-                   <CardTitle>Schedule Final Interview</CardTitle>
-                   <CardDescription>
-                     Schedule or update the final interview for the candidate.
-                   </CardDescription>
-                 </CardHeader>
-                 <CardContent className="grid gap-6">
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     <div>
-                       <Label>Action</Label>
-                       <Select 
-                         value={interviewAction} 
-                         onValueChange={(value: 'create' | 'update' | 'cancel') => setInterviewAction(value)}
-                       >
-                         <SelectTrigger className="w-[180px]">
-                           <SelectValue placeholder="Select action" />
-                         </SelectTrigger>
-                         <SelectContent>
-                           <SelectItem value="create">Create</SelectItem>
-                           <SelectItem value="update">Update</SelectItem>
-                           <SelectItem value="cancel">Cancel</SelectItem>
-                         </SelectContent>
-                       </Select>
-                     </div>
-                     <div>
-                       <Label>Manager ID (Your ID)</Label>
-                       <Input 
-                         type="text" 
-                         value={interviewManagerId} 
-                         readOnly 
-                         className="bg-muted/50" 
-                       />
-                     </div>
-                     <div>
-                       <Label>Scheduled At</Label>
-                       <Popover>
-                         <PopoverTrigger asChild>
-                           <Button
-                             variant={"outline"}
-                             className={cn(
-                               "w-[240px] justify-start text-left font-normal",
-                               !interviewScheduledAt && "text-muted-foreground"
-                             )}
-                           >
-                             <CalendarRange className="mr-2 h-4 w-4" />
-                             {interviewScheduledAt ? (
-                               format(interviewScheduledAt, "PPP")
-                             ) : (
-                               <span>Pick a date</span>
-                             )}
-                           </Button>
-                         </PopoverTrigger>
-                         <PopoverContent className="w-auto p-0" align="start">
-                           <Calendar
-                             mode="single"
-                             selected={interviewScheduledAt}
-                             onSelect={setInterviewScheduledAt}
-                             disabled={(date) =>
-                               date < new Date()
-                             }
-                             initialFocus
-                           />
-                         </PopoverContent>
-                       </Popover>
-                     </div>
-                     <div>
-                       <Label>Status</Label>
-                       <Select 
-                         value={interviewStatus} 
-                         onValueChange={(value: 'scheduled' | 'confirmed' | 'completed' | 'cancelled') => setInterviewStatus(value)}
-                       >
-                         <SelectTrigger className="w-[180px]">
-                           <SelectValue placeholder="Select status" />
-                         </SelectTrigger>
-                         <SelectContent>
-                           <SelectItem value="scheduled">Scheduled</SelectItem>
-                           <SelectItem value="confirmed">Confirmed</SelectItem>
-                           <SelectItem value="completed">Completed</SelectItem>
-                           <SelectItem value="cancelled">Cancelled</SelectItem>
-                         </SelectContent>
-                       </Select>
-                     </div>
-                     <div>
-                       <Label>Notes</Label>
-                       <Textarea 
-                         value={interviewNotes} 
-                         onChange={(e) => setInterviewNotes(e.target.value)} 
-                         placeholder="Add interview notes or instructions for the candidate"
-                       />
-                     </div>
-                     <div>
-                       <Button 
-                         onClick={handleInterviewManagement} 
-                         disabled={isManagingInterview}
-                       >
-                         {isManagingInterview ? "Managing..." : "Manage Interview"}
-                       </Button>
-                     </div>
-                   </div>
-                 </CardContent>
-               </Card>
-              )}
+              <InterviewScheduling
+                isManager={true}
+                interviewAction={interviewAction}
+                interviewManagerId={interviewManagerId}
+                interviewScheduledAt={interviewScheduledAt}
+                interviewStatus={interviewStatus}
+                interviewNotes={interviewNotes}
+                isManagingInterview={isManagingInterview}
+                onActionChange={setInterviewAction}
+                onManagerChange={setInterviewManagerId}
+                onDateChange={setInterviewScheduledAt}
+                onStatusChange={setInterviewStatus}
+                onNotesChange={setInterviewNotes}
+                onSubmit={handleInterviewManagement}
+              />
+            )}
+          </>
+        )}
+      </div>
+    </MainLayout>
+  );
+};
 
-             {/* Project Management Section (Manager only) */}
-             {userRole === 'manager' && candidate && candidate.status === 'sales_task' && (
-                <Card>
-                  <CardHeader>
-                    <
+export default CandidateDetail;
