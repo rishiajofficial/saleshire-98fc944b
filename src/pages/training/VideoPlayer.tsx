@@ -10,6 +10,12 @@ import { Loader2, ArrowLeft } from "lucide-react";
 import ReactPlayer from 'react-player';
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider,
+  TooltipTrigger 
+} from "@/components/ui/tooltip";
 
 interface VideoDetails {
   id: string;
@@ -18,6 +24,15 @@ interface VideoDetails {
   url: string;
   module: string;
   duration: string;
+}
+
+interface TrainingProgress {
+  id?: string;
+  user_id: string;
+  video_id: string;
+  module: string;
+  completed: boolean;
+  completed_at?: string | null;
 }
 
 const VideoPlayer = () => {
@@ -172,71 +187,84 @@ const VideoPlayer = () => {
   }
 
   return (
-    <MainLayout>
-      <div className="container mx-auto py-8">
-        <Button
-          variant="outline"
-          className="mb-6"
-          onClick={() => navigate(`/training/module/${moduleId}`)}
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Module
-        </Button>
-        
-        <h1 className="text-2xl font-bold mb-4">{videoDetails.title}</h1>
-        
-        {videoDetails.description && (
-          <p className="text-gray-600 mb-6">{videoDetails.description}</p>
-        )}
-        
-        <Card className="mb-6">
-          <CardContent className="p-0 relative aspect-video">
-            {!videoLoaded && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-                <Loader2 className="h-8 w-8 animate-spin" />
-              </div>
-            )}
-            <ReactPlayer
-              url={videoDetails.url}
-              controls
-              width="100%"
-              height="100%"
-              onProgress={handleProgress}
-              onReady={handleVideoReady}
-              className="aspect-video"
-              config={{
-                youtube: {
-                  playerVars: { autoplay: 1 }
-                },
-                file: {
-                  attributes: {
-                    controlsList: 'nodownload',
-                    disablePictureInPicture: true
-                  }
-                }
-              }}
-            />
-          </CardContent>
-        </Card>
-        
-        <div className="flex justify-between items-center">
-          <div>
-            <p className="text-sm text-muted-foreground">
-              Progress: {videoProgress}%
-              {alreadyMarkedComplete && <span className="ml-2 text-green-500">Completed</span>}
-            </p>
-            <div className="w-64 h-2 bg-gray-200 rounded-full overflow-hidden mt-1">
-              <div 
-                className="h-full bg-green-500" 
-                style={{ width: `${videoProgress}%` }}
-              ></div>
-            </div>
-          </div>
-          <Button onClick={() => navigate(`/training/module/${moduleId}`)}>
-            Return to Module
+    <TooltipProvider>
+      <MainLayout>
+        <div className="container mx-auto py-8">
+          <Button
+            variant="outline"
+            className="mb-6"
+            onClick={() => navigate(`/training/module/${moduleId}`)}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Module
           </Button>
+          
+          <h1 className="text-2xl font-bold mb-4">{videoDetails.title}</h1>
+          
+          {videoDetails.description && (
+            <p className="text-gray-600 mb-6">{videoDetails.description}</p>
+          )}
+          
+          <Card className="mb-6">
+            <CardContent className="p-0 relative aspect-video">
+              {!videoLoaded && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+              )}
+              <ReactPlayer
+                url={videoDetails.url}
+                controls
+                width="100%"
+                height="100%"
+                onProgress={handleProgress}
+                onReady={handleVideoReady}
+                className="aspect-video"
+                config={{
+                  youtube: {
+                    playerVars: { autoplay: 1 }
+                  },
+                  file: {
+                    attributes: {
+                      controlsList: 'nodownload',
+                      disablePictureInPicture: true
+                    }
+                  }
+                }}
+              />
+            </CardContent>
+          </Card>
+          
+          <div className="flex justify-between items-center">
+            <div>
+              <p className="text-sm text-muted-foreground">
+                Progress: {videoProgress}%
+                {alreadyMarkedComplete && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="ml-2 text-green-500">
+                        Completed
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>You've watched this video and marked it as completed</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </p>
+              <div className="w-64 h-2 bg-gray-200 rounded-full overflow-hidden mt-1">
+                <div 
+                  className="h-full bg-green-500" 
+                  style={{ width: `${videoProgress}%` }}
+                ></div>
+              </div>
+            </div>
+            <Button onClick={() => navigate(`/training/module/${moduleId}`)}>
+              Return to Module
+            </Button>
+          </div>
         </div>
-      </div>
-    </MainLayout>
+      </MainLayout>
+    </TooltipProvider>
   );
 };
 
