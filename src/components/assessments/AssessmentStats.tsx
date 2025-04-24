@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -8,17 +7,24 @@ import Loading from "@/components/ui/loading";
 import ErrorMessage from "@/components/ui/error-message";
 import { BarChart3, Award, Users, Clock } from "lucide-react";
 
+interface AssessmentResult {
+  id: string;
+  completed: boolean;
+  score: number;
+  started_at: string;
+  completed_at: string;
+}
+
 interface AssessmentStatsProps {
   assessmentId: string;
 }
 
 const AssessmentStats: React.FC<AssessmentStatsProps> = ({ assessmentId }) => {
-  // Fetch assessment results for this specific assessment
   const { 
     data: results, 
     isLoading, 
     error 
-  } = useDatabaseQuery<any[]>(
+  } = useDatabaseQuery<AssessmentResult>(
     'assessment_results',
     { 
       filter: { assessment_id: assessmentId },
@@ -40,7 +46,6 @@ const AssessmentStats: React.FC<AssessmentStatsProps> = ({ assessmentId }) => {
     );
   }
 
-  // Calculate statistics
   const calculateStats = () => {
     if (!results || results.length === 0) {
       return {
@@ -55,10 +60,8 @@ const AssessmentStats: React.FC<AssessmentStatsProps> = ({ assessmentId }) => {
 
     const completedResults = results.filter(result => result.completed);
     
-    // Calculate completion rate
     const completionRate = Math.round((completedResults.length / results.length) * 100);
     
-    // Calculate scores
     const scores = completedResults
       .map(result => Number(result.score))
       .filter(score => !isNaN(score));
@@ -70,19 +73,16 @@ const AssessmentStats: React.FC<AssessmentStatsProps> = ({ assessmentId }) => {
     const highestScore = scores.length > 0 ? Math.max(...scores) : 0;
     const lowestScore = scores.length > 0 ? Math.min(...scores) : 0;
 
-    // Calculate average time (if start and completion times are available)
     let totalTimeMinutes = 0;
     let timeDataCount = 0;
 
     completedResults.forEach(result => {
-      if (result.started_at && result.completed_at) {
-        const startTime = new Date(result.started_at);
-        const endTime = new Date(result.completed_at);
-        const timeInMinutes = (endTime.getTime() - startTime.getTime()) / 60000;
-        if (!isNaN(timeInMinutes) && timeInMinutes > 0) {
-          totalTimeMinutes += timeInMinutes;
-          timeDataCount++;
-        }
+      const startTime = new Date(result.started_at);
+      const endTime = new Date(result.completed_at);
+      const timeInMinutes = (endTime.getTime() - startTime.getTime()) / 60000;
+      if (!isNaN(timeInMinutes) && timeInMinutes > 0) {
+        totalTimeMinutes += timeInMinutes;
+        timeDataCount++;
       }
     });
 
@@ -102,14 +102,12 @@ const AssessmentStats: React.FC<AssessmentStatsProps> = ({ assessmentId }) => {
 
   const stats = calculateStats();
 
-  // Helper function to determine score color
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-green-600";
     if (score >= 70) return "text-amber-600";
     return "text-red-600";
   };
 
-  // Helper function for descriptive rating
   const getScoreRating = (score: number) => {
     if (score >= 90) return "Excellent";
     if (score >= 80) return "Very Good";
@@ -137,7 +135,6 @@ const AssessmentStats: React.FC<AssessmentStatsProps> = ({ assessmentId }) => {
         ) : (
           <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-              {/* Total Attempts */}
               <div className="p-4 bg-muted/50 rounded-md">
                 <div className="flex items-center mb-2">
                   <Users className="h-5 w-5 text-primary mr-2" />
@@ -148,7 +145,6 @@ const AssessmentStats: React.FC<AssessmentStatsProps> = ({ assessmentId }) => {
                 </p>
               </div>
               
-              {/* Completion Rate */}
               <div className="p-4 bg-muted/50 rounded-md">
                 <div className="flex items-center mb-2">
                   <Award className="h-5 w-5 text-primary mr-2" />
@@ -160,7 +156,6 @@ const AssessmentStats: React.FC<AssessmentStatsProps> = ({ assessmentId }) => {
                 <Progress value={stats.completionRate} className="h-2 mt-2" />
               </div>
               
-              {/* Average Score */}
               <div className="p-4 bg-muted/50 rounded-md">
                 <div className="flex items-center mb-2">
                   <BarChart3 className="h-5 w-5 text-primary mr-2" />
@@ -174,7 +169,6 @@ const AssessmentStats: React.FC<AssessmentStatsProps> = ({ assessmentId }) => {
                 </Badge>
               </div>
               
-              {/* Average Time */}
               <div className="p-4 bg-muted/50 rounded-md">
                 <div className="flex items-center mb-2">
                   <Clock className="h-5 w-5 text-primary mr-2" />
@@ -186,7 +180,6 @@ const AssessmentStats: React.FC<AssessmentStatsProps> = ({ assessmentId }) => {
               </div>
             </div>
             
-            {/* Score Distribution */}
             <div className="space-y-4">
               <h4 className="font-medium">Score Range</h4>
               <div className="flex items-center justify-between">

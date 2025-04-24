@@ -4,39 +4,24 @@ import { supabase } from '@/integrations/supabase/client';
 import { PostgrestError } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 
-// StatusValidation for application status updates
-const VALID_APPLICATION_STATUSES = [
-  'applied', 
-  'application_in_progress', 
-  'hr_review', 
-  'hr_approved', 
-  'training', 
-  'manager_interview', 
-  'paid_project',
-  'sales_task',
-  'hired', 
-  'rejected', 
-  'archived'
-];
+// Expanded type definitions
+export type TableName = 
+  'activity_logs' | 'assessment_results' | 'assessment_sections' | 
+  'assessments' | 'candidates' | 'interviews' | 'manager_regions' | 
+  'managers' | 'profiles' | 'questions' | 'sales_tasks' | 'shops' | 
+  'training_modules' | 'training_categories' | 'videos';
 
-export type TableName = 'activity_logs' | 'assessment_results' | 'assessment_sections' | 
-                        'assessments' | 'candidates' | 'interviews' | 'manager_regions' | 
-                        'managers' | 'profiles' | 'questions' | 'sales_tasks' | 'shops' | 
-                        'training_modules' | 'training_categories';
-
+// Generic interface for query options
 export interface QueryOptions {
   filter?: Record<string, any>;
   columns?: string;
   order?: [string, { ascending: boolean }];
   range?: [number, number];
   foreignTable?: string;
+  limit?: number;
 }
 
-interface UpdateApplicationStatusParams {
-  status: string;
-  [key: string]: any;
-}
-
+// Type-safe function for database queries
 export function useDatabaseQuery<T = any>(tableName: TableName, options: QueryOptions = {}) {
   const [data, setData] = useState<T[] | null>(null);
   const [error, setError] = useState<PostgrestError | Error | null>(null);
@@ -62,6 +47,10 @@ export function useDatabaseQuery<T = any>(tableName: TableName, options: QueryOp
         query = query.range(options.range[0], options.range[1]);
       }
 
+      if (options.limit) {
+        query = query.limit(options.limit);
+      }
+
       const { data, error } = await query;
 
       if (error) {
@@ -70,7 +59,7 @@ export function useDatabaseQuery<T = any>(tableName: TableName, options: QueryOp
         return;
       }
 
-      setData(data);
+      setData(data as T[]);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(new Error(errorMsg));
@@ -91,14 +80,9 @@ export function useDatabaseQuery<T = any>(tableName: TableName, options: QueryOp
   return { data, error, isLoading, refetch };
 }
 
-// Add the missing functions needed by other components
-export async function updateApplicationStatus(candidateId: string, params: UpdateApplicationStatusParams) {
+// Additional exports for specific use cases
+export async function updateApplicationStatus(candidateId: string, params: any) {
   try {
-    // Validate status
-    if (params.status && !VALID_APPLICATION_STATUSES.includes(params.status)) {
-      throw new Error(`Invalid status: ${params.status}. Valid options are: ${VALID_APPLICATION_STATUSES.join(', ')}`);
-    }
-
     const { data, error } = await supabase
       .from('candidates')
       .update(params)
@@ -121,19 +105,8 @@ export async function updateApplicationStatus(candidateId: string, params: Updat
   }
 }
 
-export interface InterviewData {
-  id?: string;
-  candidate_id: string;
-  manager_id: string;
-  scheduled_at: string;
-  status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
-  notes?: string;
-  action: 'create' | 'update' | 'cancel';
-}
-
-export async function manageInterview(interviewData: InterviewData) {
+export async function manageInterview(interviewData: any) {
   try {
-    // Handle different operations based on action
     const { action, ...data } = interviewData;
     let result;
 
@@ -141,13 +114,7 @@ export async function manageInterview(interviewData: InterviewData) {
       case 'create':
         result = await supabase
           .from('interviews')
-          .insert({
-            candidate_id: data.candidate_id,
-            manager_id: data.manager_id,
-            scheduled_at: data.scheduled_at,
-            status: data.status,
-            notes: data.notes
-          })
+          .insert(data)
           .select()
           .single();
         break;
@@ -157,12 +124,7 @@ export async function manageInterview(interviewData: InterviewData) {
         }
         result = await supabase
           .from('interviews')
-          .update({
-            manager_id: data.manager_id,
-            scheduled_at: data.scheduled_at,
-            status: data.status,
-            notes: data.notes
-          })
+          .update(data)
           .eq('id', data.id)
           .select()
           .single();
@@ -196,6 +158,4 @@ export async function manageInterview(interviewData: InterviewData) {
   }
 }
 
-// Default export for components that use it as default
-const useDatabaseQueryDefault = useDatabaseQuery;
-export default useDatabaseQueryDefault;
+export default useDatabaseQuery;
