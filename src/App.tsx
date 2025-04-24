@@ -59,7 +59,6 @@ const App = () => (
               </ProtectedRoute>
             } />
             
-            {/* Protected Routes */}
             <Route path="/dashboard/candidate" element={
               <ProtectedRoute allowedRoles={['candidate']}>
                 <CandidateDashboard />
@@ -106,7 +105,6 @@ const App = () => (
               </ProtectedRoute>
             } />
             
-            {/* Manager Routes */}
             <Route path="/candidates" element={
               <ProtectedRoute allowedRoles={['manager', 'admin', 'hr', 'director']}>
                 <Candidates />
@@ -133,7 +131,6 @@ const App = () => (
               </ProtectedRoute>
             } />
 
-            {/* Admin Routes */}
             <Route path="/users" element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <UserManagement />
@@ -145,12 +142,11 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/training-management" element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={['admin', 'hr']}>
                 <TrainingManagement />
               </ProtectedRoute>
             } />
             
-            {/* Assessment and Training Module Detail Routes */}
             <Route path="/assessments/results/:resultId" element={
               <ProtectedRoute allowedRoles={['admin', 'hr', 'director']}>
                 <AssessmentResultDetails />
@@ -187,14 +183,12 @@ const App = () => (
               </ProtectedRoute>
             } />
 
-            {/* Common Routes */}
             <Route path="/profile" element={
               <ProtectedRoute allowedRoles={['candidate', 'manager', 'admin', 'hr', 'director']}>
                 <Profile />
               </ProtectedRoute>
             } />
             
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="/job-openings" element={
               <ProtectedRoute allowedRoles={['candidate']}>
                 <JobOpenings />

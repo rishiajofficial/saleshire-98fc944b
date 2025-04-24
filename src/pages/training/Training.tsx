@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,8 @@ const Training = () => {
   const [hasAccess, setHasAccess] = useState(false);
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [jobs, setJobs] = useState<any[]>([]);
+  const [trainingCategories, setTrainingCategories] = useState<any[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   useEffect(() => {
     if (!user) return;
@@ -42,6 +45,7 @@ const Training = () => {
         const selectedJobId = localStorage.getItem("selectedJob");
         if (!selectedJobId) return;
         
+        // Get job data
         const { data: jobData, error: jobError } = await supabase
           .from('jobs')
           .select('*')
@@ -50,6 +54,15 @@ const Training = () => {
           
         if (jobError) throw jobError;
         setSelectedJob(jobData);
+        
+        // Fetch training categories
+        const { data: categories, error: categoriesError } = await supabase
+          .from('training_categories')
+          .select('*')
+          .order('name');
+        
+        if (categoriesError) throw categoriesError;
+        setTrainingCategories(categories || []);
         
         if (hasTrainingAccess) {
           await fetchTrainingModules(selectedJobId);
@@ -166,6 +179,15 @@ const Training = () => {
       setIsLoading(false);
     }
   };
+  
+  const handleCategoryChange = (categoryId: string) => {
+    setSelectedCategory(categoryId);
+  };
+  
+  // Filter training modules by category
+  const filteredModules = selectedCategory === 'all' 
+    ? trainingModules 
+    : trainingModules.filter(module => module.module === selectedCategory);
 
   if (isLoading) {
     return (
@@ -236,17 +258,42 @@ const Training = () => {
           </TabsList>
           
           <TabsContent value="modules">
+            {trainingCategories.length > 0 && (
+              <div className="mb-6">
+                <h2 className="text-lg font-medium mb-2">Filter by Category</h2>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant={selectedCategory === 'all' ? "default" : "outline"}
+                    onClick={() => handleCategoryChange('all')}
+                    className="text-sm"
+                  >
+                    All Categories
+                  </Button>
+                  {trainingCategories.map(category => (
+                    <Button
+                      key={category.id}
+                      variant={selectedCategory === category.name ? "default" : "outline"}
+                      onClick={() => handleCategoryChange(category.name)}
+                      className="text-sm"
+                    >
+                      {category.name}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+            
             {isLoading ? (
               <div className="flex justify-center items-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
-            ) : trainingModules.length === 0 ? (
+            ) : filteredModules.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-gray-500">No training modules available for this job.</p>
+                <p className="text-gray-500">No training modules available for this job or category.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {trainingModules.map((module) => (
+                {filteredModules.map((module) => (
                   <Card key={module.id}>
                     <CardHeader>
                       <CardTitle className="flex items-center">

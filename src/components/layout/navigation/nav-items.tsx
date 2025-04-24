@@ -52,7 +52,7 @@ export const getNavItems = (role?: string): NavItem[] => [
     label: "Training Management",
     href: "/training-management",
     icon: <BookOpen className="h-5 w-5" />,
-    role: ["admin"],
+    role: ["admin", "hr"],
   },
   {
     label: "Candidates",
