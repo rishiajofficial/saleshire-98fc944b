@@ -607,6 +607,42 @@ export type Database = {
           },
         ]
       }
+      quiz_results: {
+        Row: {
+          answers: Json | null
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          module: string
+          passed: boolean | null
+          score: number
+          total_questions: number
+          user_id: string
+        }
+        Insert: {
+          answers?: Json | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          module: string
+          passed?: boolean | null
+          score: number
+          total_questions: number
+          user_id: string
+        }
+        Update: {
+          answers?: Json | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          module?: string
+          passed?: boolean | null
+          score?: number
+          total_questions?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       sales_tasks: {
         Row: {
           candidate_id: string
@@ -759,6 +795,47 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_progress: {
+        Row: {
+          completed: boolean | null
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          module: string
+          updated_at: string | null
+          user_id: string
+          video_id: string
+        }
+        Insert: {
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          module: string
+          updated_at?: string | null
+          user_id: string
+          video_id: string
+        }
+        Update: {
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          module?: string
+          updated_at?: string | null
+          user_id?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_progress_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
             referencedColumns: ["id"]
           },
         ]

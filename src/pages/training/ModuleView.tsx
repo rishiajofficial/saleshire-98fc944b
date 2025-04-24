@@ -1,5 +1,4 @@
-
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
 import { useQuery } from "@tanstack/react-query";
@@ -32,7 +31,6 @@ const ModuleView = () => {
   const { user } = useAuth();
   const [watchedVideos, setWatchedVideos] = useState<string[]>([]);
 
-  // Fetch videos for this module
   const { data: moduleVideos, isLoading: videosLoading } = useQuery({
     queryKey: ['moduleVideos', moduleId],
     queryFn: async (): Promise<Video[]> => {
@@ -51,7 +49,6 @@ const ModuleView = () => {
     enabled: !!moduleId
   });
 
-  // Fetch module details
   const { data: moduleDetails, isLoading: detailsLoading } = useQuery({
     queryKey: ['moduleDetails', moduleId],
     queryFn: async () => {
@@ -61,7 +58,7 @@ const ModuleView = () => {
         .eq('module', moduleId)
         .single();
       
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned" error
+      if (error && error.code !== 'PGRST116') {
         toast.error(`Error fetching module details: ${error.message}`);
         throw error;
       }
@@ -70,12 +67,10 @@ const ModuleView = () => {
     enabled: !!moduleId
   });
 
-  // Check if training_progress table exists
   useEffect(() => {
     const checkProgress = async () => {
       try {
         if (!user || !moduleId) return;
-        // Try to query the table - this will fail silently if table doesn't exist
         const { data } = await supabase
           .from('training_progress')
           .select('*')
@@ -90,8 +85,7 @@ const ModuleView = () => {
     checkProgress();
   }, [user, moduleId]);
 
-  // Fetch user's video progress
-  const { data: videoProgressData, isLoading: progressLoading } = useQuery({
+  const { data: videoProgressData } = useQuery({
     queryKey: ['userVideoProgress', moduleId, user?.id],
     queryFn: async () => {
       if (!user || !moduleId) return [];
@@ -99,9 +93,10 @@ const ModuleView = () => {
       try {
         const { data, error } = await supabase
           .from('training_progress')
-          .select('video_id, completed')
+          .select('video_id')
           .eq('user_id', user.id)
-          .eq('module', moduleId);
+          .eq('module', moduleId)
+          .eq('completed', true);
         
         if (error) {
           console.error("Error fetching progress:", error);
@@ -115,27 +110,24 @@ const ModuleView = () => {
       }
     },
     enabled: !!moduleId && !!user,
-    onSuccess: (data) => {
-      const completed = data
-        .filter(item => item.completed)
-        .map(item => item.video_id);
-      setWatchedVideos(completed);
+    meta: {
+      onSuccess: (data: { video_id: string }[]) => {
+        setWatchedVideos(data.map(item => item.video_id));
+      }
     }
   });
 
-  // Calculate if all videos have been watched to unlock the quiz
   const allVideosWatched = React.useMemo(() => {
     return moduleVideos && moduleVideos.length > 0 && 
       moduleVideos.every(video => watchedVideos.includes(video.id));
   }, [moduleVideos, watchedVideos]);
 
-  // Format module name for display
   const formatModuleName = (name?: string) => {
     if (!name) return '';
     return name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' ');
   };
 
-  if (videosLoading || detailsLoading || progressLoading) {
+  if (videosLoading || detailsLoading) {
     return (
       <MainLayout>
         <div className="flex justify-center items-center h-screen">

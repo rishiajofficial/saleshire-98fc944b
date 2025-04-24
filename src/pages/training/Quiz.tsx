@@ -1,24 +1,16 @@
-
-import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import React, { useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
-import { toast } from "sonner";
-import { ArrowLeft, CheckCircle, RefreshCw, AlertCircle, Loader2 } from "lucide-react";
-import MainLayout from "@/components/layout/MainLayout";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTrainingStore } from "@/hooks/useTrainingStore";
+import { Loader2, RefreshCw, ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
+import MainLayout from "@/components/layout/MainLayout";
 
 interface Question {
   id: string;
@@ -28,44 +20,17 @@ interface Question {
 }
 
 const Quiz = () => {
-  const navigate = useNavigate();
   const { moduleId } = useParams<{ moduleId: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
+  const { submitQuizResults } = useTrainingStore(moduleId);
+  
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [score, setScore] = useState(0);
   const [quizAccess, setQuizAccess] = useState(false);
-
-  // Check if quiz_results table exists
-  useEffect(() => {
-    const checkTablesExist = async () => {
-      if (!user) return;
-      try {
-        // Simple query to check if we can access the quiz_results data
-        // If table doesn't exist, this will fail silently
-        const { data: quizResultsCheck } = await supabase
-          .from('quiz_results')
-          .select('*')
-          .limit(1);
-        
-        console.log("Quiz results table check:", quizResultsCheck);
-        
-        // Also check training_progress table
-        const { data: progressCheck } = await supabase
-          .from('training_progress')
-          .select('*')
-          .limit(1);
-          
-        console.log("Training progress table check:", progressCheck);
-      } catch (error) {
-        console.error("Error checking tables:", error);
-      }
-    };
-    
-    checkTablesExist();
-  }, [user]);
 
   // Check if user has watched all videos in this module
   const { data: accessData, isLoading: checkingAccess } = useQuery({
@@ -74,37 +39,26 @@ const Quiz = () => {
       if (!user || !moduleId) return { canAccess: false };
       
       try {
-        // Get all videos for this module
-        const { data: moduleVideos, error: videosError } = await supabase
-          .from('videos')
-          .select('id')
-          .eq('module', moduleId);
+        const [videosResult, progressResult] = await Promise.all([
+          supabase.from('videos').select('id').eq('module', moduleId),
+          supabase.from('training_progress')
+            .select('video_id')
+            .eq('user_id', user.id)
+            .eq('module', moduleId)
+            .eq('completed', true)
+        ]);
+
+        if (videosResult.error) throw videosResult.error;
+        const videos = videosResult.data || [];
         
-        if (videosError) throw videosError;
+        const progress = progressResult.data || [];
+        const watchedVideoIds = progress.map(p => p.video_id);
         
-        if (!moduleVideos || moduleVideos.length === 0) {
-          return { canAccess: true }; // If no videos, allow access
-        }
-        
-        // Get user's completed videos for this module
-        const { data: progress, error: progressError } = await supabase
-          .from('training_progress')
-          .select('video_id')
-          .eq('user_id', user.id)
-          .eq('module', moduleId)
-          .eq('completed', true);
-        
-        if (progressError) {
-          console.error("Error fetching video progress:", progressError);
-          return { canAccess: false };
-        }
-        
-        const watchedVideoIds = progress?.map(p => p.video_id) || [];
-        const allWatched = moduleVideos.every(v => watchedVideoIds.includes(v.id));
-        
-        return { canAccess: allWatched };
+        return {
+          canAccess: videos.length === 0 || videos.every(v => watchedVideoIds.includes(v.id))
+        };
       } catch (error) {
-        console.error("Error in quizAccess query:", error);
+        console.error("Error checking quiz access:", error);
         return { canAccess: false };
       }
     },
@@ -112,7 +66,7 @@ const Quiz = () => {
   });
 
   // Use effect to handle quiz access
-  useEffect(() => {
+  React.useEffect(() => {
     if (accessData) {
       setQuizAccess(accessData.canAccess);
       if (!accessData.canAccess) {
@@ -194,47 +148,6 @@ const Quiz = () => {
       }
     },
     enabled: !!moduleId && quizAccess
-  });
-
-  // Submit quiz results
-  const submitQuizMutation = useMutation({
-    mutationFn: async (quizResults: {
-      score: number;
-      total: number;
-      passed: boolean;
-      answers: Record<number, string>;
-    }) => {
-      if (!user || !moduleId) throw new Error("Missing user or module ID");
-      
-      try {
-        const { error } = await supabase
-          .from('quiz_results')
-          .insert({
-            user_id: user.id,
-            module: moduleId,
-            score: quizResults.score,
-            total_questions: quizResults.total,
-            passed: quizResults.passed,
-            answers: quizResults.answers,
-            completed_at: new Date().toISOString()
-          });
-        
-        if (error) throw error;
-        
-        return { success: true };
-      } catch (error) {
-        console.error("Error in submitQuizMutation:", error);
-        throw error;
-      }
-    },
-    onSuccess: () => {
-      console.log("Quiz results saved successfully");
-    },
-    onError: (error: Error) => {
-      console.error("Error saving quiz results:", error);
-      // Still show the results even if saving failed
-      toast.error("Could not save your quiz results, but you can still view your score");
-    }
   });
 
   // Mock quiz data based on module
@@ -442,7 +355,7 @@ const Quiz = () => {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // Check if all questions are answered
     if (Object.keys(answers).length < questions.length) {
       toast.error("Please answer all questions before submitting");
@@ -463,9 +376,8 @@ const Quiz = () => {
     const percentageScore = Math.round((correctAnswers / questions.length) * 100);
     const passed = percentageScore >= 70;
 
-    // Save quiz results
     if (user) {
-      submitQuizMutation.mutate({
+      await submitQuizResults({
         score: percentageScore,
         total: questions.length,
         passed,
@@ -633,7 +545,7 @@ const Quiz = () => {
               <div className="flex justify-center">
                 {score >= 70 ? (
                   <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center">
-                    <CheckCircle className="h-10 w-10 text-green-600" />
+                    <CheckCircle2 className="h-10 w-10 text-green-600" />
                   </div>
                 ) : (
                   <div className="w-20 h-20 rounded-full bg-red-100 flex items-center justify-center">
