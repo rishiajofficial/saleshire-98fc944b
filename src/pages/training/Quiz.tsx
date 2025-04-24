@@ -38,113 +38,159 @@ const Quiz = () => {
   const [score, setScore] = useState(0);
   const [quizAccess, setQuizAccess] = useState(false);
 
+  // Check if quiz_results table exists
+  useEffect(() => {
+    const checkTablesExist = async () => {
+      if (!user) return;
+      try {
+        // Simple query to check if we can access the quiz_results data
+        // If table doesn't exist, this will fail silently
+        const { data: quizResultsCheck } = await supabase
+          .from('quiz_results')
+          .select('*')
+          .limit(1);
+        
+        console.log("Quiz results table check:", quizResultsCheck);
+        
+        // Also check training_progress table
+        const { data: progressCheck } = await supabase
+          .from('training_progress')
+          .select('*')
+          .limit(1);
+          
+        console.log("Training progress table check:", progressCheck);
+      } catch (error) {
+        console.error("Error checking tables:", error);
+      }
+    };
+    
+    checkTablesExist();
+  }, [user]);
+
   // Check if user has watched all videos in this module
   const { data: accessData, isLoading: checkingAccess } = useQuery({
     queryKey: ['quizAccess', moduleId, user?.id],
     queryFn: async () => {
       if (!user || !moduleId) return { canAccess: false };
       
-      // Get all videos for this module
-      const { data: moduleVideos, error: videosError } = await supabase
-        .from('videos')
-        .select('id')
-        .eq('module', moduleId);
-      
-      if (videosError) throw videosError;
-      
-      if (!moduleVideos || moduleVideos.length === 0) {
-        return { canAccess: true }; // If no videos, allow access
+      try {
+        // Get all videos for this module
+        const { data: moduleVideos, error: videosError } = await supabase
+          .from('videos')
+          .select('id')
+          .eq('module', moduleId);
+        
+        if (videosError) throw videosError;
+        
+        if (!moduleVideos || moduleVideos.length === 0) {
+          return { canAccess: true }; // If no videos, allow access
+        }
+        
+        // Get user's completed videos for this module
+        const { data: progress, error: progressError } = await supabase
+          .from('training_progress')
+          .select('video_id')
+          .eq('user_id', user.id)
+          .eq('module', moduleId)
+          .eq('completed', true);
+        
+        if (progressError) {
+          console.error("Error fetching video progress:", progressError);
+          return { canAccess: false };
+        }
+        
+        const watchedVideoIds = progress?.map(p => p.video_id) || [];
+        const allWatched = moduleVideos.every(v => watchedVideoIds.includes(v.id));
+        
+        return { canAccess: allWatched };
+      } catch (error) {
+        console.error("Error in quizAccess query:", error);
+        return { canAccess: false };
       }
-      
-      // Get user's completed videos for this module
-      const { data: progress, error: progressError } = await supabase
-        .from('training_progress')
-        .select('video_id')
-        .eq('user_id', user.id)
-        .eq('module', moduleId)
-        .eq('completed', true);
-      
-      if (progressError) throw progressError;
-      
-      const watchedVideoIds = progress?.map(p => p.video_id) || [];
-      const allWatched = moduleVideos.every(v => watchedVideoIds.includes(v.id));
-      
-      return { canAccess: allWatched };
     },
-    enabled: !!user && !!moduleId,
-    onSuccess: (data) => {
-      setQuizAccess(data.canAccess);
-      if (!data.canAccess) {
+    enabled: !!user && !!moduleId
+  });
+
+  // Use effect to handle quiz access
+  useEffect(() => {
+    if (accessData) {
+      setQuizAccess(accessData.canAccess);
+      if (!accessData.canAccess) {
         toast.error("You need to watch all videos in this module first");
         navigate(`/training/module/${moduleId}`);
       }
     }
-  });
+  }, [accessData, moduleId, navigate]);
 
   // Fetch quiz questions
   const { data: quizData, isLoading: loadingQuiz } = useQuery({
     queryKey: ['quizQuestions', moduleId],
     queryFn: async () => {
-      // First get the module to find the associated quiz_id
-      const { data: moduleData, error: moduleError } = await supabase
-        .from('training_modules')
-        .select('quiz_id')
-        .eq('module', moduleId)
-        .single();
-      
-      if (moduleError) {
-        // If no specific quiz is set, use mock data
-        return getQuizQuestions();
-      }
-      
-      if (!moduleData?.quiz_id) {
-        // No specific quiz assigned, use mock data
-        return getQuizQuestions();
-      }
-      
-      // Try to fetch actual quiz questions from the assessment
       try {
-        const { data: assessmentData, error: assessmentError } = await supabase
-          .from('assessments')
-          .select('id')
-          .eq('id', moduleData.quiz_id)
+        // First get the module to find the associated quiz_id
+        const { data: moduleData, error: moduleError } = await supabase
+          .from('training_modules')
+          .select('quiz_id')
+          .eq('module', moduleId)
           .single();
-          
-        if (assessmentError) throw assessmentError;
         
-        const { data: sectionsData, error: sectionsError } = await supabase
-          .from('assessment_sections')
-          .select('id')
-          .eq('assessment_id', assessmentData.id);
-          
-        if (sectionsError) throw sectionsError;
-        
-        if (!sectionsData || sectionsData.length === 0) {
-          return getQuizQuestions(); // Fallback to mock data
+        if (moduleError) {
+          console.log("No specific quiz found for module, using mock data");
+          return getQuizQuestions();
         }
         
-        // Get questions from the first section
-        const { data: questionsData, error: questionsError } = await supabase
-          .from('questions')
-          .select('*')
-          .eq('section_id', sectionsData[0].id);
-          
-        if (questionsError) throw questionsError;
-        
-        if (!questionsData || questionsData.length === 0) {
-          return getQuizQuestions(); // Fallback to mock data
+        if (!moduleData?.quiz_id) {
+          console.log("No quiz_id assigned to module, using mock data");
+          return getQuizQuestions();
         }
         
-        // Format questions to match our interface
-        return questionsData.map(q => ({
-          id: q.id,
-          text: q.text,
-          options: q.options as string[],
-          correctAnswer: String.fromCharCode(65 + (q.correct_answer as number))
-        }));
+        // Try to fetch actual quiz questions from the assessment
+        try {
+          const { data: assessmentData, error: assessmentError } = await supabase
+            .from('assessments')
+            .select('id')
+            .eq('id', moduleData.quiz_id)
+            .single();
+            
+          if (assessmentError) throw assessmentError;
+          
+          const { data: sectionsData, error: sectionsError } = await supabase
+            .from('assessment_sections')
+            .select('id')
+            .eq('assessment_id', assessmentData.id);
+            
+          if (sectionsError) throw sectionsError;
+          
+          if (!sectionsData || sectionsData.length === 0) {
+            return getQuizQuestions(); // Fallback to mock data
+          }
+          
+          // Get questions from the first section
+          const { data: questionsData, error: questionsError } = await supabase
+            .from('questions')
+            .select('*')
+            .eq('section_id', sectionsData[0].id);
+            
+          if (questionsError) throw questionsError;
+          
+          if (!questionsData || questionsData.length === 0) {
+            return getQuizQuestions(); // Fallback to mock data
+          }
+          
+          // Format questions to match our interface
+          return questionsData.map(q => ({
+            id: q.id,
+            text: q.text,
+            options: q.options as string[],
+            correctAnswer: String.fromCharCode(65 + (q.correct_answer as number))
+          }));
+        } catch (error) {
+          console.error("Error fetching quiz questions:", error);
+          return getQuizQuestions(); // Fallback to mock data
+        }
       } catch (error) {
-        console.error("Error fetching quiz questions:", error);
-        return getQuizQuestions(); // Fallback to mock data
+        console.error("Error in quizQuestions query:", error);
+        return getQuizQuestions();
       }
     },
     enabled: !!moduleId && quizAccess
@@ -160,25 +206,34 @@ const Quiz = () => {
     }) => {
       if (!user || !moduleId) throw new Error("Missing user or module ID");
       
-      const { error } = await supabase.from('quiz_results').insert([{
-        user_id: user.id,
-        module: moduleId,
-        score: quizResults.score,
-        total_questions: quizResults.total,
-        passed: quizResults.passed,
-        answers: quizResults.answers,
-        completed_at: new Date().toISOString()
-      }]);
-      
-      if (error) throw error;
-      
-      return { success: true };
+      try {
+        const { error } = await supabase
+          .from('quiz_results')
+          .insert({
+            user_id: user.id,
+            module: moduleId,
+            score: quizResults.score,
+            total_questions: quizResults.total,
+            passed: quizResults.passed,
+            answers: quizResults.answers,
+            completed_at: new Date().toISOString()
+          });
+        
+        if (error) throw error;
+        
+        return { success: true };
+      } catch (error) {
+        console.error("Error in submitQuizMutation:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       console.log("Quiz results saved successfully");
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error("Error saving quiz results:", error);
+      // Still show the results even if saving failed
+      toast.error("Could not save your quiz results, but you can still view your score");
     }
   });
 
@@ -364,6 +419,7 @@ const Quiz = () => {
     }
   };
 
+  // Get questions for the quiz
   const questions = quizData || [];
   const currentQuestion = questions[currentQuestionIndex];
 

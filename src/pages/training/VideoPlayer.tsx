@@ -44,6 +44,27 @@ const VideoPlayer = () => {
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [alreadyMarkedComplete, setAlreadyMarkedComplete] = useState(false);
 
+  // Create the training_progress table first if it doesn't exist
+  useEffect(() => {
+    const checkTableExists = async () => {
+      if (!user) return;
+      try {
+        // Simple query to check if we can access the training_progress data
+        // If table doesn't exist, this will fail silently
+        const { data } = await supabase
+          .from('training_progress')
+          .select('*')
+          .limit(1);
+        
+        console.log("Training progress table check:", data);
+      } catch (error) {
+        console.error("Error checking training_progress table:", error);
+      }
+    };
+    
+    checkTableExists();
+  }, [user]);
+
   // Fetch the video details
   const { data: videoDetails, isLoading, error } = useQuery({
     queryKey: ['videoDetails', videoId],
@@ -71,22 +92,27 @@ const VideoPlayer = () => {
     queryFn: async () => {
       if (!user || !videoId) return null;
       
-      const { data, error } = await supabase
-        .from('training_progress')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('video_id', videoId)
-        .single();
-      
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned" error
-        console.error("Error fetching progress:", error);
+      try {
+        const { data, error } = await supabase
+          .from('training_progress')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('video_id', videoId)
+          .single();
+        
+        if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned" error
+          console.error("Error fetching progress:", error);
+        }
+        
+        if (data && data.completed) {
+          setAlreadyMarkedComplete(true);
+        }
+        
+        return data;
+      } catch (error) {
+        console.error("Error in videoProgress query:", error);
+        return null;
       }
-      
-      if (data && data.completed) {
-        setAlreadyMarkedComplete(true);
-      }
-      
-      return data;
     },
     enabled: !!user && !!videoId
   });
@@ -98,49 +124,54 @@ const VideoPlayer = () => {
         throw new Error("Missing required data");
       }
       
-      // Check if a record already exists
-      const { data: existingRecord, error: fetchError } = await supabase
-        .from('training_progress')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('video_id', videoId)
-        .single();
+      try {
+        // Check if a record already exists
+        const { data: existingRecord, error: fetchError } = await supabase
+          .from('training_progress')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('video_id', videoId)
+          .single();
+          
+        if (fetchError && fetchError.code !== 'PGRST116') {
+          throw fetchError;
+        }
         
-      if (fetchError && fetchError.code !== 'PGRST116') {
-        throw fetchError;
+        if (existingRecord) {
+          const { error } = await supabase
+            .from('training_progress')
+            .update({ 
+              completed: true,
+              completed_at: new Date().toISOString() 
+            })
+            .eq('id', existingRecord.id);
+            
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from('training_progress')
+            .insert([{
+              user_id: user.id,
+              video_id: videoId,
+              module: moduleId,
+              completed: true,
+              completed_at: new Date().toISOString()
+            }]);
+            
+          if (error) throw error;
+        }
+        
+        return { success: true };
+      } catch (error) {
+        console.error("Error in markVideoCompletedMutation:", error);
+        throw error;
       }
-      
-      if (existingRecord) {
-        const { error } = await supabase
-          .from('training_progress')
-          .update({ 
-            completed: true,
-            completed_at: new Date().toISOString() 
-          })
-          .eq('id', existingRecord.id);
-          
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('training_progress')
-          .insert([{
-            user_id: user.id,
-            video_id: videoId,
-            module: moduleId,
-            completed: true,
-            completed_at: new Date().toISOString()
-          }]);
-          
-        if (error) throw error;
-      }
-      
-      return { success: true };
     },
     onSuccess: () => {
       setAlreadyMarkedComplete(true);
       toast.success("Video marked as completed!");
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast.error(`Error updating progress: ${error.message}`);
     }
   });

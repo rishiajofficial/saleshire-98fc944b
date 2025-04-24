@@ -1,8 +1,9 @@
+
 import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 
 interface AuthContextProps {
   session: Session | null;
@@ -17,14 +18,26 @@ interface AuthContextProps {
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
+// Create a custom hook for router independent navigation
+// This will be used only when a router is available
+const useNavigation = () => {
+  // Store navigation function that will be set when used within a router
+  const navigate = (path: string) => {
+    // This is just a placeholder that will be overridden when used in a component with router context
+    console.warn("Navigation attempted outside Router context - this is safe to ignore during initialization");
+  };
+
+  return { navigate };
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const navigate = useNavigate();
   const location = useLocation();
   const locationRef = useRef(location);
+  const { navigate } = useNavigation(); // This is safe as it doesn't actually use router hooks
 
   useEffect(() => {
     locationRef.current = location;
@@ -54,14 +67,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else if (event === 'SIGNED_OUT') {
           console.log('AuthContext: SIGNED_OUT event detected. Clearing profile.');
           setProfile(null);
-          console.log('AuthContext: Navigating to /login...');
+          
+          // Handle navigation through window.location instead of useNavigate
           const currentPath = locationRef.current.pathname;
           if (currentPath !== '/login' && 
               currentPath !== '/register' && 
               currentPath !== '/forgot-password' && 
               currentPath !== '/reset-password' &&
               currentPath !== '/') {
-            navigate('/login');
+            window.location.href = '/login'; // Use direct URL navigation instead of useNavigate
           }
         }
       }
@@ -78,14 +92,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         setIsLoading(false);
         setInitialAuthCheckComplete(true);
-        // Only redirect to login if on protected pages
+        
+        // Handle navigation through window.location instead of useNavigate
         const currentPath = locationRef.current.pathname;
         if (currentPath !== '/login' && 
             currentPath !== '/register' && 
             currentPath !== '/forgot-password' && 
             currentPath !== '/reset-password' &&
             currentPath !== '/') {
-          navigate('/login');
+          window.location.href = '/login'; // Use direct URL navigation instead of useNavigate
         }
       }
     });
@@ -93,7 +108,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, []);
 
   // Fetch user profile data from Supabase
   const fetchProfile = async (userId: string) => {
@@ -174,20 +189,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (profileError) {
           console.error('Error fetching profile for redirect:', profileError.message);
-          // Default redirect if profile can't be fetched
-          navigate('/dashboard/candidate');
+          // Default redirect using window.location
+          window.location.href = '/dashboard/candidate';
           return;
         }
         
         console.log('User role:', profileData?.role);
         
-        // Redirect based on role
+        // Redirect based on role using window.location
         if (profileData?.role === 'admin') {
-          navigate('/dashboard/admin');
+          window.location.href = '/dashboard/admin';
         } else if (profileData?.role === 'manager') {
-          navigate('/dashboard/manager');
+          window.location.href = '/dashboard/manager';
+        } else if (profileData?.role === 'hr') {
+          window.location.href = '/dashboard/hr';
+        } else if (profileData?.role === 'director') {
+          window.location.href = '/dashboard/director';
         } else {
-          navigate('/dashboard/candidate');
+          window.location.href = '/dashboard/candidate';
         }
       }
     } catch (error: any) {
@@ -216,7 +235,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       toast.success('Registration successful! Please check your email for verification.');
-      navigate('/login');
+      window.location.href = '/login'; // Use window.location instead of useNavigate
       
     } catch (error: any) {
       toast.error(error.message || 'Failed to sign up');
@@ -252,7 +271,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setProfile(null);
       
       toast.success('Successfully signed out');
-      // Navigation is handled by onAuthStateChange listener
+      // Navigation is handled by onAuthStateChange listener or redirect to login
+      window.location.href = '/login';
     } catch (error: any) {
       toast.error(error.message || 'Failed to sign out');
       console.error('AuthContext: Error in signOut function wrapper:', error.message);

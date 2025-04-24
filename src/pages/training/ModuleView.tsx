@@ -21,7 +21,7 @@ interface Video {
   module: string;
 }
 
-interface TrainingProgress {
+interface Progress {
   video_id: string;
   completed: boolean;
 }
@@ -70,22 +70,49 @@ const ModuleView = () => {
     enabled: !!moduleId
   });
 
+  // Check if training_progress table exists
+  useEffect(() => {
+    const checkProgress = async () => {
+      try {
+        if (!user || !moduleId) return;
+        // Try to query the table - this will fail silently if table doesn't exist
+        const { data } = await supabase
+          .from('training_progress')
+          .select('*')
+          .limit(1);
+          
+        console.log("Training progress table check:", data);
+      } catch (error) {
+        console.error("Error checking training_progress table:", error);
+      }
+    };
+    
+    checkProgress();
+  }, [user, moduleId]);
+
   // Fetch user's video progress
-  const { data: videoProgress, isLoading: progressLoading } = useQuery({
-    queryKey: ['videoProgress', moduleId, user?.id],
-    queryFn: async (): Promise<TrainingProgress[]> => {
-      if (!user) return [];
-      const { data, error } = await supabase
-        .from('training_progress')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('module', moduleId);
+  const { data: videoProgressData, isLoading: progressLoading } = useQuery({
+    queryKey: ['userVideoProgress', moduleId, user?.id],
+    queryFn: async () => {
+      if (!user || !moduleId) return [];
       
-      if (error) {
-        console.error("Error fetching progress:", error);
+      try {
+        const { data, error } = await supabase
+          .from('training_progress')
+          .select('video_id, completed')
+          .eq('user_id', user.id)
+          .eq('module', moduleId);
+        
+        if (error) {
+          console.error("Error fetching progress:", error);
+          return [];
+        }
+        
+        return data || [];
+      } catch (error) {
+        console.error("Error in videoProgress query:", error);
         return [];
       }
-      return data || [];
     },
     enabled: !!moduleId && !!user,
     onSuccess: (data) => {
@@ -97,8 +124,10 @@ const ModuleView = () => {
   });
 
   // Calculate if all videos have been watched to unlock the quiz
-  const allVideosWatched = moduleVideos && moduleVideos.length > 0 && 
-    moduleVideos.every(video => watchedVideos.includes(video.id));
+  const allVideosWatched = React.useMemo(() => {
+    return moduleVideos && moduleVideos.length > 0 && 
+      moduleVideos.every(video => watchedVideos.includes(video.id));
+  }, [moduleVideos, watchedVideos]);
 
   // Format module name for display
   const formatModuleName = (name?: string) => {
