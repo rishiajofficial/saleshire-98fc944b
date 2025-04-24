@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ import {
   Trash2,
   Video,
   FileText,
+  Edit,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -63,6 +65,7 @@ import { useModuleCategories } from "@/hooks/useModuleCategories";
 
 type Video = Database['public']['Tables']['videos']['Row'];
 type TrainingModule = Database['public']['Tables']['training_modules']['Row'];
+type ModuleCategory = Database['public']['Tables']['module_categories']['Row'];
 
 interface AssessmentOption { id: string; title: string; }
 
@@ -74,6 +77,7 @@ const TrainingManagement = () => {
   const [showQuizDialog, setShowQuizDialog] = useState(false);
   const [showEditVideoDialog, setShowEditVideoDialog] = useState(false);
   const [showEditQuizDialog, setShowEditQuizDialog] = useState(false);
+  const [showEditCategoryDialog, setShowEditCategoryDialog] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("modules");
@@ -90,6 +94,7 @@ const TrainingManagement = () => {
   const [newQuizTitle, setNewQuizTitle] = useState("");
   const [newQuizDescription, setNewQuizDescription] = useState("");
   const [newQuizModule, setNewQuizModule] = useState("product");
+  const [newQuizAssessmentId, setNewQuizAssessmentId] = useState<string>("");
   
   const [editingVideo, setEditingVideo] = useState<Video | null>(null);
   const [editVideoTitle, setEditVideoTitle] = useState("");
@@ -107,6 +112,11 @@ const TrainingManagement = () => {
   const [assessments, setAssessments] = useState<AssessmentOption[]>([]);
 
   const [useFileUpload, setUseFileUpload] = useState(true);
+
+  // For category editing
+  const [editingCategory, setEditingCategory] = useState<ModuleCategory | null>(null);
+  const [editCategoryName, setEditCategoryName] = useState("");
+  const [editCategoryDescription, setEditCategoryDescription] = useState("");
 
   const { uploadFile: uploadTrainingVideo, isUploading: uploadingTrainingVideo } = useSupabaseStorage('videos');
 
@@ -300,6 +310,7 @@ const TrainingManagement = () => {
       setNewQuizTitle("");
       setNewQuizDescription("");
       setNewQuizModule("product");
+      setNewQuizAssessmentId("");
     },
     onError: (error) => {
       toast.error("Failed to add quiz: " + error.message);
@@ -346,6 +357,27 @@ const TrainingManagement = () => {
     },
   });
 
+  const updateCategoryMutation = useMutation({
+    mutationFn: async (updatedCategoryData: { id: string; name: string; description: string | null }) => {
+      const { id, ...updateData } = updatedCategoryData;
+      const { error } = await supabase
+        .from('module_categories')
+        .update(updateData)
+        .eq('id', id);
+      if (error) throw new Error(error.message);
+      return id;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['moduleCategories', 'trainingCategories'] });
+      toast.success("Category updated successfully");
+      setShowEditCategoryDialog(false);
+      setEditingCategory(null);
+    },
+    onError: (error) => {
+      toast.error("Failed to update category: " + error.message);
+    },
+  });
+
   const deleteContentMutation = useMutation({
     mutationFn: async ({ contentType, id }: { contentType: 'Video' | 'Module', id: string }) => {
       const tableName = contentType === 'Video' ? 'videos' : 'training_modules';
@@ -381,6 +413,7 @@ const TrainingManagement = () => {
       description: newQuizDescription || null,
       module: newQuizModule, 
       created_by: user.id,
+      quiz_id: newQuizAssessmentId || null,
     };
 
     createQuizMutation.mutate(quizData);
@@ -409,6 +442,13 @@ const TrainingManagement = () => {
     setEditQuizModule(quiz.module || "product");
     setEditQuizId(quiz.quiz_id || null);
     setShowEditQuizDialog(true);
+  };
+
+  const handleEditCategoryClick = (category: ModuleCategory) => {
+    setEditingCategory(category);
+    setEditCategoryName(category.name);
+    setEditCategoryDescription(category.description || "");
+    setShowEditCategoryDialog(true);
   };
 
   const handleUpdateVideo = () => {
@@ -441,6 +481,20 @@ const TrainingManagement = () => {
       description: editQuizDescription || null,
       module: editQuizModule,
       quiz_id: editQuizId || null,
+    });
+  };
+
+  const handleUpdateCategory = () => {
+    if (!editingCategory) return;
+    if (!editCategoryName) {
+      toast.error("Category name is required.");
+      return;
+    }
+
+    updateCategoryMutation.mutate({
+      id: editingCategory.id,
+      name: editCategoryName,
+      description: editCategoryDescription || null,
     });
   };
 
@@ -813,6 +867,22 @@ const TrainingManagement = () => {
                         </SelectContent>
                       </Select>
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="quizAssessment">Associated Assessment</Label>
+                      <Select value={newQuizAssessmentId} onValueChange={setNewQuizAssessmentId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select assessment (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">None</SelectItem>
+                          {!isLoadingAssessments && assessments?.map(assessment => (
+                            <SelectItem key={assessment.id} value={assessment.id}>
+                              {assessment.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setShowQuizDialog(false)}>Cancel</Button>
@@ -831,6 +901,8 @@ const TrainingManagement = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Title</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead className="hidden md:table-cell">Assessment</TableHead>
                         <TableHead className="hidden md:table-cell">Created</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
@@ -838,11 +910,11 @@ const TrainingManagement = () => {
                     <TableBody>
                       {isLoadingModules ? (
                         <TableRow>
-                          <TableCell colSpan={3} className="text-center py-8">Loading quizzes...</TableCell>
+                          <TableCell colSpan={5} className="text-center py-8">Loading quizzes...</TableCell>
                         </TableRow>
                       ) : modulesError ? (
                         <TableRow>
-                          <TableCell colSpan={3} className="text-center py-8 text-red-600">Error: {modulesError.message}</TableCell>
+                          <TableCell colSpan={5} className="text-center py-8 text-red-600">Error: {modulesError.message}</TableCell>
                         </TableRow>
                       ) : filteredQuizzes.length > 0 ? (
                         filteredQuizzes.map((module) => (
@@ -857,6 +929,16 @@ const TrainingManagement = () => {
                                   {module.description || "No description"}
                                 </div>
                               </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">{module.module || "general"}</Badge>
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              {module.quiz_id ? 
+                                assessments.find(a => a.id === module.quiz_id)?.title || "Assessment ID: " + module.quiz_id.substring(0, 6) + "..." 
+                                : 
+                                "None"
+                              }
                             </TableCell>
                             <TableCell className="hidden md:table-cell">
                               {new Date(module.created_at).toLocaleDateString()}
@@ -881,7 +963,7 @@ const TrainingManagement = () => {
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={3} className="text-center py-8">
+                          <TableCell colSpan={5} className="text-center py-8">
                             <p className="text-muted-foreground">{searchTerm ? "No quizzes found matching search." : "No quizzes created yet."}</p>
                           </TableCell>
                         </TableRow>
@@ -891,6 +973,69 @@ const TrainingManagement = () => {
                 </div>
               </CardContent>
             </Card>
+
+            <Dialog open={showEditQuizDialog} onOpenChange={setShowEditQuizDialog}>
+              <DialogContent className="sm:max-w-[550px]">
+                <DialogHeader>
+                  <DialogTitle>Edit Training Quiz</DialogTitle>
+                  <DialogDescription>
+                    Modify the details of this training quiz.
+                  </DialogDescription>
+                </DialogHeader>
+                {editingQuiz && (
+                  <div className="grid gap-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-quiz-title">Quiz Title</Label>
+                      <Input id="edit-quiz-title" value={editQuizTitle} onChange={(e) => setEditQuizTitle(e.target.value)} required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-quiz-description">Description</Label>
+                      <Textarea id="edit-quiz-description" value={editQuizDescription} onChange={(e) => setEditQuizDescription(e.target.value)} required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-quiz-module">Training Category</Label>
+                      <Select value={editQuizModule} onValueChange={setEditQuizModule}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {trainingCategories.map(category => (
+                            <SelectItem key={category.id} value={category.name}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-quiz-assessment">Associated Assessment</Label>
+                      <Select 
+                        value={editQuizId || ""} 
+                        onValueChange={value => setEditQuizId(value || null)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select assessment (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">None</SelectItem>
+                          {!isLoadingAssessments && assessments?.map(assessment => (
+                            <SelectItem key={assessment.id} value={assessment.id}>
+                              {assessment.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setShowEditQuizDialog(false)}>Cancel</Button>
+                  <Button type="button" onClick={handleUpdateQuiz} disabled={updateQuizMutation.isPending}>
+                    {updateQuizMutation.isPending ? "Saving..." : "Save Changes"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           <TabsContent value="categories" className="space-y-6">
@@ -931,18 +1076,28 @@ const TrainingManagement = () => {
                               {new Date(category.created_at).toLocaleDateString()}
                             </TableCell>
                             <TableCell className="text-right">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
-                                onClick={() => {
-                                  if (window.confirm("Are you sure you want to delete this category?")) {
-                                    deleteCategory(category.id);
-                                  }
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <div className="flex justify-end space-x-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => handleEditCategoryClick(category)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                  onClick={() => {
+                                    if (window.confirm("Are you sure you want to delete this category?")) {
+                                      deleteCategory(category.id);
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))
@@ -958,6 +1113,50 @@ const TrainingManagement = () => {
                 </div>
               </CardContent>
             </Card>
+
+            <Dialog open={showEditCategoryDialog} onOpenChange={setShowEditCategoryDialog}>
+              <DialogContent className="sm:max-w-[550px]">
+                <DialogHeader>
+                  <DialogTitle>Edit Category</DialogTitle>
+                  <DialogDescription>
+                    Modify the details of this training category.
+                  </DialogDescription>
+                </DialogHeader>
+                {editingCategory && (
+                  <div className="grid gap-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-category-name">Category Name</Label>
+                      <Input 
+                        id="edit-category-name" 
+                        value={editCategoryName} 
+                        onChange={(e) => setEditCategoryName(e.target.value)} 
+                        required 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-category-description">Description</Label>
+                      <Textarea 
+                        id="edit-category-description" 
+                        value={editCategoryDescription} 
+                        onChange={(e) => setEditCategoryDescription(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setShowEditCategoryDialog(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="button" 
+                    onClick={handleUpdateCategory} 
+                    disabled={updateCategoryMutation.isPending}
+                  >
+                    {updateCategoryMutation.isPending ? "Saving..." : "Save Changes"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
         </Tabs>
       </div>
