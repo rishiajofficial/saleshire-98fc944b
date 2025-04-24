@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -32,19 +33,22 @@ import {
   Video,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useDatabaseQuery } from "@/hooks/useDatabaseQuery";
+import useDatabaseQuery from "@/hooks/useDatabaseQuery";
 import { toast } from "sonner";
 
 const ActivityLog = () => {
   const [filter, setFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Fetch all activity logs, ordered by most recent first
   const { data: activityLogs, isLoading } = useDatabaseQuery<any[]>('activity_logs', {
     order: ['created_at', { ascending: false }]
   });
 
+  // Fetch users to map user_id to names
   const { data: users } = useDatabaseQuery<any[]>('profiles');
 
+  // Process and format activity logs
   const [activities, setActivities] = useState<any[]>([]);
 
   useEffect(() => {
@@ -64,14 +68,18 @@ const ActivityLog = () => {
     }
   }, [activityLogs, users]);
 
+  // Handle exporting logs
   const handleExport = () => {
     if (!activities || activities.length === 0) {
       toast.error("No activities to export");
       return;
     }
 
+    // Format the activities for CSV export
     const csvContent = [
+      // Header row
       ['User', 'Type', 'Action', 'Entity Type', 'Timestamp'].join(','),
+      // Data rows
       ...activities.map(activity => [
         `"${activity.user}"`,
         `"${activity.userType}"`,
@@ -81,6 +89,7 @@ const ActivityLog = () => {
       ].join(','))
     ].join('\n');
 
+    // Create a blob and download link
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -94,6 +103,7 @@ const ActivityLog = () => {
     toast.success("Activity log exported successfully");
   };
 
+  // Filter activities based on selected filter and search term
   const filteredActivities = activities
     .filter(activity => {
       if (filter === "all") return true;
@@ -107,6 +117,7 @@ const ActivityLog = () => {
       );
     });
 
+  // Helper function to get the icon for each activity type
   const getActivityIcon = (type: string, userType: string) => {
     switch(type) {
       case "content":
@@ -130,6 +141,7 @@ const ActivityLog = () => {
     }
   };
 
+  // Format date for display
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleString('en-US', {
@@ -141,6 +153,7 @@ const ActivityLog = () => {
     });
   };
 
+  // Handle relative time display
   const getRelativeTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();

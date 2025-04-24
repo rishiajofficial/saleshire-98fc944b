@@ -659,33 +659,6 @@ export type Database = {
           },
         ]
       }
-      training_categories: {
-        Row: {
-          created_at: string
-          created_by: string
-          description: string | null
-          id: string
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          created_by: string
-          description?: string | null
-          id?: string
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string
-          description?: string | null
-          id?: string
-          name?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       training_modules: {
         Row: {
           content: string | null
@@ -693,7 +666,6 @@ export type Database = {
           created_by: string
           description: string | null
           id: string
-          is_quiz: boolean | null
           module: string
           quiz_id: string | null
           title: string
@@ -706,7 +678,6 @@ export type Database = {
           created_by: string
           description?: string | null
           id?: string
-          is_quiz?: boolean | null
           module: string
           quiz_id?: string | null
           title: string
@@ -719,7 +690,6 @@ export type Database = {
           created_by?: string
           description?: string | null
           id?: string
-          is_quiz?: boolean | null
           module?: string
           quiz_id?: string | null
           title?: string
@@ -732,6 +702,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_modules_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
             referencedColumns: ["id"]
           },
         ]

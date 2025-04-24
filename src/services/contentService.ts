@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { BaseService, ServiceResponse } from "./baseService";
 
@@ -7,12 +8,13 @@ export type ContentData = {
   description?: string;
   content?: string;
   difficulty?: string;
-  module?: string; 
-  name?: string;
+  module?: string; // Category of the training module
   [key: string]: any;
 };
 
+// Content management service
 export const ContentService = {
+  // Create new content
   async createContent(
     contentType: 'assessment' | 'video' | 'training_module' | 'training_category',
     data: ContentData
@@ -20,6 +22,7 @@ export const ContentService = {
     try {
       console.log(`Creating ${contentType}:`, data);
       
+      // For assessments, directly insert into the database
       if (contentType === 'assessment') {
         const { data: result, error } = await supabase
           .from('assessments')
@@ -37,10 +40,11 @@ export const ContentService = {
         console.log(`${contentType} created successfully:`, result);
         return { success: true, data: result };
       } else if (contentType === 'training_category') {
+        // For training categories
         const { data: result, error } = await supabase
           .from('training_categories')
           .insert({
-            name: data.title || data.name,
+            name: data.title,
             description: data.description,
             created_by: data.createdBy
           })
@@ -52,6 +56,7 @@ export const ContentService = {
         console.log(`${contentType} created successfully:`, result);
         return { success: true, data: result };
       } else {
+        // For other content types, use the edge function
         return await BaseService.invokeFunction("admin-operations", {
           operation: "updateContent",
           data: {
@@ -67,6 +72,7 @@ export const ContentService = {
     }
   },
   
+  // Update existing content
   async updateContent(
     contentType: 'assessment' | 'video' | 'training_module' | 'training_category',
     id: string,
@@ -75,6 +81,7 @@ export const ContentService = {
     try {
       console.log(`Updating ${contentType} ${id}:`, data);
       
+      // For assessments, directly update the database
       if (contentType === 'assessment') {
         const { data: result, error } = await supabase
           .from('assessments')
@@ -82,7 +89,7 @@ export const ContentService = {
             title: data.title,
             description: data.description,
             difficulty: data.difficulty,
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString() // Convert Date to string
           })
           .eq('id', id)
           .select()
@@ -93,10 +100,11 @@ export const ContentService = {
         console.log(`${contentType} updated successfully:`, result);
         return { success: true, data: result };
       } else if (contentType === 'training_category') {
+        // For training categories
         const { data: result, error } = await supabase
           .from('training_categories')
           .update({
-            name: data.title || data.name,
+            name: data.title,
             description: data.description
           })
           .eq('id', id)
@@ -108,6 +116,7 @@ export const ContentService = {
         console.log(`${contentType} updated successfully:`, result);
         return { success: true, data: result };
       } else {
+        // Ensure ID is included in the data
         const contentData = { ...data, id };
         
         return await BaseService.invokeFunction("admin-operations", {
@@ -125,6 +134,7 @@ export const ContentService = {
     }
   },
   
+  // Delete content
   async deleteContent(
     contentType: 'assessment' | 'video' | 'training_module' | 'training_category',
     id: string
@@ -132,6 +142,7 @@ export const ContentService = {
     try {
       console.log(`Deleting ${contentType} ${id}`);
       
+      // For assessments, directly delete from the database
       if (contentType === 'assessment') {
         const { error } = await supabase
           .from('assessments')
@@ -143,6 +154,7 @@ export const ContentService = {
         console.log(`${contentType} deleted successfully`);
         return { success: true };
       } else if (contentType === 'training_category') {
+        // For training categories
         const { error } = await supabase
           .from('training_categories')
           .delete()
@@ -168,6 +180,7 @@ export const ContentService = {
     }
   },
   
+  // Fetch training categories
   async getTrainingCategories(): Promise<ServiceResponse> {
     try {
       const { data, error } = await supabase
@@ -184,6 +197,7 @@ export const ContentService = {
     }
   },
   
+  // Fetch assessment results
   async getAssessmentResults(assessmentId: string): Promise<ServiceResponse> {
     try {
       console.log(`Fetching results for assessment ${assessmentId}`);
@@ -204,102 +218,6 @@ export const ContentService = {
       return { success: true, data };
     } catch (error: any) {
       console.error(`Error fetching assessment results:`, error.message);
-      return { success: false, error: error.message };
-    }
-  },
-  
-  async createTrainingCategory(
-    data: ContentData
-  ): Promise<ServiceResponse> {
-    try {
-      const { data: result, error } = await supabase
-        .from('training_categories')
-        .insert({
-          name: data.title || data.name,
-          description: data.description,
-          created_by: data.createdBy
-        })
-        .select()
-        .single();
-      
-      if (error) throw error;
-      
-      console.log('Training category created successfully:', result);
-      return { success: true, data: result };
-    } catch (error: any) {
-      console.error('Error creating training category:', error.message);
-      return { success: false, error: error.message };
-    }
-  },
-  
-  async updateTrainingCategory(
-    id: string,
-    data: ContentData
-  ): Promise<ServiceResponse> {
-    try {
-      const { data: result, error } = await supabase
-        .from('training_categories')
-        .update({
-          name: data.title || data.name,
-          description: data.description
-        })
-        .eq('id', id)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      
-      console.log('Training category updated successfully:', result);
-      return { success: true, data: result };
-    } catch (error: any) {
-      console.error('Error updating training category:', error.message);
-      return { success: false, error: error.message };
-    }
-  },
-  
-  async deleteTrainingCategory(
-    id: string
-  ): Promise<ServiceResponse> {
-    try {
-      const { error } = await supabase
-        .from('training_categories')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-      
-      console.log('Training category deleted successfully');
-      return { success: true };
-    } catch (error: any) {
-      console.error('Error deleting training category:', error.message);
-      return { success: false, error: error.message };
-    }
-  },
-  
-  async createTrainingModule(
-    data: ContentData
-  ): Promise<ServiceResponse> {
-    try {
-      const { data: result, error } = await supabase
-        .from('training_modules')
-        .insert({
-          title: data.title,
-          description: data.description,
-          created_by: data.createdBy,
-          module: data.module,
-          is_quiz: data.is_quiz || false,
-          content: data.content,
-          video_url: data.video_url
-        })
-        .select()
-        .single();
-      
-      if (error) throw error;
-      
-      console.log('Training module created successfully:', result);
-      return { success: true, data: result };
-    } catch (error: any) {
-      console.error('Error creating training module:', error.message);
       return { success: false, error: error.message };
     }
   }

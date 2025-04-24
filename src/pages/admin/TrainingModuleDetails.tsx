@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -113,14 +112,14 @@ const TrainingModuleDetails = () => {
         
         setTrainingModule(moduleData);
         
-        // Set form values - safely handle quiz_id property
+        // Set form values
         form.reset({
           title: moduleData.title || "",
           module: moduleData.module || "",
           description: moduleData.description || "",
           content: moduleData.content || "",
           video_url: moduleData.video_url || "",
-          quiz_id: moduleData.quiz_id !== undefined ? moduleData.quiz_id : null,
+          quiz_id: moduleData.quiz_id || null,
         });
       } catch (error: any) {
         console.error("Error loading training module data:", error.message);

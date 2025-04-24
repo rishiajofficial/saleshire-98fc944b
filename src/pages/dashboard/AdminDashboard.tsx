@@ -33,7 +33,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import MainLayout from "@/components/layout/MainLayout";
-import { useDatabaseQuery } from "@/hooks/useDatabaseQuery";
+import useDatabaseQuery from "@/hooks/useDatabaseQuery";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
