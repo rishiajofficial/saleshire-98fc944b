@@ -1,129 +1,171 @@
 
-import React, { useState, useEffect, useRef } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import ReactPlayer from 'react-player/youtube'; // Import specifically for YouTube
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { Loader2, ArrowLeft } from "lucide-react";
+import ReactPlayer from 'react-player';
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
-interface VideoData {
+interface VideoDetails {
   id: string;
   title: string;
   description: string | null;
   url: string;
-  duration: string | null;
-  created_at: string;
+  module: string;
+  duration: string;
 }
 
 const VideoPlayer = () => {
+  const { videoId, moduleId } = useParams<{ videoId: string, moduleId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { moduleId, videoId } = useParams<{ moduleId: string; videoId: string }>();
-  const playerRef = useRef<ReactPlayer>(null);
+  const [videoCompleted, setVideoCompleted] = useState(false);
+  const [videoProgress, setVideoProgress] = useState(0);
+  const [videoLoaded, setVideoLoaded] = useState(false);
+  const [alreadyMarkedComplete, setAlreadyMarkedComplete] = useState(false);
 
-  const [videoData, setVideoData] = useState<VideoData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [durationSeconds, setDurationSeconds] = useState(0);
-
-  useEffect(() => {
-    const fetchVideo = async () => {
-      if (!videoId) {
-        setError("Video ID missing.");
-        setIsLoading(false);
-        return;
+  // Fetch the video details
+  const { data: videoDetails, isLoading, error } = useQuery({
+    queryKey: ['videoDetails', videoId],
+    queryFn: async (): Promise<VideoDetails | null> => {
+      if (!videoId) return null;
+      
+      const { data, error } = await supabase
+        .from('videos')
+        .select('*')
+        .eq('id', videoId)
+        .single();
+      
+      if (error) {
+        toast.error(`Error loading video: ${error.message}`);
+        throw error;
       }
+      
+      return data;
+    }
+  });
 
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const { data: videoResult, error: videoError } = await supabase
-          .from('videos')
-          .select('*')
-          .eq('id', videoId)
-          .single();
-
-        if (videoError) throw videoError;
-        if (!videoResult) throw new Error("Video not found.");
-
-        setVideoData(videoResult as VideoData);
-
-      } catch (err: any) {
-        console.error("Error fetching video:", err);
-        setError(err.message || "Failed to load video data.");
-        toast.error("Failed to load video data.");
-      } finally {
-        setIsLoading(false);
+  // Check if this video was already completed
+  const { data: progressData } = useQuery({
+    queryKey: ['videoProgress', videoId, user?.id],
+    queryFn: async () => {
+      if (!user || !videoId) return null;
+      
+      const { data, error } = await supabase
+        .from('training_progress')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('video_id', videoId)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned" error
+        console.error("Error fetching progress:", error);
       }
-    };
+      
+      if (data && data.completed) {
+        setAlreadyMarkedComplete(true);
+      }
+      
+      return data;
+    },
+    enabled: !!user && !!videoId
+  });
 
-    fetchVideo();
-  }, [videoId]);
+  // Mutation to mark video as completed
+  const markVideoCompletedMutation = useMutation({
+    mutationFn: async () => {
+      if (!user || !videoId || !moduleId) {
+        throw new Error("Missing required data");
+      }
+      
+      // Check if a record already exists
+      const { data: existingRecord, error: fetchError } = await supabase
+        .from('training_progress')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('video_id', videoId)
+        .single();
+        
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        throw fetchError;
+      }
+      
+      if (existingRecord) {
+        const { error } = await supabase
+          .from('training_progress')
+          .update({ 
+            completed: true,
+            completed_at: new Date().toISOString() 
+          })
+          .eq('id', existingRecord.id);
+          
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('training_progress')
+          .insert([{
+            user_id: user.id,
+            video_id: videoId,
+            module: moduleId,
+            completed: true,
+            completed_at: new Date().toISOString()
+          }]);
+          
+        if (error) throw error;
+      }
+      
+      return { success: true };
+    },
+    onSuccess: () => {
+      setAlreadyMarkedComplete(true);
+      toast.success("Video marked as completed!");
+    },
+    onError: (error) => {
+      toast.error(`Error updating progress: ${error.message}`);
+    }
+  });
 
-  const handleReady = () => {
-    console.log('Player ready');
+  const handleProgress = (state: { played: number }) => {
+    // Update video progress
+    setVideoProgress(Math.floor(state.played * 100));
+    
+    // Mark video as completed when user watches more than 90%
+    if (state.played > 0.9 && !videoCompleted && !alreadyMarkedComplete) {
+      setVideoCompleted(true);
+      markVideoCompletedMutation.mutate();
+    }
   };
 
-  const handleDuration = (duration: number) => {
-    setDurationSeconds(duration);
-  };
-
-  const handlePlay = () => setIsPlaying(true);
-  const handlePause = () => setIsPlaying(false);
-  const handleError = (e: any) => {
-    console.error('Video Player Error:', e);
-    setError("Failed to load or play video.");
-    toast.error("Video playback error.");
-  }
-
-  const handleBackToTraining = () => {
-    navigate('/training');
+  const handleVideoReady = () => {
+    setVideoLoaded(true);
   };
 
   if (isLoading) {
     return (
       <MainLayout>
-        <div className="flex justify-center items-center h-[70vh]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="flex justify-center items-center h-screen">
+          <Loader2 className="h-8 w-8 animate-spin" />
         </div>
       </MainLayout>
     );
   }
 
-  if (error || !videoData) {
+  if (error || !videoDetails) {
     return (
       <MainLayout>
-        <div className="max-w-4xl mx-auto text-center py-10">
-           <Button
-             variant="outline"
-             className="mb-4 inline-flex items-center"
-             onClick={handleBackToTraining}
-           >
-             <ArrowLeft className="mr-2 h-4 w-4" />
-             Back to Training
-           </Button>
-           <Card className="mt-4">
-             <CardHeader>
-               <CardTitle className="text-red-600">Error Loading Video</CardTitle>
-             </CardHeader>
-             <CardContent>
-               <p>{error || "Video data could not be found."}</p>
-             </CardContent>
-           </Card>
+        <div className="container mx-auto py-8 text-center">
+          <h2 className="text-2xl font-semibold mb-4">Error Loading Video</h2>
+          <p className="text-gray-500 mb-4">
+            {error ? error.message : "Video not found"}
+          </p>
+          <Button onClick={() => navigate(`/training/module/${moduleId}`)}>
+            Return to Module
+          </Button>
         </div>
       </MainLayout>
     );
@@ -131,57 +173,68 @@ const VideoPlayer = () => {
 
   return (
     <MainLayout>
-      <div className="max-w-4xl mx-auto">
-        <Button 
+      <div className="container mx-auto py-8">
+        <Button
           variant="outline"
-          className="mb-4 inline-flex items-center"
-          onClick={handleBackToTraining}
+          className="mb-6"
+          onClick={() => navigate(`/training/module/${moduleId}`)}
         >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Training
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Module
         </Button>
         
-        <Card className="mb-6 overflow-hidden">
-          <div className="relative aspect-video bg-black">
+        <h1 className="text-2xl font-bold mb-4">{videoDetails.title}</h1>
+        
+        {videoDetails.description && (
+          <p className="text-gray-600 mb-6">{videoDetails.description}</p>
+        )}
+        
+        <Card className="mb-6">
+          <CardContent className="p-0 relative aspect-video">
+            {!videoLoaded && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            )}
             <ReactPlayer
-              ref={playerRef}
-              url={videoData.url} 
-              width='100%'
-              height='100%'
-              playing={isPlaying}
-              controls={true}
-              onReady={handleReady}
-              onDuration={handleDuration}
-              onPlay={handlePlay}
-              onPause={handlePause}
-              onError={handleError}
+              url={videoDetails.url}
+              controls
+              width="100%"
+              height="100%"
+              onProgress={handleProgress}
+              onReady={handleVideoReady}
+              className="aspect-video"
               config={{
-                playerVars: { showinfo: 0 } 
+                youtube: {
+                  playerVars: { autoplay: 1 }
+                },
+                file: {
+                  attributes: {
+                    controlsList: 'nodownload',
+                    disablePictureInPicture: true
+                  }
+                }
               }}
             />
-          </div>
-          
-          <CardHeader>
-            <CardTitle>{videoData.title}</CardTitle>
-             {durationSeconds > 0 && (
-                <CardDescription>
-                    {Math.floor(durationSeconds / 60)}m {Math.floor(durationSeconds % 60)}s • Training Material
-                </CardDescription>
-             )}
-          </CardHeader>
-          
-          <CardContent>
-            {videoData.description && (
-                <div className="text-sm text-muted-foreground mb-4">
-              {videoData.description}
-            </div>
-            )}
           </CardContent>
-          
-          <CardFooter className="border-t pt-4 flex justify-end">
-             <Button variant="outline" onClick={handleBackToTraining}>Back to Training</Button>
-          </CardFooter>
         </Card>
+        
+        <div className="flex justify-between items-center">
+          <div>
+            <p className="text-sm text-muted-foreground">
+              Progress: {videoProgress}%
+              {alreadyMarkedComplete && <span className="ml-2 text-green-500">Completed</span>}
+            </p>
+            <div className="w-64 h-2 bg-gray-200 rounded-full overflow-hidden mt-1">
+              <div 
+                className="h-full bg-green-500" 
+                style={{ width: `${videoProgress}%` }}
+              ></div>
+            </div>
+          </div>
+          <Button onClick={() => navigate(`/training/module/${moduleId}`)}>
+            Return to Module
+          </Button>
+        </div>
       </div>
     </MainLayout>
   );

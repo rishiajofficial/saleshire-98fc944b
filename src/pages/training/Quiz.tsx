@@ -14,17 +14,173 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { ArrowLeft, CheckCircle, RefreshCw, AlertCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle, RefreshCw, AlertCircle, Loader2 } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
+
+interface Question {
+  id: string;
+  text: string;
+  options: string[];
+  correctAnswer: string;
+}
 
 const Quiz = () => {
   const navigate = useNavigate();
   const { moduleId } = useParams<{ moduleId: string }>();
+  const { user } = useAuth();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [score, setScore] = useState(0);
+  const [quizAccess, setQuizAccess] = useState(false);
+
+  // Check if user has watched all videos in this module
+  const { data: accessData, isLoading: checkingAccess } = useQuery({
+    queryKey: ['quizAccess', moduleId, user?.id],
+    queryFn: async () => {
+      if (!user || !moduleId) return { canAccess: false };
+      
+      // Get all videos for this module
+      const { data: moduleVideos, error: videosError } = await supabase
+        .from('videos')
+        .select('id')
+        .eq('module', moduleId);
+      
+      if (videosError) throw videosError;
+      
+      if (!moduleVideos || moduleVideos.length === 0) {
+        return { canAccess: true }; // If no videos, allow access
+      }
+      
+      // Get user's completed videos for this module
+      const { data: progress, error: progressError } = await supabase
+        .from('training_progress')
+        .select('video_id')
+        .eq('user_id', user.id)
+        .eq('module', moduleId)
+        .eq('completed', true);
+      
+      if (progressError) throw progressError;
+      
+      const watchedVideoIds = progress?.map(p => p.video_id) || [];
+      const allWatched = moduleVideos.every(v => watchedVideoIds.includes(v.id));
+      
+      return { canAccess: allWatched };
+    },
+    enabled: !!user && !!moduleId,
+    onSuccess: (data) => {
+      setQuizAccess(data.canAccess);
+      if (!data.canAccess) {
+        toast.error("You need to watch all videos in this module first");
+        navigate(`/training/module/${moduleId}`);
+      }
+    }
+  });
+
+  // Fetch quiz questions
+  const { data: quizData, isLoading: loadingQuiz } = useQuery({
+    queryKey: ['quizQuestions', moduleId],
+    queryFn: async () => {
+      // First get the module to find the associated quiz_id
+      const { data: moduleData, error: moduleError } = await supabase
+        .from('training_modules')
+        .select('quiz_id')
+        .eq('module', moduleId)
+        .single();
+      
+      if (moduleError) {
+        // If no specific quiz is set, use mock data
+        return getQuizQuestions();
+      }
+      
+      if (!moduleData?.quiz_id) {
+        // No specific quiz assigned, use mock data
+        return getQuizQuestions();
+      }
+      
+      // Try to fetch actual quiz questions from the assessment
+      try {
+        const { data: assessmentData, error: assessmentError } = await supabase
+          .from('assessments')
+          .select('id')
+          .eq('id', moduleData.quiz_id)
+          .single();
+          
+        if (assessmentError) throw assessmentError;
+        
+        const { data: sectionsData, error: sectionsError } = await supabase
+          .from('assessment_sections')
+          .select('id')
+          .eq('assessment_id', assessmentData.id);
+          
+        if (sectionsError) throw sectionsError;
+        
+        if (!sectionsData || sectionsData.length === 0) {
+          return getQuizQuestions(); // Fallback to mock data
+        }
+        
+        // Get questions from the first section
+        const { data: questionsData, error: questionsError } = await supabase
+          .from('questions')
+          .select('*')
+          .eq('section_id', sectionsData[0].id);
+          
+        if (questionsError) throw questionsError;
+        
+        if (!questionsData || questionsData.length === 0) {
+          return getQuizQuestions(); // Fallback to mock data
+        }
+        
+        // Format questions to match our interface
+        return questionsData.map(q => ({
+          id: q.id,
+          text: q.text,
+          options: q.options as string[],
+          correctAnswer: String.fromCharCode(65 + (q.correct_answer as number))
+        }));
+      } catch (error) {
+        console.error("Error fetching quiz questions:", error);
+        return getQuizQuestions(); // Fallback to mock data
+      }
+    },
+    enabled: !!moduleId && quizAccess
+  });
+
+  // Submit quiz results
+  const submitQuizMutation = useMutation({
+    mutationFn: async (quizResults: {
+      score: number;
+      total: number;
+      passed: boolean;
+      answers: Record<number, string>;
+    }) => {
+      if (!user || !moduleId) throw new Error("Missing user or module ID");
+      
+      const { error } = await supabase.from('quiz_results').insert([{
+        user_id: user.id,
+        module: moduleId,
+        score: quizResults.score,
+        total_questions: quizResults.total,
+        passed: quizResults.passed,
+        answers: quizResults.answers,
+        completed_at: new Date().toISOString()
+      }]);
+      
+      if (error) throw error;
+      
+      return { success: true };
+    },
+    onSuccess: () => {
+      console.log("Quiz results saved successfully");
+    },
+    onError: (error) => {
+      console.error("Error saving quiz results:", error);
+    }
+  });
 
   // Mock quiz data based on module
   const getQuizQuestions = () => {
@@ -32,7 +188,7 @@ const Quiz = () => {
       case "product":
         return [
           {
-            id: 1,
+            id: "1",
             text: "What is the main advantage of our smart locks compared to traditional locks?",
             options: [
               "They are cheaper",
@@ -43,7 +199,7 @@ const Quiz = () => {
             correctAnswer: "B"
           },
           {
-            id: 2,
+            id: "2",
             text: "Which customer segment is most likely to purchase our high-end security systems?",
             options: [
               "Students",
@@ -54,7 +210,7 @@ const Quiz = () => {
             correctAnswer: "C"
           },
           {
-            id: 3,
+            id: "3",
             text: "What feature should you highlight for customers concerned primarily about safety?",
             options: [
               "Aesthetic design",
@@ -65,7 +221,7 @@ const Quiz = () => {
             correctAnswer: "B"
           },
           {
-            id: 4,
+            id: "4",
             text: "What is the warranty period for our premium-tier security products?",
             options: [
               "1 year",
@@ -76,7 +232,7 @@ const Quiz = () => {
             correctAnswer: "C"
           },
           {
-            id: 5,
+            id: "5",
             text: "Which of our products is most suitable for small retail shops?",
             options: [
               "HomeGuard Basic",
@@ -90,7 +246,7 @@ const Quiz = () => {
       case "sales":
         return [
           {
-            id: 1,
+            id: "1",
             text: "What is the most effective approach when a customer raises a price objection?",
             options: [
               "Immediately offer a discount",
@@ -101,7 +257,7 @@ const Quiz = () => {
             correctAnswer: "B"
           },
           {
-            id: 2,
+            id: "2",
             text: "What is the SPIN selling technique primarily focused on?",
             options: [
               "Situational, Problem, Implication, and Need-payoff questions",
@@ -112,7 +268,7 @@ const Quiz = () => {
             correctAnswer: "A"
           },
           {
-            id: 3,
+            id: "3",
             text: "Which of the following is a key element of an effective sales pitch?",
             options: [
               "Presenting all product features at once",
@@ -123,7 +279,7 @@ const Quiz = () => {
             correctAnswer: "C"
           },
           {
-            id: 4,
+            id: "4",
             text: "What closing technique involves assuming the sale has already been made?",
             options: [
               "Alternative close",
@@ -134,7 +290,7 @@ const Quiz = () => {
             correctAnswer: "B"
           },
           {
-            id: 5,
+            id: "5",
             text: "What is the best way to handle a customer who is comparing your product with a competitor's?",
             options: [
               "Criticize the competitor's product",
@@ -148,7 +304,7 @@ const Quiz = () => {
       case "retailer":
         return [
           {
-            id: 1,
+            id: "1",
             text: "What is a key element in building long-term relationships with retail partners?",
             options: [
               "Only contacting them when there's a new product",
@@ -159,7 +315,7 @@ const Quiz = () => {
             correctAnswer: "B"
           },
           {
-            id: 2,
+            id: "2",
             text: "How should you approach a retailer who has had a negative experience with your company in the past?",
             options: [
               "Avoid mentioning the past issues",
@@ -170,7 +326,7 @@ const Quiz = () => {
             correctAnswer: "C"
           },
           {
-            id: 3,
+            id: "3",
             text: "What type of information should you provide to retailers about your products?",
             options: [
               "Only technical specifications",
@@ -181,7 +337,7 @@ const Quiz = () => {
             correctAnswer: "D"
           },
           {
-            id: 4,
+            id: "4",
             text: "What is a planogram in retail sales?",
             options: [
               "A type of retail contract",
@@ -192,7 +348,7 @@ const Quiz = () => {
             correctAnswer: "B"
           },
           {
-            id: 5,
+            id: "5",
             text: "How often should you ideally check in with your retail partners?",
             options: [
               "Only when there are new products",
@@ -208,7 +364,7 @@ const Quiz = () => {
     }
   };
 
-  const questions = getQuizQuestions();
+  const questions = quizData || [];
   const currentQuestion = questions[currentQuestionIndex];
 
   const handleAnswerChange = (value: string) => {
@@ -249,8 +405,19 @@ const Quiz = () => {
     });
 
     const percentageScore = Math.round((correctAnswers / questions.length) * 100);
+    const passed = percentageScore >= 70;
 
-    // Simulate API call
+    // Save quiz results
+    if (user) {
+      submitQuizMutation.mutate({
+        score: percentageScore,
+        total: questions.length,
+        passed,
+        answers
+      });
+    }
+
+    // Show results
     setTimeout(() => {
       setIsSubmitting(false);
       setQuizCompleted(true);
@@ -273,13 +440,55 @@ const Quiz = () => {
       case "retailer":
         return "Retailer Relationships";
       default:
-        return "Quiz";
+        return moduleId ? moduleId.charAt(0).toUpperCase() + moduleId.slice(1) : "Quiz";
     }
   };
 
+  if (checkingAccess || loadingQuiz) {
+    return (
+      <MainLayout>
+        <div className="flex justify-center items-center h-screen">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (!quizAccess) {
+    return (
+      <MainLayout>
+        <div className="max-w-3xl mx-auto py-8">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Access Restricted</h1>
+            <p className="mb-4">You need to watch all videos in this module before taking the quiz.</p>
+            <Button onClick={() => navigate(`/training/module/${moduleId}`)}>
+              Return to Module
+            </Button>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (questions.length === 0) {
+    return (
+      <MainLayout>
+        <div className="max-w-3xl mx-auto py-8">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">No Quiz Available</h1>
+            <p className="mb-4">There are currently no quiz questions available for this module.</p>
+            <Button onClick={() => navigate(`/training/module/${moduleId}`)}>
+              Return to Module
+            </Button>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-3xl mx-auto py-8">
         <div className="mb-6">
           <h1 className="text-3xl font-bold tracking-tight">{getModuleTitle()} Quiz</h1>
           <p className="text-muted-foreground mt-2">
