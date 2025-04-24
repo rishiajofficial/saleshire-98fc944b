@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -113,7 +112,6 @@ const TrainingManagement = () => {
 
   const [useFileUpload, setUseFileUpload] = useState(true);
 
-  // For category editing
   const [editingCategory, setEditingCategory] = useState<ModuleCategory | null>(null);
   const [editCategoryName, setEditCategoryName] = useState("");
   const [editCategoryDescription, setEditCategoryDescription] = useState("");
