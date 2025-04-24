@@ -76,7 +76,7 @@ const TrainingManagement = () => {
   const [showEditQuizDialog, setShowEditQuizDialog] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState("videos");
+  const [activeTab, setActiveTab] = useState("modules");
 
   const [newVideoTitle, setNewVideoTitle] = useState("");
   const [newVideoDescription, setNewVideoDescription] = useState("");
@@ -863,4 +863,106 @@ const TrainingManagement = () => {
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end space-x-1">
-                                <Button variant="ghost" size="icon" className="h-8 w
+                                <Button variant="ghost" size="icon" className="h-8 w-8" title="Edit Quiz" onClick={() => handleEditQuizClick(module)}>
+                                  <PenLine className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                  title="Delete Quiz"
+                                  onClick={() => handleDeleteContent('Module', module.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center py-8">
+                            <p className="text-muted-foreground">{searchTerm ? "No quizzes found matching search." : "No quizzes created yet."}</p>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="categories" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold">Module Categories</h2>
+                <p className="text-muted-foreground">Manage categories for organizing training content</p>
+              </div>
+            </div>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead className="hidden md:table-cell">Created</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {isTrainingCategoriesLoading ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-8">Loading categories...</TableCell>
+                        </TableRow>
+                      ) : trainingCategoriesError ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-8 text-red-600">Error: {trainingCategoriesError.message}</TableCell>
+                        </TableRow>
+                      ) : trainingCategories.length > 0 ? (
+                        trainingCategories.map((category) => (
+                          <TableRow key={category.id}>
+                            <TableCell className="font-medium">{category.name}</TableCell>
+                            <TableCell>{category.description || "No description"}</TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              {new Date(category.created_at).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                onClick={() => {
+                                  if (window.confirm("Are you sure you want to delete this category?")) {
+                                    deleteCategory(category.id);
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-8">
+                            <p className="text-muted-foreground">No categories created yet.</p>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </MainLayout>
+  );
+};
+
+export default TrainingManagement;
