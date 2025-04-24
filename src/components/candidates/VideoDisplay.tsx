@@ -1,4 +1,5 @@
 
+import React from 'react';
 import { Video } from "lucide-react";
 
 interface VideoDisplayProps {
@@ -24,4 +25,3 @@ export const VideoDisplay = ({ url, title }: VideoDisplayProps) => {
     </div>
   );
 };
-

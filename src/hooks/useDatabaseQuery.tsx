@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -192,6 +193,7 @@ const getStepFromStatus = (status?: string): number | undefined => {
     case "manager_interview":
       return 4; // Interview Step
     case "paid_project":
+    case "sales_task":
       return 5; // Paid Project Step
     case "hired":
       return 6; // Hired Step
@@ -232,14 +234,31 @@ export const updateApplicationStatus = async (
     
     console.log("Updating candidate status with payload:", updatePayload);
 
+    // Make sure we're not passing invalid values for the status field
+    const validStatuses = [
+      'applied', 'application_in_progress', 'hr_review', 
+      'hr_approved', 'training', 'manager_interview', 
+      'paid_project', 'sales_task', 'hired', 'rejected', 'archived'
+    ];
+    
+    if (updatePayload.status && !validStatuses.includes(updatePayload.status)) {
+      throw new Error(`Invalid status value: ${updatePayload.status}`);
+    }
+
     const { data, error } = await supabase
       .from('candidates')
       .update(updatePayload)
       .eq('id', candidateId)
       .select();
 
-    if (error) throw error;
-    if (!data || data.length === 0) throw new Error('No candidate found with that ID');
+    if (error) {
+      console.error("Supabase error while updating status:", error);
+      throw error;
+    }
+    
+    if (!data || data.length === 0) {
+      throw new Error('No candidate found with that ID');
+    }
 
     return { data: data[0], error: null };
   } catch (error: unknown) {

@@ -13,45 +13,46 @@ export const StatusBadge = ({ status }: StatusBadgeProps) => {
     case "application_in_progress":
       return (
         <Badge className="bg-blue-100 text-blue-800">
-          Application in Progress
+          Application in Progress (Step 1)
         </Badge>
       );
     case "hr_review":
       return (
         <Badge className="bg-yellow-100 text-yellow-800">
-          <Clock className="mr-1 h-3 w-3" /> HR Review
+          <Clock className="mr-1 h-3 w-3" /> HR Review (Step 2)
         </Badge>
       );
     case "hr_approved":
     case "training":
       return (
         <Badge className="bg-purple-100 text-purple-800">
-          Training Phase
+          Training Phase (Step 3)
         </Badge>
       );
     case "manager_interview":
       return (
         <Badge className="bg-green-100 text-green-800">
-          Manager Interview
+          Manager Interview (Step 4)
         </Badge>
       );
     case "paid_project":
+    case "sales_task":
       return (
         <Badge className="bg-orange-100 text-orange-800">
-          Paid Project
+          Paid Project (Step 5)
         </Badge>
       );
     case "hired":
       return (
         <Badge className="bg-green-100 text-green-800">
-          <CheckCircle className="mr-1 h-3 w-3" /> Hired
+          <CheckCircle className="mr-1 h-3 w-3" /> Hired (Step 6)
         </Badge>
       );
     case "rejected":
     case "archived":
       return (
         <Badge className="bg-red-100 text-red-800">
-          <XCircle className="mr-1 h-3 w-3" /> {status === "archived" ? "Archived" : "Rejected"}
+          <XCircle className="mr-1 h-3 w-3" /> {status === "archived" ? "Archived" : "Rejected"} (Step 7)
         </Badge>
       );
     default:
@@ -62,4 +63,3 @@ export const StatusBadge = ({ status }: StatusBadgeProps) => {
       );
   }
 };
-
