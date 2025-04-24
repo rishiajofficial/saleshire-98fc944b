@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -306,7 +305,7 @@ const Training = () => {
                         {module.description || "No description available."}
                       </p>
                       <Button asChild className="w-full">
-                        <Link to={`/training/module/${module.id}`}>
+                        <Link to={`/training/module/${module.module}`}>
                           Start Module
                         </Link>
                       </Button>

@@ -37,6 +37,7 @@ import JobOpenings from "./pages/candidate/JobOpenings";
 import JobManagement from "./pages/hr/JobManagement";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import ModuleView from "./pages/training/ModuleView";
 
 const queryClient = new QueryClient();
 
@@ -197,6 +198,11 @@ const App = () => (
             <Route path="/hr/job-management" element={
               <ProtectedRoute allowedRoles={['hr', 'director']}>
                 <JobManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="/training/module/:moduleId" element={
+              <ProtectedRoute allowedRoles={['candidate']}>
+                <ModuleView />
               </ProtectedRoute>
             } />
             <Route path="*" element={<NotFound />} />
