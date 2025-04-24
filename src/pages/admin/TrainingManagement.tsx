@@ -58,6 +58,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Database, TablesInsert } from "@/integrations/supabase/types";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSupabaseStorage } from '@/hooks/useSupabaseStorage';
+import ModuleCategoryDialog from "@/components/training/ModuleCategoryDialog";
+import { useModuleCategories } from "@/hooks/useModuleCategories";
 
 type Video = Database['public']['Tables']['videos']['Row'];
 type TrainingModule = Database['public']['Tables']['training_modules']['Row'];
@@ -231,6 +233,26 @@ const TrainingManagement = () => {
     enabled: !!user,
   });
 
+  const { 
+    data: fetchedCategories,
+    isLoading: loadingCategories,
+    error: categoriesError
+  } = useQuery<Database['public']['Tables']['module_categories']['Row'][]>({
+    queryKey: ['moduleCategories'],
+    queryFn: async (): Promise<Database['public']['Tables']['module_categories']['Row'][]> => {
+      const { data, error } = await supabase
+        .from('module_categories')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) {
+        toast.error("Failed to fetch categories: " + error.message);
+        throw new Error(error.message);
+      }
+      return data || [];
+    },
+    enabled: !!user,
+  });
+
   const createVideoMutation = useMutation({
     mutationFn: async (newVideoData: Omit<Video, 'id' | 'created_at'>) => { 
       const { data, error } = await supabase
@@ -340,6 +362,19 @@ const TrainingManagement = () => {
     },
   });
 
+  const deleteCategory = async (categoryId: string) => {
+    const { error } = await supabase
+      .from('module_categories')
+      .delete()
+      .eq('id', categoryId);
+    
+    if (error) {
+      throw new Error(error.message);
+    }
+    queryClient.invalidateQueries({ queryKey: ['moduleCategories'] });
+    toast.success("Category deleted successfully");
+  };
+
   const handleAddQuiz = () => {
     if (!newQuizTitle || !newQuizModule) { 
       toast.error("Quiz title and module are required.");
@@ -434,9 +469,12 @@ const TrainingManagement = () => {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Training Management</h1>
             <p className="text-muted-foreground mt-2">
-              Manage training videos and quizzes for the sales training program
+              Manage training videos, quizzes, and categories
             </p>
           </div>
+          <ModuleCategoryDialog onCategoryCreated={() => {
+            queryClient.invalidateQueries({ queryKey: ['moduleCategories'] });
+          }} />
         </div>
 
         <div className="flex items-center space-x-2">
@@ -452,9 +490,10 @@ const TrainingManagement = () => {
         </div>
 
         <Tabs defaultValue="videos" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-2 w-full md:w-[400px]">
+          <TabsList className="grid grid-cols-3 w-full md:w-[400px]">
             <TabsTrigger value="videos">Training Videos</TabsTrigger>
             <TabsTrigger value="quizzes">Quizzes</TabsTrigger>
+            <TabsTrigger value="categories">Categories</TabsTrigger>
           </TabsList>
 
           <TabsContent value="videos" className="space-y-6">
@@ -913,6 +952,69 @@ const TrainingManagement = () => {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+          </TabsContent>
+
+          <TabsContent value="categories" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold">Module Categories</h2>
+                <p className="text-muted-foreground">Manage categories for organizing training content</p>
+              </div>
+            </div>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead className="hidden md:table-cell">Created</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {loadingCategories ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-8">Loading categories...</TableCell>
+                        </TableRow>
+                      ) : fetchedCategories.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-8">
+                            <p className="text-muted-foreground">No categories created yet.</p>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        fetchedCategories.map((category) => (
+                          <TableRow key={category.id}>
+                            <TableCell className="font-medium">{category.name}</TableCell>
+                            <TableCell>{category.description || "No description"}</TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              {new Date(category.created_at).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                onClick={() => {
+                                  if (window.confirm("Are you sure you want to delete this category?")) {
+                                    deleteCategory(category.id);
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
