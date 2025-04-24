@@ -53,6 +53,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tables } from "@/integrations/supabase/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; 
+import { CandidateInfo } from "@/components/candidates/CandidateInfo";
+import { StatusUpdateSection } from "@/components/candidates/StatusUpdateSection";
 
 // Define types based on Supabase schema
 type Profile = Tables<'profiles'>;
@@ -699,61 +701,28 @@ const CandidateDetail = () => {
           </Alert>
         )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-               {candidate.profile?.name || "Candidate Details"}
-            </CardTitle>
-            <CardDescription>
-               {candidate.profile?.email}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Application Artifacts Section */}
-            <div className="space-y-3">
-               <h4 className="text-sm font-medium text-muted-foreground">Application Files</h4>
-               {candidate.resume ? (
-                  <a 
-                    href={candidate.resume} // Assuming this is a direct URL
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="text-sm text-primary hover:underline flex items-center gap-1"
-                  >
-                    <FileText className="h-4 w-4" /> View Resume
-                  </a>
-               ) : (
-                  <p className="text-sm text-muted-foreground">No resume submitted.</p>
-               )}
-               <VideoDisplay url={candidate.about_me_video} title="About Me Video" />
-               <VideoDisplay url={candidate.sales_pitch_video} title="Sales Pitch Video" />
-            </div>
-            <Separator />
+        {candidate && (
+          <>
+            <CandidateInfo
+              candidate={candidate}
+              phone={phone}
+              location={location}
+              region={region}
+              isUpdating={isUpdatingInfo}
+              isLoading={isLoading}
+              onPhoneChange={setPhone}
+              onLocationChange={setLocation}
+              onRegionChange={setRegion}
+              onUpdateInfo={handleUpdateCandidate}
+            />
 
-            {/* Contact & Location Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
-              </div>
-              <div>
-                  <Label htmlFor="location">Location</Label>
-                  <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} />
-              </div>
-              <div>
-                   <Label htmlFor="region">Region</Label>
-                   <Input id="region" value={region} onChange={(e) => setRegion(e.target.value)} />
-              </div>
-                {/* Update Button */}
-                <div className="md:col-span-1 flex items-end">
-                    <Button onClick={handleUpdateCandidate} disabled={isUpdatingInfo || isLoading} className="w-full md:w-auto">
-                      {isUpdatingInfo ? "Updating..." : "Update Info"}
-                    </Button>
-              </div>
-            </div>
-
-            <Separator />
-
-            {renderStatusUpdateSection()}
+            <StatusUpdateSection
+              applicationStatus={applicationStatus}
+              isUpdatingStatus={isUpdatingStatus}
+              candidateData={candidateData}
+              onStatusChange={(value: string) => setApplicationStatus(value)}
+              onStatusUpdate={handleStatusUpdate}
+            />
 
              {/* Manager Assignment Card for HR */}
              {userRole === 'hr' && (
@@ -989,3 +958,53 @@ const CandidateDetail = () => {
                              selected={interviewScheduledAt}
                              onSelect={setInterviewScheduledAt}
                              disabled={(date) =>
+                               date < new Date()
+                             }
+                             initialFocus
+                           />
+                         </PopoverContent>
+                       </Popover>
+                     </div>
+                     <div>
+                       <Label>Status</Label>
+                       <Select 
+                         value={interviewStatus} 
+                         onValueChange={(value: 'scheduled' | 'confirmed' | 'completed' | 'cancelled') => setInterviewStatus(value)}
+                       >
+                         <SelectTrigger className="w-[180px]">
+                           <SelectValue placeholder="Select status" />
+                         </SelectTrigger>
+                         <SelectContent>
+                           <SelectItem value="scheduled">Scheduled</SelectItem>
+                           <SelectItem value="confirmed">Confirmed</SelectItem>
+                           <SelectItem value="completed">Completed</SelectItem>
+                           <SelectItem value="cancelled">Cancelled</SelectItem>
+                         </SelectContent>
+                       </Select>
+                     </div>
+                     <div>
+                       <Label>Notes</Label>
+                       <Textarea 
+                         value={interviewNotes} 
+                         onChange={(e) => setInterviewNotes(e.target.value)} 
+                         placeholder="Add interview notes or instructions for the candidate"
+                       />
+                     </div>
+                     <div>
+                       <Button 
+                         onClick={handleInterviewManagement} 
+                         disabled={isManagingInterview}
+                       >
+                         {isManagingInterview ? "Managing..." : "Manage Interview"}
+                       </Button>
+                     </div>
+                   </div>
+                 </CardContent>
+               </Card>
+              )}
+
+             {/* Project Management Section (Manager only) */}
+             {userRole === 'manager' && candidate && candidate.status === 'sales_task' && (
+                <Card>
+                  <CardHeader>
+                    <
