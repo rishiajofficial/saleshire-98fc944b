@@ -486,6 +486,7 @@ export type Database = {
       }
       jobs: {
         Row: {
+          archived: boolean
           created_at: string
           created_by: string
           department: string | null
@@ -499,6 +500,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          archived?: boolean
           created_at?: string
           created_by: string
           department?: string | null
@@ -512,6 +514,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          archived?: boolean
           created_at?: string
           created_by?: string
           department?: string | null
@@ -961,6 +964,10 @@ export type Database = {
       admin_manage_user: {
         Args: { admin_id: string; action: string; user_data: Json }
         Returns: Json
+      }
+      delete_job_applications: {
+        Args: { job_id: string }
+        Returns: undefined
       }
       get_my_profile: {
         Args: { user_id: string }

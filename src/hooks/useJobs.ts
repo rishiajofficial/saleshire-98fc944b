@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Job } from "@/types/job";
@@ -7,10 +6,9 @@ import { toast } from "sonner";
 export function useJobs() {
   const queryClient = useQueryClient();
 
-  const { data: jobs, isLoading } = useQuery({
+  const { data: jobs, isLoading, refetch } = useQuery({
     queryKey: ['jobs'],
     queryFn: async () => {
-      console.log("Fetching jobs with categories...");
       const { data, error } = await supabase
         .from('jobs')
         .select(`
@@ -27,13 +25,8 @@ export function useJobs() {
         `)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error("Error fetching jobs:", error);
-        throw error;
-      }
-
-      console.log("Fetched jobs data:", data);
-      return data as Job[];
+      if (error) throw error;
+      return data;
     }
   });
 
@@ -186,21 +179,24 @@ export function useJobs() {
 
   const deleteJob = useMutation({
     mutationFn: async (jobId: string) => {
-      const { error } = await supabase
+      const { error } = await supabase.rpc('delete_job_applications', { job_id: jobId });
+      if (error) throw error;
+
+      const { error: deleteError } = await supabase
         .from('jobs')
         .delete()
         .eq('id', jobId);
 
-      if (error) throw error;
+      if (deleteError) throw deleteError;
       return jobId;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
-      toast.success('Job deleted successfully');
+      toast.success('Job and related applications deleted successfully');
     },
     onError: (error: any) => {
       console.error('Error deleting job:', error);
-      toast.error(`Failed to delete job: ${error.message || 'Unknown error'}`);
+      toast.error(`Failed to delete job: ${error.message}`);
     }
   });
 
@@ -209,6 +205,7 @@ export function useJobs() {
     isLoading,
     createJob,
     updateJob,
-    deleteJob
+    deleteJob,
+    refetch
   };
 }

@@ -56,6 +56,23 @@ const JobManagement = () => {
     }
   };
 
+  const handleArchiveJob = async (jobId: string, archived: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('jobs')
+        .update({ archived })
+        .eq('id', jobId);
+
+      if (error) throw error;
+      
+      await refetch();
+      toast.success(archived ? 'Job archived successfully' : 'Job unarchived successfully');
+    } catch (error: any) {
+      console.error("Failed to archive job:", error);
+      toast.error(`Failed to archive job: ${error.message}`);
+    }
+  };
+
   if (isLoading) {
     return (
       <MainLayout>
@@ -81,6 +98,7 @@ const JobManagement = () => {
           jobs={jobs || []}
           onJobDeleted={deleteJob.mutate}
           onJobUpdated={handleUpdateJob}
+          onJobArchived={handleArchiveJob}
           assessments={assessments}
           categories={categories}
         />
