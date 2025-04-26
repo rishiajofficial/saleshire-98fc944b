@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,10 +11,11 @@ import { NotificationsCard } from '@/components/dashboard/NotificationsCard';
 import { HiringJourneyCard } from '@/components/dashboard/HiringJourneyCard';
 import { TrainingCard } from '@/components/dashboard/TrainingCard';
 import { ApplicationPrompt } from '@/components/dashboard/ApplicationPrompt';
+import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
+import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 const CandidateDashboard = () => {
-  const navigate = useNavigate();
   const { profile, user } = useAuth();
   
   const { 
@@ -67,44 +67,41 @@ const CandidateDashboard = () => {
     );
   }
 
+  const mainContent = (
+    <>
+      <HiringJourneyCard 
+        currentStep={currentStep}
+        applicationSubmitted={applicationSubmitted}
+      />
+      <TrainingCard 
+        canAccessTraining={canAccessTraining}
+        trainingModules={trainingModules}
+        isLoadingTraining={isLoadingTraining}
+      />
+    </>
+  );
+
+  const sideContent = (
+    <>
+      <StatusCard 
+        currentStep={currentStep}
+        candidateStatus={candidateData?.status}
+      />
+      <NotificationsCard 
+        notifications={notifications}
+      />
+    </>
+  );
+
   return (
     <MainLayout>
       <TooltipProvider>
         <div className="container mx-auto px-4 py-8 space-y-8">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Candidate Dashboard</h1>
-            <p className="text-muted-foreground mt-2">
-              Welcome back, {profile?.name || 'Candidate'}
-            </p>
-          </div>
-
+          <DashboardHeader userName={profile?.name} />
           {showApplicationPrompt && <ApplicationPrompt />}
-
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-            <div className="md:col-span-8 space-y-6">
-              <HiringJourneyCard 
-                currentStep={currentStep}
-                applicationSubmitted={applicationSubmitted}
-              />
-
-              <TrainingCard 
-                canAccessTraining={canAccessTraining}
-                trainingModules={trainingModules}
-                isLoadingTraining={isLoadingTraining}
-              />
-            </div>
-
-            <div className="md:col-span-4 space-y-6">
-              <StatusCard 
-                currentStep={currentStep}
-                candidateStatus={candidateData?.status}
-              />
-
-              <NotificationsCard 
-                notifications={notifications}
-              />
-            </div>
-          </div>
+          <DashboardLayout sideContent={sideContent}>
+            {mainContent}
+          </DashboardLayout>
         </div>
       </TooltipProvider>
     </MainLayout>
