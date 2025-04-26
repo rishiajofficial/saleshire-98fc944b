@@ -390,12 +390,12 @@ const CandidateDashboard = () => {
     <MainLayout>
       <TooltipProvider>
         <div className="container mx-auto px-4 py-8 space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Candidate Dashboard</h1>
-          <p className="text-muted-foreground mt-2">
-              Welcome back, {profile?.name || 'Candidate'}
-          </p>
-        </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Candidate Dashboard</h1>
+            <p className="text-muted-foreground mt-2">
+                Welcome back, {profile?.name || 'Candidate'}
+            </p>
+          </div>
 
           {showApplicationPrompt && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start">

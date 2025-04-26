@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Job } from "@/types/job";
@@ -19,7 +20,7 @@ export function useJobs() {
               id,
               name,
               description,
-              quiz_id
+              quiz_ids
             )
           )
         `)
