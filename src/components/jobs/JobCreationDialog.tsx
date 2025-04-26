@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +26,7 @@ interface JobFormProps {
   assessments: { id: string; title: string }[];
   trainingModules: { id: string; title: string }[];
   mode: 'create' | 'edit' | 'view';
+  categories: Array<{ id: string; name: string }>;
 }
 
 const JobForm: React.FC<JobFormProps> = ({
@@ -34,6 +34,7 @@ const JobForm: React.FC<JobFormProps> = ({
   onSubmit,
   assessments,
   trainingModules,
+  categories,
   mode
 }) => {
   const [form, setForm] = useState({
@@ -45,9 +46,9 @@ const JobForm: React.FC<JobFormProps> = ({
     salary_range: job?.salary_range || "",
     selectedAssessment: job?.selectedAssessment || "none",
     selectedTrainingModule: job?.selectedTrainingModule || "none",
+    categories: job?.job_categories?.map((jc: any) => jc.category_id) || []
   });
 
-  // Update form when job changes
   useEffect(() => {
     if (job) {
       setForm({
@@ -59,6 +60,7 @@ const JobForm: React.FC<JobFormProps> = ({
         salary_range: job.salary_range || "",
         selectedAssessment: job.selectedAssessment || "none",
         selectedTrainingModule: job.selectedTrainingModule || "none",
+        categories: job.job_categories?.map((jc: any) => jc.category_id) || []
       });
     }
   }, [job]);
@@ -176,6 +178,33 @@ const JobForm: React.FC<JobFormProps> = ({
           </SelectContent>
         </Select>
       </div>
+      <div>
+        <Label htmlFor="categories">Training Categories</Label>
+        <div className="flex flex-wrap gap-2 mt-2">
+          {categories.map((category) => (
+            <Button
+              key={category.id}
+              type="button"
+              variant={form.categories.includes(category.id) ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                setForm(prev => ({
+                  ...prev,
+                  categories: prev.categories.includes(category.id)
+                    ? prev.categories.filter(id => id !== category.id)
+                    : [...prev.categories, category.id]
+                }));
+              }}
+              disabled={isView}
+            >
+              {category.name}
+              {form.categories.includes(category.id) && (
+                <Check className="ml-2 h-4 w-4" />
+              )}
+            </Button>
+          ))}
+        </div>
+      </div>
       {!isView && (
         <Button className="mt-2" type="submit">
           {mode === "edit" ? "Update Job" : "Create Job"}
@@ -208,7 +237,6 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // Sync with external open state if provided
   useEffect(() => {
     if (externalIsOpen !== undefined) {
       setDialogOpen(externalIsOpen);
@@ -225,7 +253,6 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
     if (mode === "edit" && onJobUpdated) {
       onJobUpdated({ ...editingJob, ...form });
     } else if (onJobCreated) {
-      // Handle the case for "none" values to save as null or empty string
       const processedForm = {
         ...form,
         selectedAssessment: form.selectedAssessment === "none" ? null : form.selectedAssessment,
@@ -285,6 +312,7 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
           onSubmit={handleSubmit}
           assessments={assessments}
           trainingModules={trainingModules}
+          categories={categories}
           mode={mode}
         />
       </DialogContent>

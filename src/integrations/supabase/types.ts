@@ -385,6 +385,39 @@ export type Database = {
           },
         ]
       }
+      job_categories: {
+        Row: {
+          category_id: string
+          created_at: string | null
+          job_id: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string | null
+          job_id: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string | null
+          job_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "module_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_categories_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_training: {
         Row: {
           job_id: string
@@ -513,6 +546,7 @@ export type Database = {
           description: string | null
           id: string
           name: string
+          quiz_id: string | null
           updated_at: string
         }
         Insert: {
@@ -521,6 +555,7 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
+          quiz_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -529,9 +564,18 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+          quiz_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "module_categories_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "training_modules"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {

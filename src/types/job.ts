@@ -1,4 +1,3 @@
-
 export interface Job {
   id: string;
   title: string;
@@ -21,4 +20,10 @@ export interface JobAssessment {
 export interface JobTraining {
   job_id: string;
   training_module_id: string;
+}
+
+export interface JobCategory {
+  job_id: string;
+  category_id: string;
+  created_at?: string;
 }

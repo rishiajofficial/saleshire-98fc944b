@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import MainLayout from '@/components/layout/MainLayout';
 import { Loader2 } from "lucide-react";
@@ -12,25 +11,32 @@ const JobManagement = () => {
   const { jobs, isLoading, createJob, deleteJob, updateJob } = useJobs();
   const [assessments, setAssessments] = useState<{ id: string; title: string; }[]>([]);
   const [trainingModules, setTrainingModules] = useState<{ id: string; title: string; }[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string; }[]>([]);
 
   const fetchAssessmentsAndTraining = async () => {
     try {
-      const assessmentsResult = await supabase
-        .from('assessments')
-        .select('id, title');
-
-      const trainingResult = await supabase
-        .from('training_modules')
-        .select('id, title');
+      const [assessmentsResult, trainingResult, categoriesResult] = await Promise.all([
+        supabase
+          .from('assessments')
+          .select('id, title'),
+        supabase
+          .from('training_modules')
+          .select('id, title'),
+        supabase
+          .from('module_categories')
+          .select('id, name')
+      ]);
 
       if (assessmentsResult.error) throw assessmentsResult.error;
       if (trainingResult.error) throw trainingResult.error;
+      if (categoriesResult.error) throw categoriesResult.error;
 
       setAssessments(assessmentsResult.data || []);
       setTrainingModules(trainingResult.data || []);
+      setCategories(categoriesResult.data || []);
     } catch (error: any) {
-      console.error('Error fetching assessments and training:', error);
-      toast.error(`Failed to load assessments and training modules: ${error.message || 'Unknown error'}`);
+      console.error('Error fetching data:', error);
+      toast.error(`Failed to load data: ${error.message || 'Unknown error'}`);
     }
   };
 
@@ -75,6 +81,7 @@ const JobManagement = () => {
             onJobCreated={handleCreateJob}
             assessments={assessments}
             trainingModules={trainingModules}
+            categories={categories}
           />
         </div>
         <JobList
@@ -83,6 +90,7 @@ const JobManagement = () => {
           onJobUpdated={handleUpdateJob}
           assessments={assessments}
           trainingModules={trainingModules}
+          categories={categories}
         />
       </div>
     </MainLayout>
