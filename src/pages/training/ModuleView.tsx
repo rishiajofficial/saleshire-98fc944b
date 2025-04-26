@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -5,11 +6,12 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Play, Video, BookOpen, CheckCircle } from "lucide-react";
+import { ArrowLeft, Play, Video, BookOpen, CheckCircle, Lock } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { Progress } from "@/components/ui/progress";
 
 interface Video {
   id: string;
@@ -20,16 +22,13 @@ interface Video {
   module: string;
 }
 
-interface Progress {
-  video_id: string;
-  completed: boolean;
-}
-
 const ModuleView = () => {
   const { moduleId } = useParams<{ moduleId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [watchedVideos, setWatchedVideos] = useState<string[]>([]);
+  const [videoProgress, setVideoProgress] = useState<number>(0);
+  const [quizCompleted, setQuizCompleted] = useState<boolean>(false);
 
   const { data: moduleVideos, isLoading: videosLoading } = useQuery({
     queryKey: ['moduleVideos', moduleId],
@@ -53,9 +52,9 @@ const ModuleView = () => {
     queryKey: ['moduleDetails', moduleId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('training_modules')
-        .select('*')
-        .eq('module', moduleId)
+        .from('module_categories')
+        .select('*, quiz_id')
+        .eq('name', moduleId)
         .single();
       
       if (error && error.code !== 'PGRST116') {
@@ -67,24 +66,7 @@ const ModuleView = () => {
     enabled: !!moduleId
   });
 
-  useEffect(() => {
-    const checkProgress = async () => {
-      try {
-        if (!user || !moduleId) return;
-        const { data } = await supabase
-          .from('training_progress')
-          .select('*')
-          .limit(1);
-          
-        console.log("Training progress table check:", data);
-      } catch (error) {
-        console.error("Error checking training_progress table:", error);
-      }
-    };
-    
-    checkProgress();
-  }, [user, moduleId]);
-
+  // Fetch video progress data
   const { data: videoProgressData } = useQuery({
     queryKey: ['userVideoProgress', moduleId, user?.id],
     queryFn: async () => {
@@ -112,7 +94,47 @@ const ModuleView = () => {
     enabled: !!moduleId && !!user,
     meta: {
       onSuccess: (data: { video_id: string }[]) => {
-        setWatchedVideos(data.map(item => item.video_id));
+        const watchedIds = data.map(item => item.video_id);
+        setWatchedVideos(watchedIds);
+        
+        // Calculate overall progress percentage
+        if (moduleVideos && moduleVideos.length > 0) {
+          const percentage = Math.round((watchedIds.length / moduleVideos.length) * 100);
+          setVideoProgress(percentage);
+        }
+      }
+    }
+  });
+  
+  // Fetch quiz completion status
+  const { data: quizResultData } = useQuery({
+    queryKey: ['userQuizResult', moduleId, user?.id],
+    queryFn: async () => {
+      if (!user || !moduleId) return null;
+      
+      try {
+        const { data, error } = await supabase
+          .from('quiz_results')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('module', moduleId)
+          .eq('passed', true)
+          .maybeSingle();
+        
+        if (error && error.code !== 'PGRST116') {
+          console.error("Error fetching quiz results:", error);
+        }
+        
+        return data;
+      } catch (error) {
+        console.error("Error in quiz results query:", error);
+        return null;
+      }
+    },
+    enabled: !!moduleId && !!user,
+    meta: {
+      onSuccess: (data: any) => {
+        setQuizCompleted(!!data);
       }
     }
   });
@@ -175,6 +197,21 @@ const ModuleView = () => {
           <p className="text-muted-foreground mt-2">
             Complete all videos to unlock the assessment
           </p>
+          
+          <div className="mt-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium">
+                Progress: {watchedVideos.length} of {moduleVideos.length} videos watched
+                ({videoProgress}%)
+              </span>
+              {quizCompleted && (
+                <span className="text-sm font-medium text-green-600 flex items-center">
+                  <CheckCircle className="h-4 w-4 mr-1" /> Quiz Completed
+                </span>
+              )}
+            </div>
+            <Progress value={videoProgress} className="h-2" />
+          </div>
         </div>
 
         <div className="grid gap-6">
@@ -213,24 +250,39 @@ const ModuleView = () => {
           })}
 
           {moduleDetails?.quiz_id && (
-            <Card className={`border-primary ${!allVideosWatched ? "opacity-75" : ""}`}>
+            <Card className={`${!allVideosWatched ? "opacity-75" : ""} ${quizCompleted ? "border-green-200" : ""}`}>
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <BookOpen className="h-5 w-5 mr-2 text-primary" />
                   Module Assessment
+                  {quizCompleted && (
+                    <CheckCircle className="h-4 w-4 text-green-500 ml-2" />
+                  )}
                 </CardTitle>
                 <CardDescription>
-                  {allVideosWatched 
-                    ? "You've completed all videos! Take the assessment to test your knowledge."
-                    : "Complete all videos above to unlock this assessment"}
+                  {quizCompleted 
+                    ? "You've successfully completed this assessment!"
+                    : (allVideosWatched 
+                      ? "You've completed all videos! Take the assessment to test your knowledge."
+                      : "Complete all videos above to unlock this assessment")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button asChild disabled={!allVideosWatched}>
-                  <Link to={allVideosWatched ? `/training/quiz/${moduleId}` : "#"}>
-                    {allVideosWatched ? "Start Assessment" : "Complete All Videos First"}
-                  </Link>
-                </Button>
+                {!allVideosWatched ? (
+                  <div className="flex items-center space-x-2">
+                    <Lock className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Complete All Videos First</span>
+                  </div>
+                ) : (
+                  <Button 
+                    asChild
+                    variant={quizCompleted ? "outline" : "default"}
+                  >
+                    <Link to={`/training/quiz/${moduleId}`}>
+                      {quizCompleted ? "Retake Assessment" : "Start Assessment"}
+                    </Link>
+                  </Button>
+                )}
               </CardContent>
             </Card>
           )}

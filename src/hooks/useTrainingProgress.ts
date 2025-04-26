@@ -1,7 +1,8 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner'; // Use sonner for consistency if used elsewhere
+import { toast } from 'sonner';
 
 // Reusable types (consider moving to a shared types file if used elsewhere)
 interface Video {
@@ -18,11 +19,14 @@ export interface TrainingModuleProgress {
   title: string;
   description: string | null;
   module: string; // The category identifier (e.g., 'product')
-  progress: number; // 0 or 100 based on quiz completion
+  progress: number; // 0 to 100 based on video completion and quiz
   status: 'completed' | 'in_progress' | 'locked';
   locked: boolean;
   videos: Video[];
   quizId: string | null; // Store associated quiz ID
+  totalVideos: number;
+  watchedVideos: number;
+  quizCompleted: boolean;
 }
 
 export interface TrainingProgressState {
@@ -30,6 +34,7 @@ export interface TrainingProgressState {
   sales: number;
   relationship: number;
   overall: number;
+  categories: Record<string, number>; // Progress by category name
 }
 
 // Define the return type of the hook
@@ -41,9 +46,6 @@ interface UseTrainingProgressReturn {
   refetch: () => void; // Function to manually refetch data
 }
 
-// Define the order of modules - IMPORTANT: Must match module values in DB
-const moduleOrder = ['product', 'sales', 'relationship'];
-
 export const useTrainingProgress = (): UseTrainingProgressReturn => {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -54,15 +56,12 @@ export const useTrainingProgress = (): UseTrainingProgressReturn => {
     sales: 0,
     relationship: 0,
     overall: 0,
+    categories: {}
   });
 
   const fetchTrainingData = useCallback(async () => {
     // Ensure user context is loaded before fetching
     if (!user?.id) {
-      // If no user ID yet, don't treat as error, just wait.
-      // Keep loading true if it was already true.
-      // console.log("Hook: Waiting for user ID...");
-      // setIsLoading(true); // Keep loading until user ID is available
       return;
     }
 
@@ -72,94 +71,124 @@ export const useTrainingProgress = (): UseTrainingProgressReturn => {
 
     try {
       // --- Fetch all data concurrently ---
-      const [moduleResult, videoResult, completedResult] = await Promise.all([
+      const [categoriesResult, videoResult, trainingProgressResult, quizResultsResult] = await Promise.all([
         supabase
-          .from('training_modules')
+          .from('module_categories')
           .select('*, quiz_id')
-          .order('created_at', { ascending: true }),
+          .order('name', { ascending: true }),
         supabase
           .from('videos')
           .select('*'),
         supabase
-          .from('assessment_results')
-          .select('assessment_id')
-          .eq('candidate_id', user.id)
-          .eq('completed', true)
+          .from('training_progress')
+          .select('video_id, completed')
+          .eq('user_id', user.id)
+          .eq('completed', true),
+        supabase
+          .from('quiz_results')
+          .select('module, passed')
+          .eq('user_id', user.id)
+          .eq('passed', true)
       ]);
 
       // --- Check for errors after all promises settle ---
-      if (moduleResult.error) throw new Error(`Module definitions fetch failed: ${moduleResult.error.message}`);
+      if (categoriesResult.error) throw new Error(`Module categories fetch failed: ${categoriesResult.error.message}`);
       if (videoResult.error) throw new Error(`Videos fetch failed: ${videoResult.error.message}`);
-      if (completedResult.error) throw new Error(`Completed results fetch failed: ${completedResult.error.message}`);
+      if (trainingProgressResult.error) throw new Error(`Training progress fetch failed: ${trainingProgressResult.error.message}`);
+      if (quizResultsResult.error) throw new Error(`Quiz results fetch failed: ${quizResultsResult.error.message}`);
 
-      const moduleDefinitions = moduleResult.data;
-      const videoData = videoResult.data;
-      const completedResultsData = completedResult.data;
+      const categories = categoriesResult.data || [];
+      const videos = videoResult.data || [];
+      const completedVideos = trainingProgressResult.data || [];
+      const passedQuizzes = quizResultsResult.data || [];
 
-      console.log("Hook: Fetched Module Definitions:", moduleDefinitions);
-      console.log("Hook: Fetched Video Data:", videoData);
-      console.log("Hook: Fetched Completed Results:", completedResultsData);
+      console.log("Hook: Fetched Categories:", categories);
+      console.log("Hook: Fetched Videos:", videos);
+      console.log("Hook: Fetched Completed Videos:", completedVideos);
+      console.log("Hook: Fetched Passed Quizzes:", passedQuizzes);
 
-      // --- Process the data ---
-      const completedAssessmentIds = new Set(completedResultsData?.map(r => r.assessment_id) || []);
-      console.log("Hook: Completed Assessment IDs Set:", completedAssessmentIds);
+      // Create set of watched video IDs for quick lookup
+      const watchedVideoIds = new Set(completedVideos.map(item => item.video_id));
+      
+      // Create set of passed quiz modules for quick lookup
+      const passedQuizModules = new Set(passedQuizzes.map(quiz => quiz.module));
 
-      const moduleVideoMap: Record<string, Video[]> = {};
-      videoData?.forEach((video: any) => { // Use 'any' temporarily if Video type causes issues
-        const moduleKey = video.module;
-        if (!moduleVideoMap[moduleKey]) {
-          moduleVideoMap[moduleKey] = [];
+      // Group videos by module/category
+      const videosByCategory: Record<string, Video[]> = {};
+      videos.forEach(video => {
+        const categoryName = video.module;
+        if (!videosByCategory[categoryName]) {
+          videosByCategory[categoryName] = [];
         }
-        moduleVideoMap[moduleKey].push(video as Video);
+        videosByCategory[categoryName].push(video as Video);
       });
-      console.log("Hook: Module Video Map:", moduleVideoMap);
 
-      // --- Format modules with sequential locking ---
-      let previousModuleCompleted = true;
-      const formattedModules: TrainingModuleProgress[] = moduleOrder.map(moduleKey => {
-          const modDef = moduleDefinitions?.find(m => m.module === moduleKey);
-          if (!modDef) {
-              console.warn(`Hook: Module definition NOT FOUND for key: ${moduleKey}`);
-              return null; // Skip if module definition not found
-          }
+      // --- Process modules with videos ---
+      let previousModuleCompleted = true; // First module is always unlocked
+      const formattedModules: TrainingModuleProgress[] = categories.map((category, index) => {
+        const categoryName = category.name;
+        const categoryVideos = videosByCategory[categoryName] || [];
+        const totalVideos = categoryVideos.length;
+        const watchedVideos = categoryVideos.filter(video => watchedVideoIds.has(video.id)).length;
+        const quizCompleted = passedQuizModules.has(categoryName);
+        
+        // Calculate module progress
+        let moduleProgress = 0;
+        if (totalVideos > 0) {
+          // Videos are 80% of progress, quiz is 20%
+          const videoProgress = (watchedVideos / totalVideos) * 80;
+          const quizProgress = quizCompleted ? 20 : 0;
+          moduleProgress = Math.round(videoProgress + quizProgress);
+        } else if (quizCompleted) {
+          // If no videos but quiz completed
+          moduleProgress = 100;
+        }
+        
+        // Determine if module is complete
+        const isModuleComplete = moduleProgress === 100;
+        
+        // Determine if module should be locked based on previous module
+        const locked = index > 0 ? !previousModuleCompleted : false;
+        const status = locked ? 'locked' : (isModuleComplete ? 'completed' : 'in_progress');
+        
+        // Update completion status for next module's lock check
+        previousModuleCompleted = !locked && isModuleComplete;
+        
+        return {
+          id: category.id,
+          title: category.name,
+          description: category.description,
+          module: category.name.toLowerCase(),
+          progress: moduleProgress,
+          status: status,
+          locked: locked,
+          videos: categoryVideos,
+          quizId: category.quiz_id,
+          totalVideos,
+          watchedVideos,
+          quizCompleted
+        };
+      });
 
-          const videosForModule = moduleVideoMap[moduleKey] || [];
-          const associatedQuizId = modDef.quiz_id;
-          const isModuleComplete = associatedQuizId ? completedAssessmentIds.has(associatedQuizId) : false;
-          const moduleProg = isModuleComplete ? 100 : 0;
-          const locked = !previousModuleCompleted;
-          const currentStatus = locked ? 'locked' : (isModuleComplete ? 'completed' : 'in_progress');
-
-          // Update completion status for the next iteration's lock check
-          if (!locked) {
-              previousModuleCompleted = isModuleComplete;
-          } else {
-              previousModuleCompleted = false; // If current is locked, next must be locked
-          }
-
-          return {
-             id: modDef.id,
-             title: modDef.title,
-             description: modDef.description,
-             module: modDef.module,
-             progress: moduleProg,
-             status: currentStatus,
-             locked: locked,
-             videos: videosForModule,
-             quizId: associatedQuizId
-          };
-      }).filter((m): m is TrainingModuleProgress => m !== null); // Filter out nulls if def not found
-
-      // --- Calculate overall progress ---
+      // --- Calculate progress states ---
+      const categoriesProgress: Record<string, number> = {};
+      
+      formattedModules.forEach(module => {
+        categoriesProgress[module.module] = module.progress;
+      });
+      
+      // Calculate overall progress
       const totalModules = formattedModules.length;
-      const completedModulesCount = formattedModules.filter(m => m.progress === 100).length;
-      const overallProgress = totalModules > 0 ? Math.round((completedModulesCount / totalModules) * 100) : 0;
+      const overallProgress = totalModules > 0 
+        ? Math.round(formattedModules.reduce((sum, mod) => sum + mod.progress, 0) / totalModules)
+        : 0;
 
       const newProgressState = {
-        product: formattedModules.find(m => m.module === 'product')?.progress ?? 0,
-        sales: formattedModules.find(m => m.module === 'sales')?.progress ?? 0,
-        relationship: formattedModules.find(m => m.module === 'relationship')?.progress ?? 0,
-        overall: overallProgress
+        product: categoriesProgress['product'] || 0,
+        sales: categoriesProgress['sales'] || 0,
+        relationship: categoriesProgress['relationship'] || 0,
+        overall: overallProgress,
+        categories: categoriesProgress
       };
 
       console.log("Hook: Final Formatted Modules:", formattedModules);
@@ -168,42 +197,38 @@ export const useTrainingProgress = (): UseTrainingProgressReturn => {
       // --- Update State ---
       setTrainingModules(formattedModules);
       setProgress(newProgressState);
-      setError(null); // Clear previous errors on success
+      setError(null);
 
     } catch (error: any) {
       console.error("Hook: Error fetching training data:", error);
       setError(error.message || "Failed to load training data.");
       toast.error("Failed to load training data: " + error.message);
-      // Optionally keep stale data on error:
-      // setTrainingModules([]); // Clear data on error?
-      // setProgress({ product: 0, sales: 0, relationship: 0, overall: 0 });
     } finally {
       setIsLoading(false);
-      console.log("Hook: Fetch complete. isLoading:", false);
     }
-  }, [user?.id]); // Depend only on user ID
+  }, [user?.id]);
 
   // Effect to fetch data on mount or when user ID changes
   useEffect(() => {
     // Wait for user context to be loaded
     if(user === undefined) {
         console.log("Hook: User context is undefined, waiting...");
-        setIsLoading(true); // Ensure loading is true while waiting for user
-        return; // Don't fetch yet
+        setIsLoading(true);
+        return;
     }
-     // If user is null after context loaded, means not logged in
+    // If user is null after context loaded, means not logged in
     if (user === null) {
         console.log("Hook: User is null, not logged in.");
-        setIsLoading(false); // Stop loading, nothing to fetch
-        setError("User not authenticated."); // Set appropriate error
-        setTrainingModules([]); // Clear any stale data
-        setProgress({ product: 0, sales: 0, relationship: 0, overall: 0 });
+        setIsLoading(false);
+        setError("User not authenticated.");
+        setTrainingModules([]);
+        setProgress({ product: 0, sales: 0, relationship: 0, overall: 0, categories: {} });
         return;
     }
     // If user object is present (logged in), fetch data
     fetchTrainingData();
 
-  }, [user, fetchTrainingData]); // Depend on user object itself and fetch callback
+  }, [user, fetchTrainingData]);
 
   // Return state and refetch function
   return { trainingModules, progress, isLoading, error, refetch: fetchTrainingData };

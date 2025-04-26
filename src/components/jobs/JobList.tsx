@@ -13,6 +13,7 @@ interface JobListProps {
   onJobUpdated: (job: any) => void;
   assessments: { id: string; title: string }[];
   trainingModules: { id: string; title: string }[];
+  categories: { id: string; name: string }[];
 }
 
 const JobList: React.FC<JobListProps> = ({
@@ -20,7 +21,8 @@ const JobList: React.FC<JobListProps> = ({
   onJobDeleted,
   onJobUpdated,
   assessments,
-  trainingModules
+  trainingModules,
+  categories
 }) => {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [viewMode, setViewMode] = useState<"view" | "edit" | null>(null);
@@ -40,12 +42,21 @@ const JobList: React.FC<JobListProps> = ({
       .select('training_module_id')
       .eq('job_id', job.id)
       .maybeSingle();
+      
+    // Fetch categories 
+    const { data: categoriesData } = await supabase
+      .from('job_categories')
+      .select('category_id')
+      .eq('job_id', job.id);
+      
+    const selectedCategories = (categoriesData || []).map(item => item.category_id);
     
     // Return enhanced job object with assessment and training module IDs
     return {
       ...job,
       selectedAssessment: assessmentData?.assessment_id || "none",
-      selectedTrainingModule: trainingData?.training_module_id || "none"
+      selectedTrainingModule: trainingData?.training_module_id || "none",
+      selectedCategories: selectedCategories || []
     };
   };
 
@@ -119,6 +130,7 @@ const JobList: React.FC<JobListProps> = ({
           editingJob={selectedJob}
           assessments={assessments}
           trainingModules={trainingModules}
+          categories={categories}
           onJobCreated={dummyOnJobCreated}
           onJobUpdated={onJobUpdated}
           isOpen={true}

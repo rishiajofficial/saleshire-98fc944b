@@ -228,8 +228,8 @@ const CandidateDashboard = () => {
     };
   }, [user?.id]);
 
-  const getModuleStatusBadge = (status: 'completed' | 'in_progress' | 'locked') => {
-    switch (status) {
+  const getModuleStatusBadge = (module: TrainingModuleProgress) => {
+    switch (module.status) {
       case "completed":
         return (
           <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
@@ -518,15 +518,33 @@ const CandidateDashboard = () => {
                   <div className="space-y-4">
                     {trainingModules.map((module) => (
                       <Link 
-                        to="/training"
+                        to={`/training/module/${module.module}`}
                         key={module.id} 
-                        className={`block p-4 border rounded-lg hover:bg-muted/50 ${module.locked ? 'opacity-60 pointer-events-none' : ''}`}
+                        className={`block p-4 border rounded-lg hover:bg-muted/50 transition-all ${module.locked ? 'opacity-60 pointer-events-none' : ''}`}
                       >
                         <div className="flex justify-between items-center mb-2">
                           <span className="font-medium">{module.title}</span>
-                          {getModuleStatusBadge(module.status)}
+                          {getModuleStatusBadge(module)}
                         </div>
-                        <Progress value={module.progress} className="h-2" />
+                        
+                        <div className="mb-2">
+                          <Progress value={module.progress} className="h-2" />
+                        </div>
+                        
+                        <div className="flex justify-between items-center text-xs text-muted-foreground">
+                          <span>
+                            {module.watchedVideos} of {module.totalVideos} videos completed
+                          </span>
+                          {module.quizCompleted ? (
+                            <span className="text-green-600 flex items-center">
+                              <CheckCircle2 className="h-3 w-3 mr-1" /> Quiz passed
+                            </span>
+                          ) : module.quizId && module.watchedVideos === module.totalVideos ? (
+                            <span className="text-blue-600 flex items-center">
+                              <BookOpen className="h-3 w-3 mr-1" /> Quiz available
+                            </span>
+                          ) : null}
+                        </div>
                       </Link>
                     ))}
                     {trainingModules.length === 0 && (
