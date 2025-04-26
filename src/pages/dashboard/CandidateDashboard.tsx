@@ -10,6 +10,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import {
   Check,
@@ -37,7 +38,7 @@ import { Tables } from "@/integrations/supabase/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useTrainingProgress, TrainingModuleProgress } from "@/hooks/useTrainingProgress";
 import ErrorMessage from "@/components/ui/error-message";
-import { RealtimeChannel } from '@supabase/supabase-js';
+import { RealtimeChannel } from '@supabase/supabase-js";
 
 type CandidateProfile = Tables<'candidates'>;
 type AssessmentResult = Tables<'assessment_results'> & { profiles?: { name?: string | null } | null };
