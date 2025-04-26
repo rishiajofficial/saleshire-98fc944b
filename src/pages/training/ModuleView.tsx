@@ -30,20 +30,46 @@ const ModuleView = () => {
   const [videoProgress, setVideoProgress] = useState<number>(0);
   const [quizCompleted, setQuizCompleted] = useState<boolean>(false);
 
+  // Added console.logs for debugging
+  console.log("ModuleView - moduleId:", moduleId);
+
   const { data: moduleVideos, isLoading: videosLoading } = useQuery({
     queryKey: ['moduleVideos', moduleId],
     queryFn: async (): Promise<Video[]> => {
-      const { data, error } = await supabase
+      console.log("Fetching videos for module:", moduleId);
+      
+      // First, fetch videos for this module/category
+      const { data: categoryVideosData, error: categoryVideosError } = await supabase
+        .from('category_videos')
+        .select('video_id')
+        .eq('category_id', moduleId);
+        
+      if (categoryVideosError) {
+        toast.error(`Error fetching category videos: ${categoryVideosError.message}`);
+        throw categoryVideosError;
+      }
+      
+      console.log("Category videos data:", categoryVideosData);
+      
+      if (!categoryVideosData || categoryVideosData.length === 0) {
+        return [];
+      }
+      
+      // Get the actual video data using the video IDs
+      const videoIds = categoryVideosData.map(item => item.video_id);
+      
+      const { data: videosData, error: videosError } = await supabase
         .from('videos')
         .select('*')
-        .eq('module', moduleId)
-        .order('created_at');
+        .in('id', videoIds);
       
-      if (error) {
-        toast.error(`Error fetching videos: ${error.message}`);
-        throw error;
+      if (videosError) {
+        toast.error(`Error fetching videos: ${videosError.message}`);
+        throw videosError;
       }
-      return data || [];
+      
+      console.log("Videos data:", videosData);
+      return videosData || [];
     },
     enabled: !!moduleId
   });
@@ -51,16 +77,20 @@ const ModuleView = () => {
   const { data: moduleDetails, isLoading: detailsLoading } = useQuery({
     queryKey: ['moduleDetails', moduleId],
     queryFn: async () => {
+      console.log("Fetching module details for:", moduleId);
       const { data, error } = await supabase
         .from('module_categories')
         .select('*, quiz_ids')
-        .eq('name', moduleId)
+        .eq('id', moduleId)
         .single();
       
       if (error && error.code !== 'PGRST116') {
+        console.error("Error fetching module details:", error);
         toast.error(`Error fetching module details: ${error.message}`);
         throw error;
       }
+      
+      console.log("Module details:", data);
       return data;
     },
     enabled: !!moduleId
@@ -73,6 +103,7 @@ const ModuleView = () => {
       if (!user || !moduleId) return [];
       
       try {
+        console.log("Fetching video progress for user:", user.id, "module:", moduleId);
         const { data, error } = await supabase
           .from('training_progress')
           .select('video_id')
@@ -85,6 +116,7 @@ const ModuleView = () => {
           return [];
         }
         
+        console.log("Video progress data:", data);
         return data || [];
       } catch (error) {
         console.error("Error in videoProgress query:", error);
@@ -95,6 +127,7 @@ const ModuleView = () => {
     meta: {
       onSuccess: (data: { video_id: string }[]) => {
         const watchedIds = data.map(item => item.video_id);
+        console.log("Setting watched videos:", watchedIds);
         setWatchedVideos(watchedIds);
         
         // Calculate overall progress percentage
@@ -113,6 +146,7 @@ const ModuleView = () => {
       if (!user || !moduleId) return null;
       
       try {
+        console.log("Fetching quiz results for user:", user.id, "module:", moduleId);
         const { data, error } = await supabase
           .from('quiz_results')
           .select('*')
@@ -125,6 +159,7 @@ const ModuleView = () => {
           console.error("Error fetching quiz results:", error);
         }
         
+        console.log("Quiz result data:", data);
         return data;
       } catch (error) {
         console.error("Error in quiz results query:", error);
@@ -193,7 +228,7 @@ const ModuleView = () => {
         </Button>
 
         <div className="mb-6">
-          <h1 className="text-3xl font-bold">{formatModuleName(moduleId)} Training Module</h1>
+          <h1 className="text-3xl font-bold">{formatModuleName(moduleDetails?.name)} Training Module</h1>
           <p className="text-muted-foreground mt-2">
             Complete all videos to unlock the assessment
           </p>

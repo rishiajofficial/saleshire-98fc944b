@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -76,22 +77,31 @@ const Training = () => {
 
   const fetchJobTrainingCategories = async (jobId: string) => {
     try {
+      console.log("Fetching training categories for job:", jobId);
+      
       // Fetch categories associated with the job
       const { data: jobCategoriesData, error: jobCategoriesError } = await supabase
         .from('job_categories')
         .select('category_id')
         .eq('job_id', jobId);
         
-      if (jobCategoriesError) throw jobCategoriesError;
+      if (jobCategoriesError) {
+        console.error("Error fetching job categories:", jobCategoriesError);
+        throw jobCategoriesError;
+      }
+      
+      console.log("Job categories data:", jobCategoriesData);
       
       if (!jobCategoriesData || jobCategoriesData.length === 0) {
         // No categories found for this job
+        console.log("No categories found for this job");
         setCategories([]);
         return;
       }
       
       // Extract category IDs
       const categoryIds = jobCategoriesData.map(item => item.category_id);
+      console.log("Category IDs:", categoryIds);
       
       // Fetch detailed category information
       const { data: categoriesData, error: categoriesError } = await supabase
@@ -99,7 +109,12 @@ const Training = () => {
         .select('*')
         .in('id', categoryIds);
         
-      if (categoriesError) throw categoriesError;
+      if (categoriesError) {
+        console.error("Error fetching categories data:", categoriesError);
+        throw categoriesError;
+      }
+      
+      console.log("Categories data:", categoriesData);
       
       if (!categoriesData) {
         setCategories([]);
@@ -115,17 +130,26 @@ const Training = () => {
       const categoriesWithContent: CategoryWithContent[] = [];
       
       for (const category of categoriesData) {
+        console.log("Processing category:", category.name);
+        
         // Fetch videos associated with this category
         const { data: categoryVideosData, error: categoryVideosError } = await supabase
           .from('category_videos')
           .select('videos:video_id(*)')
           .eq('category_id', category.id);
           
-        if (categoryVideosError) throw categoryVideosError;
+        if (categoryVideosError) {
+          console.error("Error fetching category videos:", categoryVideosError);
+          throw categoryVideosError;
+        }
+        
+        console.log("Category videos data:", categoryVideosData);
         
         const videos = categoryVideosData
           ? categoryVideosData.map(item => item.videos).filter(Boolean)
           : [];
+        
+        console.log("Processed videos:", videos);
         
         // Fetch quizzes associated with this category
         let quizzes: any[] = [];
@@ -135,8 +159,15 @@ const Training = () => {
             .select('*')
             .in('id', category.quiz_ids);
             
-          if (quizzesError) throw quizzesError;
+          if (quizzesError) {
+            console.error("Error fetching quizzes:", quizzesError);
+            throw quizzesError;
+          }
+          
+          console.log("Quizzes data:", quizzesData);
           quizzes = quizzesData || [];
+        } else {
+          console.log("No quiz_ids found for category:", category.name);
         }
         
         categoriesWithContent.push({
@@ -146,6 +177,7 @@ const Training = () => {
         });
       }
       
+      console.log("Final categories with content:", categoriesWithContent);
       setCategories(categoriesWithContent);
     } catch (error) {
       console.error("Error fetching job training categories:", error);
