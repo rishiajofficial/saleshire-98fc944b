@@ -1,3 +1,4 @@
+
 export interface Job {
   id: string;
   title: string;
@@ -10,6 +11,7 @@ export interface Job {
   created_at?: string;
   created_by?: string;
   updated_at?: string;
+  archived?: boolean;
 }
 
 export interface JobAssessment {

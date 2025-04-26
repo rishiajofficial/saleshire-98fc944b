@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import JobCreationDialog from "./JobCreationDialog";
 import { JobApplicationsDialog } from "./JobApplicationsDialog";
 import { DeleteJobDialog } from "./DeleteJobDialog";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { supabase } from "@/integrations/supabase/client";
 
 interface JobListProps {
   jobs: Job[];

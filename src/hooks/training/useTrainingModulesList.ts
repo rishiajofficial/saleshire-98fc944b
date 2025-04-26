@@ -1,117 +1,129 @@
 
-import { useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { TrainingModule, Video } from "@/types";
+import { useTrainingProgress } from "./useTrainingProgress";
 
-export interface TrainingModule {
-  id: string;
-  title: string;
-  description: string | null;
-  module: string;
-  progress: number;
-  status: 'completed' | 'in_progress' | 'locked';
-  locked: boolean;
-  videos: any[];
-  quizIds: string[] | null;
-  totalVideos: number;
-  watchedVideos: number;
-  quizCompleted: boolean;
-}
+export function useTrainingModulesList(userId?: string) {
+  const [modules, setModules] = useState<TrainingModule[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const { videoProgress, completedQuizzes, calculateModuleProgress } = useTrainingProgress(userId);
 
-export const useTrainingModulesList = () => {
-  const { user } = useAuth();
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [trainingModules, setTrainingModules] = useState<TrainingModule[]>([]);
-
-  const fetchTrainingData = useCallback(async () => {
-    if (!user?.id) {
-      return;
-    }
-
+  const fetchModules = useCallback(async () => {
     try {
-      console.log("Hook: Fetching training data for user:", user.id);
-      setIsLoading(true);
-      setError(null);
-
-      const [categoriesResult, videoResult, trainingProgressResult, quizResultsResult, categoryVideosResult] = await Promise.all([
-        supabase.from('module_categories').select('*, quiz_ids').order('name', { ascending: true }),
-        supabase.from('videos').select('*'),
-        supabase.from('training_progress').select('*')
-          .eq('user_id', user.id)
-          .eq('completed', true),
-        supabase.from('quiz_results').select('*')
-          .eq('user_id', user.id)
-          .eq('passed', true),
-        supabase.from('category_videos').select('*')
-      ]);
-
-      // Error handling
-      if (categoriesResult.error) throw new Error(`Module categories fetch failed: ${categoriesResult.error.message}`);
-      if (videoResult.error) throw new Error(`Videos fetch failed: ${videoResult.error.message}`);
-      if (trainingProgressResult.error) throw new Error(`Training progress fetch failed: ${trainingProgressResult.error.message}`);
-      if (quizResultsResult.error) throw new Error(`Quiz results fetch failed: ${quizResultsResult.error.message}`);
-      if (categoryVideosResult.error) throw new Error(`Category videos fetch failed: ${categoryVideosResult.error.message}`);
-
-      const watchedVideoIds = new Set(trainingProgressResult.data.map(item => item.video_id));
-      const passedQuizModules = new Set(quizResultsResult.data.map(quiz => quiz.module));
-
-      let previousModuleCompleted = true;
-      const formattedModules = categoriesResult.data.map((category, index) => {
-        const categoryVideos = videoResult.data.filter(video => 
-          categoryVideosResult.data.some(cv => cv.category_id === category.id && cv.video_id === video.id) ||
-          video.module === category.name
-        );
-
-        const totalVideos = categoryVideos.length;
-        const watchedVideos = categoryVideos.filter(video => watchedVideoIds.has(video.id)).length;
-        const quizCompleted = passedQuizModules.has(category.id);
+      setLoading(true);
+      
+      // Get all training modules
+      const { data: modulesData, error: modulesError } = await supabase
+        .from('training_modules')
+        .select('*')
+        .order('order_index', { ascending: true });
         
-        let moduleProgress = 0;
-        if (totalVideos > 0) {
-          const videoProgress = (watchedVideos / totalVideos) * 80;
-          const quizProgress = quizCompleted ? 20 : 0;
-          moduleProgress = Math.round(videoProgress + quizProgress);
-        } else if (quizCompleted) {
-          moduleProgress = 100;
+      if (modulesError) throw modulesError;
+      
+      // Get all videos
+      const { data: videosData, error: videosError } = await supabase
+        .from('videos')
+        .select('*');
+      
+      if (videosError) throw videosError;
+      
+      // Get required modules
+      const { data: requiredModules, error: requiredError } = await supabase
+        .from('required_modules')
+        .select('*');
+        
+      if (requiredError) throw requiredError;
+        
+      // Map of module IDs to their videos
+      const moduleVideosMap: Record<string, any[]> = {};
+      videosData.forEach(video => {
+        if (!moduleVideosMap[video.module]) {
+          moduleVideosMap[video.module] = [];
         }
-
-        const isModuleComplete = moduleProgress === 100;
-        const locked = index > 0 ? !previousModuleCompleted : false;
-        previousModuleCompleted = !locked && isModuleComplete;
-
-        return {
-          id: category.id,
-          title: category.name,
-          description: category.description,
-          module: category.name.toLowerCase(),
-          progress: moduleProgress,
-          status: locked ? 'locked' : (isModuleComplete ? 'completed' : 'in_progress'),
+        moduleVideosMap[video.module].push(video);
+      });
+      
+      // Dependencies map (which modules are required for which)
+      const moduleDependencies: Record<string, string[]> = {};
+      requiredModules?.forEach(req => {
+        if (!moduleDependencies[req.module_id]) {
+          moduleDependencies[req.module_id] = [];
+        }
+        moduleDependencies[req.module_id].push(req.required_module_id);
+      });
+      
+      // Create training modules with progress info
+      const trainingModules: TrainingModule[] = [];
+      
+      for (const moduleData of modulesData) {
+        const videos = moduleVideosMap[moduleData.id] || [];
+        const quizIds = moduleData.quiz_ids || [];
+        
+        // Calculate progress for this module
+        const progress = calculateModuleProgress(videos, quizIds);
+        
+        // Determine if module should be locked
+        let locked = false;
+        if (moduleDependencies[moduleData.id]) {
+          locked = moduleDependencies[moduleData.id].some(requiredModuleId => {
+            const requiredModule = trainingModules.find(m => m.id === requiredModuleId);
+            return requiredModule ? requiredModule.progress < 100 : true;
+          });
+        }
+        
+        // Count watched videos
+        const watchedVideos = videos.filter(video => {
+          const videoLen = parseFloat(video.duration || '0');
+          const watched = videoProgress[video.id] || 0;
+          return videoLen > 0 && watched / videoLen >= 0.9;
+        }).length;
+        
+        // Check if quiz is completed
+        const quizCompleted = quizIds.every(quizId => 
+          completedQuizzes.includes(quizId)
+        );
+        
+        // Determine status based on progress
+        let status: "completed" | "in_progress" | "locked" = "locked";
+        if (!locked) {
+          status = progress >= 100 ? "completed" : "in_progress";
+        }
+        
+        trainingModules.push({
+          id: moduleData.id,
+          title: moduleData.title,
+          description: moduleData.description,
+          module: moduleData.module,
+          progress,
+          status,
           locked,
-          videos: categoryVideos,
-          quizIds: category.quiz_ids,
-          totalVideos,
+          videos,
+          quizIds,
+          totalVideos: videos.length,
           watchedVideos,
           quizCompleted
-        };
-      });
-
-      setTrainingModules(formattedModules);
-
-    } catch (error: any) {
-      console.error("Hook: Error fetching training data:", error);
-      setError(error.message || "Failed to load training data.");
-      toast.error("Failed to load training data: " + error.message);
+        });
+      }
+      
+      setModules(trainingModules);
+    } catch (err) {
+      console.error('Error fetching training modules:', err);
+      setError(err instanceof Error ? err : new Error('Failed to fetch modules'));
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  }, [user?.id]);
+  }, [userId, videoProgress, completedQuizzes, calculateModuleProgress]);
+
+  useEffect(() => {
+    fetchModules();
+  }, [fetchModules]);
 
   return {
-    trainingModules,
-    isLoading,
+    modules,
+    loading,
     error,
-    refetch: fetchTrainingData
+    refetch: fetchModules
   };
-};
+}

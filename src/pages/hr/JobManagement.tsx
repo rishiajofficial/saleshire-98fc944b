@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import MainLayout from '@/components/layout/MainLayout';
 import { Loader2 } from "lucide-react";
@@ -8,7 +9,7 @@ import { useJobs } from "@/hooks/useJobs";
 import { toast } from "sonner";
 
 const JobManagement = () => {
-  const { jobs, isLoading, createJob, deleteJob, updateJob } = useJobs();
+  const { jobs, isLoading, createJob, deleteJob, updateJob, refetch } = useJobs();
   const [assessments, setAssessments] = useState<{ id: string; title: string; }[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string; }[]>([]);
 
