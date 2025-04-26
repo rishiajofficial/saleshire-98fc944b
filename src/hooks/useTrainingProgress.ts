@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -65,11 +64,11 @@ export const useTrainingProgress = (): UseTrainingProgressReturn => {
       return;
     }
 
-    console.log("Hook: Fetching training data for user:", user.id);
-    setIsLoading(true);
-    setError(null);
-
     try {
+      console.log("Hook: Fetching training data for user:", user.id);
+      setIsLoading(true);
+      setError(null);
+
       // --- Fetch all data concurrently ---
       const [categoriesResult, videoResult, trainingProgressResult, quizResultsResult, categoryVideosResult] = await Promise.all([
         supabase
@@ -113,8 +112,7 @@ export const useTrainingProgress = (): UseTrainingProgressReturn => {
       console.log("Hook: Fetched Passed Quizzes:", passedQuizzes);
       console.log("Hook: Fetched Category Videos:", categoryVideos);
 
-      // Create set of watched video IDs for quick lookup
-      const watchedVideoIds = new Set(completedVideos.map(item => item.video_id));
+      const watchedVideoIds = new Set(completedVideos.filter(item => item.completed).map(item => item.video_id));
       
       // Create set of passed quiz modules for quick lookup
       const passedQuizModules = new Set(passedQuizzes.map(quiz => quiz.module));

@@ -84,7 +84,7 @@ export const useModuleData = (moduleId: string | undefined) => {
         console.log("Fetching video progress for user:", user.id, "module:", moduleId);
         const { data, error } = await supabase
           .from('training_progress')
-          .select('video_id')
+          .select('*')  // Changed from just video_id to select all fields
           .eq('user_id', user.id)
           .eq('module', moduleId)
           .eq('completed', true);

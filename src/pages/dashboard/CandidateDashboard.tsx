@@ -8,7 +8,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -598,55 +597,6 @@ const CandidateDashboard = () => {
                       ))
                     )}
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle>Quick Links</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                  <Button variant="outline" className="w-full justify-start" asChild>
-                  <Link to="/application">
-                    <FileText className="mr-2 h-4 w-4" />
-                      {dashboardState.applicationSubmitted ? "View Application" : "Complete Application"}
-                  </Link>
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start" 
-                    disabled={!dashboardState.applicationSubmitted}
-                    asChild={dashboardState.applicationSubmitted}
-                >
-                    {dashboardState.applicationSubmitted ? (
-                    <Link to="/training">
-                      <BookOpen className="mr-2 h-4 w-4" />
-                      Training Center
-                    </Link>
-                  ) : (
-                      <span className="flex items-center text-muted-foreground">
-                      <BookOpen className="mr-2 h-4 w-4" />
-                        Training Center (Complete App First)
-                      </span>
-                  )}
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start" 
-                    disabled={dashboardState.currentStep < 5}
-                    asChild={dashboardState.currentStep >= 5}
-                  >
-                     {dashboardState.currentStep >= 5 ? (
-                        <Link to="/sales-task">
-                          <Briefcase className="mr-2 h-4 w-4" />
-                         </Link>
-                      ) : (
-                        <span className="flex items-center text-muted-foreground">
-                  <Briefcase className="mr-2 h-4 w-4" />
-                        Sales Task (Coming Soon)
-                      </span>
-                    )}
-                </Button>
               </CardContent>
             </Card>
           </div>
