@@ -1,8 +1,9 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Progress } from "@/components/ui/progress";
 
 interface ModuleHeaderProps {
   title: string | undefined;
@@ -34,7 +35,7 @@ const ModuleHeader = ({
       </Button>
 
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">{title} Training Module</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{title} Training Module</h1>
         <p className="text-muted-foreground mt-2">
           Complete all videos to unlock the assessment
         </p>
