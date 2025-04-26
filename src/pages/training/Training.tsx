@@ -1,16 +1,17 @@
-
 import React, { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Book, Calendar, Lock, Video } from "lucide-react";
-import { Link } from "react-router-dom";
 import MainLayout from '@/components/layout/MainLayout';
-import { TrainingCategory } from "@/hooks/useModuleCategories";
+import TrainingHeader from "@/components/training/TrainingHeader";
+import CategorySelector from "@/components/training/CategorySelector";
+import VideoSection from "@/components/training/VideoSection";
+import AssessmentSection from "@/components/training/AssessmentSection";
 
-interface CategoryWithContent extends TrainingCategory {
+export interface CategoryWithContent {
+  id: string;
+  name: string;
+  description: string | null;
   videos: any[];
   quizzes: any[];
 }
@@ -218,47 +219,18 @@ const Training = () => {
   return (
     <MainLayout>
       <div className="container mx-auto py-8">
-        <h1 className="text-3xl font-bold mb-6">Training Center</h1>
+        <TrainingHeader jobTitle={selectedJob?.title} />
         
-        {selectedJob && (
-          <div className="bg-blue-50 p-4 rounded-md mb-6">
-            <h2 className="font-semibold text-blue-800">Training for: {selectedJob.title}</h2>
-            <p className="text-sm text-gray-600">
-              Complete the following training modules and assessments.
-            </p>
-          </div>
-        )}
-        
-        {categories.length > 0 && (
-          <div className="mb-6">
-            <h2 className="text-lg font-medium mb-2">Training Categories</h2>
-            <div className="flex flex-wrap gap-2">
-              {categories.map(category => (
-                <Button
-                  key={category.id}
-                  variant={selectedCategoryId === category.id ? "default" : "outline"}
-                  onClick={() => handleCategoryChange(category.id)}
-                  className="text-sm"
-                >
-                  {category.name}
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
-        
-        {isLoading ? (
-          <div className="flex justify-center items-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : categories.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500">No training content available for this job.</p>
-          </div>
-        ) : (
-          <div className="space-y-8">
+        {categories.length > 0 ? (
+          <>
+            <CategorySelector
+              categories={categories}
+              selectedCategoryId={selectedCategoryId}
+              onCategoryChange={handleCategoryChange}
+            />
+            
             {selectedCategory && (
-              <>
+              <div className="space-y-8">
                 <div>
                   <h2 className="text-xl font-bold mb-4">{selectedCategory.name} Training</h2>
                   {selectedCategory.description && (
@@ -266,72 +238,14 @@ const Training = () => {
                   )}
                 </div>
                 
-                {/* Videos section */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-4 flex items-center">
-                    <Video className="h-5 w-5 mr-2 text-blue-500" /> Training Videos
-                  </h3>
-                  
-                  {selectedCategory.videos.length === 0 ? (
-                    <p className="text-gray-500 py-4">No videos available for this category.</p>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {selectedCategory.videos.map((video: any) => (
-                        <Card key={video.id}>
-                          <CardHeader>
-                            <CardTitle className="text-md font-semibold">{video.title}</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <p className="text-sm text-gray-600 mb-4 line-clamp-3">
-                              {video.description || "No description available."}
-                            </p>
-                            <Button asChild className="w-full">
-                              <Link to={`/training/video/${video.id}`}>
-                                Watch Video
-                              </Link>
-                            </Button>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                
-                {/* Quizzes section */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-4 flex items-center">
-                    <Book className="h-5 w-5 mr-2 text-green-500" /> Assessments
-                  </h3>
-                  
-                  {selectedCategory.quizzes.length === 0 ? (
-                    <p className="text-gray-500 py-4">No assessments available for this category.</p>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {selectedCategory.quizzes.map((quiz: any) => (
-                        <Card key={quiz.id}>
-                          <CardHeader>
-                            <CardTitle className="text-md font-semibold">{quiz.title}</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <p className="text-sm text-gray-600 mb-2">
-                              {quiz.description || "No description available."}
-                            </p>
-                            <p className="text-xs font-medium mb-4">
-                              Difficulty: {quiz.difficulty || "Not specified"}
-                            </p>
-                            <Button asChild className="w-full">
-                              <Link to={`/training/assessment/${quiz.id}`}>
-                                Take Assessment
-                              </Link>
-                            </Button>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </>
+                <VideoSection videos={selectedCategory.videos} />
+                <AssessmentSection quizzes={selectedCategory.quizzes} />
+              </div>
             )}
+          </>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-gray-500">No training content available for this job.</p>
           </div>
         )}
       </div>
