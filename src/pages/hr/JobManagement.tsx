@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import MainLayout from '@/components/layout/MainLayout';
 import { Loader2 } from "lucide-react";
@@ -11,17 +10,13 @@ import { toast } from "sonner";
 const JobManagement = () => {
   const { jobs, isLoading, createJob, deleteJob, updateJob } = useJobs();
   const [assessments, setAssessments] = useState<{ id: string; title: string; }[]>([]);
-  const [trainingModules, setTrainingModules] = useState<{ id: string; title: string; }[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string; }[]>([]);
 
-  const fetchAssessmentsAndTraining = async () => {
+  const fetchAssessmentsAndCategories = async () => {
     try {
-      const [assessmentsResult, trainingResult, categoriesResult] = await Promise.all([
+      const [assessmentsResult, categoriesResult] = await Promise.all([
         supabase
           .from('assessments')
-          .select('id, title'),
-        supabase
-          .from('training_modules')
           .select('id, title'),
         supabase
           .from('module_categories')
@@ -29,11 +24,9 @@ const JobManagement = () => {
       ]);
 
       if (assessmentsResult.error) throw assessmentsResult.error;
-      if (trainingResult.error) throw trainingResult.error;
       if (categoriesResult.error) throw categoriesResult.error;
 
       setAssessments(assessmentsResult.data || []);
-      setTrainingModules(trainingResult.data || []);
       setCategories(categoriesResult.data || []);
     } catch (error: any) {
       console.error('Error fetching data:', error);
@@ -42,7 +35,7 @@ const JobManagement = () => {
   };
 
   useEffect(() => {
-    fetchAssessmentsAndTraining();
+    fetchAssessmentsAndCategories();
   }, []);
 
   const handleCreateJob = async (jobData: any) => {
@@ -81,7 +74,6 @@ const JobManagement = () => {
           <JobCreationDialog
             onJobCreated={handleCreateJob}
             assessments={assessments}
-            trainingModules={trainingModules}
             categories={categories}
           />
         </div>
@@ -90,7 +82,6 @@ const JobManagement = () => {
           onJobDeleted={deleteJob.mutate}
           onJobUpdated={handleUpdateJob}
           assessments={assessments}
-          trainingModules={trainingModules}
           categories={categories}
         />
       </div>

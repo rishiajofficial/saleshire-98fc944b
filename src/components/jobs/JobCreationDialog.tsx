@@ -24,7 +24,6 @@ interface JobFormProps {
   job?: any;
   onSubmit: (values: any) => void;
   assessments: { id: string; title: string }[];
-  trainingModules: { id: string; title: string }[];
   categories: Array<{ id: string; name: string }>;
   mode: 'create' | 'edit' | 'view';
 }
@@ -33,7 +32,6 @@ const JobForm: React.FC<JobFormProps> = ({
   job,
   onSubmit,
   assessments,
-  trainingModules,
   categories,
   mode
 }) => {
@@ -45,7 +43,6 @@ const JobForm: React.FC<JobFormProps> = ({
     employment_type: job?.employment_type || "",
     salary_range: job?.salary_range || "",
     selectedAssessment: job?.selectedAssessment || "none",
-    selectedTrainingModule: job?.selectedTrainingModule || "none",
     categories: job?.selectedCategories || []
   });
 
@@ -59,7 +56,6 @@ const JobForm: React.FC<JobFormProps> = ({
         employment_type: job.employment_type || "",
         salary_range: job.salary_range || "",
         selectedAssessment: job.selectedAssessment || "none",
-        selectedTrainingModule: job.selectedTrainingModule || "none",
         categories: job.selectedCategories || []
       });
     }
@@ -159,26 +155,6 @@ const JobForm: React.FC<JobFormProps> = ({
         </Select>
       </div>
       <div>
-        <Label htmlFor="training">Required Training Module</Label>
-        <Select
-          value={form.selectedTrainingModule}
-          disabled={isView}
-          onValueChange={(value) => setForm({ ...form, selectedTrainingModule: value })}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select a training module" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">None</SelectItem>
-            {trainingModules.map((module) => (
-              <SelectItem key={module.id} value={module.id}>
-                {module.title}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div>
         <Label htmlFor="categories">Training Categories</Label>
         <div className="flex flex-wrap gap-2 mt-2">
           {categories.map((category) => (
@@ -218,7 +194,6 @@ interface JobCreationDialogProps {
   onJobCreated?: (job: any) => void;
   onJobUpdated?: (job: any) => void;
   assessments: { id: string; title: string }[];
-  trainingModules: { id: string; title: string }[];
   categories: Array<{ id: string; name: string }>;
   editingJob?: any;
   mode?: "create" | "edit" | "view";
@@ -230,7 +205,6 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
   onJobCreated,
   onJobUpdated,
   assessments,
-  trainingModules,
   categories,
   editingJob,
   mode = "create",
@@ -313,7 +287,6 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
           job={editingJob}
           onSubmit={handleSubmit}
           assessments={assessments}
-          trainingModules={trainingModules}
           categories={categories}
           mode={mode}
         />

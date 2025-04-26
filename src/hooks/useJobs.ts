@@ -10,7 +10,7 @@ export function useJobs() {
   const { data: jobs, isLoading } = useQuery({
     queryKey: ['jobs'],
     queryFn: async () => {
-      console.log("Fetching jobs...");
+      console.log("Fetching jobs with categories...");
       const { data, error } = await supabase
         .from('jobs')
         .select(`
@@ -31,7 +31,8 @@ export function useJobs() {
         console.error("Error fetching jobs:", error);
         throw error;
       }
-      console.log("Jobs data:", data);
+
+      console.log("Fetched jobs data:", data);
       return data as Job[];
     }
   });
