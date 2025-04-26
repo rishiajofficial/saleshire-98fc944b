@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Job } from "@/types/job";
@@ -13,13 +14,13 @@ export function useJobs() {
         .from('jobs')
         .select(`
           *,
-          job_categories (
-            category_id,
-            module_categories (
+          job_modules (
+            module_id,
+            training_modules (
               id,
               name,
               description,
-              quiz_ids
+              status
             )
           )
         `)
@@ -60,18 +61,18 @@ export function useJobs() {
 
         if (jobError) throw jobError;
 
-        // Add training categories
-        if (newJob.categories && newJob.categories.length > 0) {
-          const categoryInserts = newJob.categories.map((categoryId: string) => ({
+        // Add training modules
+        if (newJob.selectedModules && newJob.selectedModules.length > 0) {
+          const moduleInserts = newJob.selectedModules.map((moduleId: string) => ({
             job_id: jobData.id,
-            category_id: categoryId
+            module_id: moduleId
           }));
 
-          const { error: categoriesError } = await supabase
-            .from('job_categories')
-            .insert(categoryInserts);
+          const { error: modulesError } = await supabase
+            .from('job_modules')
+            .insert(moduleInserts);
 
-          if (categoriesError) throw categoriesError;
+          if (modulesError) throw modulesError;
         }
 
         // Handle assessment association if selected
@@ -105,7 +106,7 @@ export function useJobs() {
   const updateJob = useMutation({
     mutationFn: async (updateJobData: any) => {
       try {
-        const { id, selectedAssessment, categories, ...jobFields } = updateJobData;
+        const { id, selectedAssessment, selectedModules, ...jobFields } = updateJobData;
         
         // 1. Update job basic fields
         const { error: jobUpdateError } = await supabase
@@ -115,33 +116,33 @@ export function useJobs() {
 
         if (jobUpdateError) throw jobUpdateError;
 
-        // 2. Update training categories
-        if (categories) {
-          // First delete existing category associations
-          const { error: deleteCategoriesError } = await supabase
-            .from('job_categories')
+        // 2. Update training modules
+        if (selectedModules) {
+          // First delete existing module associations
+          const { error: deleteModulesError } = await supabase
+            .from('job_modules')
             .delete()
             .eq('job_id', id);
             
-          if (deleteCategoriesError) throw deleteCategoriesError;
+          if (deleteModulesError) throw deleteModulesError;
           
-          // Then insert new categories if any are selected
-          if (categories.length > 0) {
-            const categoryInserts = categories.map((categoryId: string) => ({
+          // Then insert new modules if any are selected
+          if (selectedModules.length > 0) {
+            const moduleInserts = selectedModules.map((moduleId: string) => ({
               job_id: id,
-              category_id: categoryId
+              module_id: moduleId
             }));
 
-            const { error: categoriesError } = await supabase
-              .from('job_categories')
-              .insert(categoryInserts);
+            const { error: modulesError } = await supabase
+              .from('job_modules')
+              .insert(moduleInserts);
             
-            if (categoriesError) throw categoriesError;
+            if (modulesError) throw modulesError;
           }
         }
         
         // 3. Handle assessment association
-        if (selectedAssessment) {
+        if (selectedAssessment !== undefined) {
           const { error: deleteAssessmentError } = await supabase
             .from('job_assessments')
             .delete()
@@ -149,7 +150,7 @@ export function useJobs() {
             
           if (deleteAssessmentError) throw deleteAssessmentError;
           
-          if (selectedAssessment !== "none") {
+          if (selectedAssessment !== "none" && selectedAssessment !== null) {
             const { error: assessmentError } = await supabase
               .from('job_assessments')
               .insert({
@@ -179,9 +180,27 @@ export function useJobs() {
 
   const deleteJob = useMutation({
     mutationFn: async (jobId: string) => {
+      // Delete job modules
+      const { error: moduleError } = await supabase
+        .from('job_modules')
+        .delete()
+        .eq('job_id', jobId);
+      
+      if (moduleError) throw moduleError;
+      
+      // Delete job assessments
+      const { error: assessmentError } = await supabase
+        .from('job_assessments')
+        .delete()
+        .eq('job_id', jobId);
+      
+      if (assessmentError) throw assessmentError;
+
+      // Delete job applications
       const { error } = await supabase.rpc('delete_job_applications', { job_id: jobId });
       if (error) throw error;
 
+      // Delete the job
       const { error: deleteError } = await supabase
         .from('jobs')
         .delete()

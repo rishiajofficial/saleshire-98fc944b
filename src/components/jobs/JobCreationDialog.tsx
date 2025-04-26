@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,12 +20,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 interface JobFormProps {
   job?: any;
   onSubmit: (values: any) => void;
   assessments: { id: string; title: string }[];
-  categories: Array<{ id: string; name: string }>;
+  modules: Array<{ id: string; name: string }>;
   mode: 'create' | 'edit' | 'view';
 }
 
@@ -32,7 +36,7 @@ const JobForm: React.FC<JobFormProps> = ({
   job,
   onSubmit,
   assessments,
-  categories,
+  modules,
   mode
 }) => {
   const [form, setForm] = useState({
@@ -43,7 +47,7 @@ const JobForm: React.FC<JobFormProps> = ({
     employment_type: job?.employment_type || "",
     salary_range: job?.salary_range || "",
     selectedAssessment: job?.selectedAssessment || "none",
-    categories: job?.selectedCategories || []
+    selectedModules: job?.selectedModules || []
   });
 
   useEffect(() => {
@@ -56,7 +60,7 @@ const JobForm: React.FC<JobFormProps> = ({
         employment_type: job.employment_type || "",
         salary_range: job.salary_range || "",
         selectedAssessment: job.selectedAssessment || "none",
-        categories: job.selectedCategories || []
+        selectedModules: job.selectedModules || []
       });
     }
   }, [job]);
@@ -135,7 +139,7 @@ const JobForm: React.FC<JobFormProps> = ({
         />
       </div>
       <div>
-        <Label htmlFor="assessment">Required Assessment</Label>
+        <Label htmlFor="assessment">Required Initial Assessment</Label>
         <Select
           value={form.selectedAssessment}
           disabled={isView}
@@ -155,26 +159,26 @@ const JobForm: React.FC<JobFormProps> = ({
         </Select>
       </div>
       <div>
-        <Label htmlFor="categories">Training Categories</Label>
+        <Label htmlFor="modules">Training Modules</Label>
         <div className="flex flex-wrap gap-2 mt-2">
-          {categories.map((category) => (
+          {modules.map((module) => (
             <Button
-              key={category.id}
+              key={module.id}
               type="button"
-              variant={form.categories.includes(category.id) ? "default" : "outline"}
+              variant={form.selectedModules.includes(module.id) ? "default" : "outline"}
               size="sm"
               onClick={() => {
                 setForm(prev => ({
                   ...prev,
-                  categories: prev.categories.includes(category.id)
-                    ? prev.categories.filter(id => id !== category.id)
-                    : [...prev.categories, category.id]
+                  selectedModules: prev.selectedModules.includes(module.id)
+                    ? prev.selectedModules.filter(id => id !== module.id)
+                    : [...prev.selectedModules, module.id]
                 }));
               }}
               disabled={isView}
             >
-              {category.name}
-              {form.categories.includes(category.id) && (
+              {module.name}
+              {form.selectedModules.includes(module.id) && (
                 <Check className="ml-2 h-4 w-4" />
               )}
             </Button>
@@ -194,7 +198,7 @@ interface JobCreationDialogProps {
   onJobCreated?: (job: any) => void;
   onJobUpdated?: (job: any) => void;
   assessments: { id: string; title: string }[];
-  categories: Array<{ id: string; name: string }>;
+  categories?: Array<{ id: string; name: string }>;
   editingJob?: any;
   mode?: "create" | "edit" | "view";
   isOpen?: boolean;
@@ -205,21 +209,48 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
   onJobCreated,
   onJobUpdated,
   assessments,
-  categories,
+  categories, // Deprecated, keeping for compatibility
   editingJob,
   mode = "create",
   isOpen: externalIsOpen,
   onClose
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [modules, setModules] = useState<Array<{ id: string; name: string }>>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (externalIsOpen !== undefined) {
       setDialogOpen(externalIsOpen);
     }
+    if (externalIsOpen) {
+      fetchTrainingModules();
+    }
   }, [externalIsOpen]);
 
-  const handleOpen = () => setDialogOpen(true);
+  const fetchTrainingModules = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("training_modules")
+        .select("id, name")
+        .eq("status", "active")
+        .order("name");
+
+      if (error) throw error;
+      setModules(data || []);
+    } catch (error: any) {
+      toast.error(`Failed to fetch training modules: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpen = () => {
+    setDialogOpen(true);
+    fetchTrainingModules();
+  };
+
   const handleClose = () => {
     setDialogOpen(false);
     if (onClose) onClose();
@@ -227,12 +258,15 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
 
   const handleSubmit = (form: any) => {
     if (mode === "edit" && onJobUpdated) {
-      onJobUpdated({ ...editingJob, ...form });
+      onJobUpdated({ 
+        ...editingJob, 
+        ...form,
+        selectedAssessment: form.selectedAssessment === "none" ? null : form.selectedAssessment
+      });
     } else if (onJobCreated) {
       const processedForm = {
         ...form,
-        selectedAssessment: form.selectedAssessment === "none" ? null : form.selectedAssessment,
-        selectedTrainingModule: form.selectedTrainingModule === "none" ? null : form.selectedTrainingModule
+        selectedAssessment: form.selectedAssessment === "none" ? null : form.selectedAssessment
       };
       onJobCreated(processedForm);
     }
@@ -266,7 +300,7 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       {!externalIsOpen && <DialogTrigger asChild>{triggerButton()}</DialogTrigger>}
-      <DialogContent onEscapeKeyDown={handleClose} onInteractOutside={handleClose}>
+      <DialogContent onEscapeKeyDown={handleClose} onInteractOutside={handleClose} className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {mode === "edit"
@@ -283,13 +317,19 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
               : "Fill in the details below to create a new job posting."}
           </DialogDescription>
         </DialogHeader>
-        <JobForm
-          job={editingJob}
-          onSubmit={handleSubmit}
-          assessments={assessments}
-          categories={categories}
-          mode={mode}
-        />
+        {loading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <JobForm
+            job={editingJob}
+            onSubmit={handleSubmit}
+            assessments={assessments}
+            modules={modules}
+            mode={mode}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );

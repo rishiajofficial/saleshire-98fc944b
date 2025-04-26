@@ -1,7 +1,11 @@
+
 import React, { useState } from "react";
 import MainLayout from '@/components/layout/MainLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ModuleManagement from "@/components/training/ModuleManagement";
+import VideoManagement from "@/components/training/VideoManagement";
+import AssessmentManagement from "@/components/training/AssessmentManagement";
+import { Book, Video, FileText } from "lucide-react";
 
 const TrainingManagement = () => {
   const [activeTab, setActiveTab] = useState("modules");
@@ -13,9 +17,18 @@ const TrainingManagement = () => {
         
         <Tabs defaultValue="modules" value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-6">
-            <TabsTrigger value="modules">Training Modules</TabsTrigger>
-            <TabsTrigger value="videos">Videos</TabsTrigger>
-            <TabsTrigger value="assessments">Assessments</TabsTrigger>
+            <TabsTrigger value="modules" className="flex items-center gap-2">
+              <Book className="h-4 w-4" />
+              Training Modules
+            </TabsTrigger>
+            <TabsTrigger value="videos" className="flex items-center gap-2">
+              <Video className="h-4 w-4" />
+              Videos
+            </TabsTrigger>
+            <TabsTrigger value="assessments" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Assessments
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="modules">
@@ -23,15 +36,11 @@ const TrainingManagement = () => {
           </TabsContent>
           
           <TabsContent value="videos">
-            <h2 className="text-2xl font-bold mb-4">Video Management</h2>
-            <p>You can upload and manage training videos here.</p>
-            {/* Video upload and management component would go here */}
+            <VideoManagement />
           </TabsContent>
           
           <TabsContent value="assessments">
-            <h2 className="text-2xl font-bold mb-4">Assessment Management</h2>
-            <p>Create and manage assessments for training modules.</p>
-            {/* Assessment management component would go here */}
+            <AssessmentManagement />
           </TabsContent>
         </Tabs>
       </div>

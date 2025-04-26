@@ -5,38 +5,49 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Edit, Trash2 } from "lucide-react";
-import { Video } from "@/types/training";
-import ModuleCategoryDialog from "./ModuleCategoryDialog";
+import { Switch } from "@/components/ui/switch";
+import { Plus, Edit, Trash2, Check, ArrowUp, ArrowDown, DraggableIcon } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { Video, Assessment } from "@/types/training";
+import { Badge } from "@/components/ui/badge";
 
-interface Category {
+interface Module {
   id: string;
   name: string;
   description: string | null;
-  quiz_ids: string[] | null;
+  tags: string[] | null;
+  status: 'active' | 'inactive';
+  thumbnail: string | null;
   created_at: string;
   created_by: string;
 }
 
-export default function ModuleManagement() {
-  const { user } = useAuth();
-  const [categories, setCategories] = useState<Category[]>([]);
+const ModuleManagement = () => {
+  const [modules, setModules] = useState<Module[]>([]);
   const [videos, setVideos] = useState<Video[]>([]);
-  const [assessments, setAssessments] = useState<any[]>([]);
+  const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [categoryName, setCategoryName] = useState("");
-  const [categoryDescription, setCategoryDescription] = useState("");
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedModule, setSelectedModule] = useState<Module | null>(null);
   const [selectedVideos, setSelectedVideos] = useState<string[]>([]);
   const [selectedAssessments, setSelectedAssessments] = useState<string[]>([]);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+  const [moduleVideos, setModuleVideos] = useState<{id: string, video_id: string, order: number}[]>([]);
+  const [moduleAssessments, setModuleAssessments] = useState<{id: string, assessment_id: string, order: number}[]>([]);
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    tags: "",
+    status: "active" as 'active' | 'inactive',
+    thumbnail: ""
+  });
+
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchData();
@@ -46,13 +57,13 @@ export default function ModuleManagement() {
     try {
       setLoading(true);
       
-      // Fetch categories
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from("module_categories")
+      // Fetch modules
+      const { data: modulesData, error: modulesError } = await supabase
+        .from("training_modules")
         .select("*")
         .order("name");
         
-      if (categoriesError) throw categoriesError;
+      if (modulesError) throw modulesError;
       
       // Fetch videos
       const { data: videosData, error: videosError } = await supabase
@@ -70,7 +81,7 @@ export default function ModuleManagement() {
         
       if (assessmentsError) throw assessmentsError;
       
-      setCategories(categoriesData || []);
+      setModules(modulesData || []);
       setVideos(videosData || []);
       setAssessments(assessmentsData || []);
       
@@ -81,213 +92,412 @@ export default function ModuleManagement() {
       setLoading(false);
     }
   };
-  
-  const handleEditCategory = (category: Category) => {
-    setEditingCategory(category);
-    setCategoryName(category.name);
-    setCategoryDescription(category.description || "");
-    setSelectedAssessments(category.quiz_ids || []);
-    
-    // Fetch associated videos
-    fetchCategoryVideos(category.id);
-    
-    setShowEditDialog(true);
-  };
-  
-  const fetchCategoryVideos = async (categoryId: string) => {
+
+  const fetchModuleRelations = async (moduleId: string) => {
     try {
-      const { data, error } = await supabase
-        .from("category_videos")
-        .select("video_id")
-        .eq("category_id", categoryId);
+      // Fetch module videos
+      const { data: moduleVideosData, error: moduleVideosError } = await supabase
+        .from("module_videos")
+        .select("*")
+        .eq("module_id", moduleId)
+        .order("order");
         
-      if (error) throw error;
+      if (moduleVideosError) throw moduleVideosError;
       
-      setSelectedVideos(data?.map(item => item.video_id) || []);
+      // Fetch module assessments
+      const { data: moduleAssessmentsData, error: moduleAssessmentsError } = await supabase
+        .from("module_assessments")
+        .select("*")
+        .eq("module_id", moduleId)
+        .order("order");
+        
+      if (moduleAssessmentsError) throw moduleAssessmentsError;
+      
+      setModuleVideos(moduleVideosData || []);
+      setModuleAssessments(moduleAssessmentsData || []);
+      
+      // Set selected videos and assessments
+      setSelectedVideos((moduleVideosData || []).map(mv => mv.video_id));
+      setSelectedAssessments((moduleAssessmentsData || []).map(ma => ma.assessment_id));
       
     } catch (error: any) {
-      toast.error(`Failed to fetch category videos: ${error.message}`);
-    }
-  };
-  
-  const handleUpdateCategory = async () => {
-    try {
-      if (!editingCategory) return;
-      
-      // Update category details
-      const { error: updateError } = await supabase
-        .from("module_categories")
-        .update({
-          name: categoryName,
-          description: categoryDescription || null,
-          quiz_ids: selectedAssessments
-        })
-        .eq("id", editingCategory.id);
-        
-      if (updateError) throw updateError;
-      
-      // Remove all existing video associations
-      const { error: deleteError } = await supabase
-        .from("category_videos")
-        .delete()
-        .eq("category_id", editingCategory.id);
-        
-      if (deleteError) throw deleteError;
-      
-      // Add new video associations
-      if (selectedVideos.length > 0) {
-        const videoAssociations = selectedVideos.map(videoId => ({
-          category_id: editingCategory.id,
-          video_id: videoId
-        }));
-        
-        const { error: insertError } = await supabase
-          .from("category_videos")
-          .insert(videoAssociations);
-          
-        if (insertError) throw insertError;
-      }
-      
-      toast.success("Category updated successfully");
-      setShowEditDialog(false);
-      fetchData();
-      
-    } catch (error: any) {
-      toast.error(`Failed to update category: ${error.message}`);
-    }
-  };
-  
-  const handleDeletePrompt = (categoryId: string) => {
-    setCategoryToDelete(categoryId);
-    setShowDeleteDialog(true);
-  };
-  
-  const handleDeleteCategory = async () => {
-    try {
-      if (!categoryToDelete) return;
-      
-      // First delete associations
-      const { error: deleteVideosError } = await supabase
-        .from("category_videos")
-        .delete()
-        .eq("category_id", categoryToDelete);
-        
-      if (deleteVideosError) throw deleteVideosError;
-      
-      // Then delete the category
-      const { error: deleteCategoryError } = await supabase
-        .from("module_categories")
-        .delete()
-        .eq("id", categoryToDelete);
-        
-      if (deleteCategoryError) throw deleteCategoryError;
-      
-      toast.success("Category deleted successfully");
-      setShowDeleteDialog(false);
-      setCategoryToDelete(null);
-      fetchData();
-      
-    } catch (error: any) {
-      toast.error(`Failed to delete category: ${error.message}`);
+      toast.error(`Failed to fetch module content: ${error.message}`);
     }
   };
 
+  const handleOpenCreateDialog = () => {
+    setFormData({
+      name: "",
+      description: "",
+      tags: "",
+      status: "active",
+      thumbnail: ""
+    });
+    setSelectedVideos([]);
+    setSelectedAssessments([]);
+    setShowCreateDialog(true);
+  };
+
+  const handleOpenEditDialog = async (module: Module) => {
+    setSelectedModule(module);
+    setFormData({
+      name: module.name,
+      description: module.description || "",
+      tags: module.tags ? module.tags.join(", ") : "",
+      status: module.status || "active",
+      thumbnail: module.thumbnail || ""
+    });
+    
+    await fetchModuleRelations(module.id);
+    setShowEditDialog(true);
+  };
+
+  const handleOpenDeleteDialog = (module: Module) => {
+    setSelectedModule(module);
+    setShowDeleteDialog(true);
+  };
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const handleStatusChange = (checked: boolean) => {
+    setFormData({ ...formData, status: checked ? "active" : "inactive" });
+  };
+
+  const handleVideoToggle = (videoId: string) => {
+    setSelectedVideos(prev => 
+      prev.includes(videoId) 
+        ? prev.filter(id => id !== videoId)
+        : [...prev, videoId]
+    );
+  };
+
+  const handleAssessmentToggle = (assessmentId: string) => {
+    setSelectedAssessments(prev => 
+      prev.includes(assessmentId) 
+        ? prev.filter(id => id !== assessmentId)
+        : [...prev, assessmentId]
+    );
+  };
+
+  const moveVideo = (videoId: string, direction: 'up' | 'down') => {
+    setSelectedVideos(prev => {
+      const newOrder = [...prev];
+      const index = newOrder.indexOf(videoId);
+      if (direction === 'up' && index > 0) {
+        // Swap with previous item
+        [newOrder[index], newOrder[index - 1]] = [newOrder[index - 1], newOrder[index]];
+      } else if (direction === 'down' && index < newOrder.length - 1) {
+        // Swap with next item
+        [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
+      }
+      return newOrder;
+    });
+  };
+
+  const moveAssessment = (assessmentId: string, direction: 'up' | 'down') => {
+    setSelectedAssessments(prev => {
+      const newOrder = [...prev];
+      const index = newOrder.indexOf(assessmentId);
+      if (direction === 'up' && index > 0) {
+        // Swap with previous item
+        [newOrder[index], newOrder[index - 1]] = [newOrder[index - 1], newOrder[index]];
+      } else if (direction === 'down' && index < newOrder.length - 1) {
+        // Swap with next item
+        [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
+      }
+      return newOrder;
+    });
+  };
+
+  const handleCreateModule = async () => {
+    try {
+      if (!formData.name) {
+        toast.error("Module name is required");
+        return;
+      }
+
+      if (!user?.id) {
+        toast.error("You must be logged in to create a module");
+        return;
+      }
+
+      // Create the module
+      const { data: moduleData, error: moduleError } = await supabase
+        .from("training_modules")
+        .insert({
+          name: formData.name,
+          description: formData.description || null,
+          tags: formData.tags ? formData.tags.split(",").map(tag => tag.trim()) : null,
+          status: formData.status,
+          thumbnail: formData.thumbnail || null,
+          created_by: user.id
+        })
+        .select();
+
+      if (moduleError) throw moduleError;
+      
+      const moduleId = moduleData[0].id;
+      
+      // Create module-video relations
+      if (selectedVideos.length > 0) {
+        const videoRelations = selectedVideos.map((videoId, index) => ({
+          module_id: moduleId,
+          video_id: videoId,
+          order: index
+        }));
+        
+        const { error: videoRelationError } = await supabase
+          .from("module_videos")
+          .insert(videoRelations);
+          
+        if (videoRelationError) throw videoRelationError;
+      }
+      
+      // Create module-assessment relations
+      if (selectedAssessments.length > 0) {
+        const assessmentRelations = selectedAssessments.map((assessmentId, index) => ({
+          module_id: moduleId,
+          assessment_id: assessmentId,
+          order: index
+        }));
+        
+        const { error: assessmentRelationError } = await supabase
+          .from("module_assessments")
+          .insert(assessmentRelations);
+          
+        if (assessmentRelationError) throw assessmentRelationError;
+      }
+      
+      toast.success("Training module created successfully");
+      setShowCreateDialog(false);
+      fetchData();
+    } catch (error: any) {
+      toast.error(`Failed to create module: ${error.message}`);
+    }
+  };
+
+  const handleUpdateModule = async () => {
+    try {
+      if (!selectedModule) return;
+      if (!formData.name) {
+        toast.error("Module name is required");
+        return;
+      }
+
+      // Update the module
+      const { error: moduleError } = await supabase
+        .from("training_modules")
+        .update({
+          name: formData.name,
+          description: formData.description || null,
+          tags: formData.tags ? formData.tags.split(",").map(tag => tag.trim()) : null,
+          status: formData.status,
+          thumbnail: formData.thumbnail || null
+        })
+        .eq("id", selectedModule.id);
+
+      if (moduleError) throw moduleError;
+      
+      // Update module-video relations
+      // First delete existing relations
+      const { error: deleteVideoError } = await supabase
+        .from("module_videos")
+        .delete()
+        .eq("module_id", selectedModule.id);
+        
+      if (deleteVideoError) throw deleteVideoError;
+      
+      // Then create new relations
+      if (selectedVideos.length > 0) {
+        const videoRelations = selectedVideos.map((videoId, index) => ({
+          module_id: selectedModule.id,
+          video_id: videoId,
+          order: index
+        }));
+        
+        const { error: videoRelationError } = await supabase
+          .from("module_videos")
+          .insert(videoRelations);
+          
+        if (videoRelationError) throw videoRelationError;
+      }
+      
+      // Update module-assessment relations
+      // First delete existing relations
+      const { error: deleteAssessmentError } = await supabase
+        .from("module_assessments")
+        .delete()
+        .eq("module_id", selectedModule.id);
+        
+      if (deleteAssessmentError) throw deleteAssessmentError;
+      
+      // Then create new relations
+      if (selectedAssessments.length > 0) {
+        const assessmentRelations = selectedAssessments.map((assessmentId, index) => ({
+          module_id: selectedModule.id,
+          assessment_id: assessmentId,
+          order: index
+        }));
+        
+        const { error: assessmentRelationError } = await supabase
+          .from("module_assessments")
+          .insert(assessmentRelations);
+          
+        if (assessmentRelationError) throw assessmentRelationError;
+      }
+      
+      toast.success("Training module updated successfully");
+      setShowEditDialog(false);
+      fetchData();
+    } catch (error: any) {
+      toast.error(`Failed to update module: ${error.message}`);
+    }
+  };
+
+  const handleDeleteModule = async () => {
+    try {
+      if (!selectedModule) return;
+      
+      // Delete module-video relations
+      const { error: deleteVideoError } = await supabase
+        .from("module_videos")
+        .delete()
+        .eq("module_id", selectedModule.id);
+        
+      if (deleteVideoError) throw deleteVideoError;
+      
+      // Delete module-assessment relations
+      const { error: deleteAssessmentError } = await supabase
+        .from("module_assessments")
+        .delete()
+        .eq("module_id", selectedModule.id);
+        
+      if (deleteAssessmentError) throw deleteAssessmentError;
+      
+      // Check if the module is used in any jobs
+      const { data: jobModules, error: jobCheckError } = await supabase
+        .from("job_modules")
+        .select("job_id")
+        .eq("module_id", selectedModule.id);
+        
+      if (jobCheckError) throw jobCheckError;
+      
+      if (jobModules && jobModules.length > 0) {
+        toast.error("Cannot delete module as it is used in one or more job postings");
+        setShowDeleteDialog(false);
+        return;
+      }
+      
+      // Delete the module
+      const { error: deleteError } = await supabase
+        .from("training_modules")
+        .delete()
+        .eq("id", selectedModule.id);
+        
+      if (deleteError) throw deleteError;
+      
+      toast.success("Training module deleted successfully");
+      setShowDeleteDialog(false);
+      fetchData();
+    } catch (error: any) {
+      toast.error(`Failed to delete module: ${error.message}`);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Training Module Management</h1>
-        <ModuleCategoryDialog onCategoryCreated={fetchData} />
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold">Training Module Management</h2>
+        <Button onClick={handleOpenCreateDialog}>
+          <Plus className="mr-2 h-4 w-4" /> Create Module
+        </Button>
       </div>
       
-      <Tabs defaultValue="categories">
-        <TabsList className="mb-4">
-          <TabsTrigger value="categories">Module Categories</TabsTrigger>
-          <TabsTrigger value="videos">Videos</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="categories">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {categories.map((category) => (
-              <Card key={category.id} className="overflow-hidden">
-                <CardHeader>
-                  <CardTitle className="flex justify-between items-center">
-                    <span className="truncate">{category.name}</span>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditCategory(category)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeletePrompt(category.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    {category.description || "No description provided"}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          
-          {categories.length === 0 && !loading && (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">No training categories found</p>
-              <p className="text-sm mt-2">Create your first training category to get started</p>
-            </div>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="videos">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {videos.map((video) => (
-              <Card key={video.id}>
-                <CardHeader>
-                  <CardTitle>{video.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    {video.description || "No description"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Duration: {video.duration || "Unknown"}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          
-          {videos.length === 0 && !loading && (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">No videos found</p>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {modules.map((module) => (
+          <Card key={module.id} className="overflow-hidden">
+            <CardHeader className="relative">
+              {module.status === "inactive" && (
+                <Badge variant="outline" className="absolute top-2 right-2">
+                  Inactive
+                </Badge>
+              )}
+              <CardTitle className="flex justify-between items-center">
+                <span className="truncate">{module.name}</span>
+                <div className="flex space-x-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleOpenEditDialog(module)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleOpenDeleteDialog(module)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                {module.description || "No description provided"}
+              </p>
+              {module.tags && module.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {module.tags.map((tag, index) => (
+                    <Badge key={index} variant="secondary" className="text-xs">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Created: {new Date(module.created_at).toLocaleDateString()}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
       
-      {/* Edit Category Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+      {modules.length === 0 && !loading && (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">No training modules found</p>
+          <p className="text-sm mt-2">Create your first training module to get started</p>
+        </div>
+      )}
+      
+      {/* Create Module Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Module Category</DialogTitle>
+            <DialogTitle>Create New Training Module</DialogTitle>
           </DialogHeader>
           
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="name">Category Name</Label>
+              <Label htmlFor="name">Module Name</Label>
               <Input
                 id="name"
-                value={categoryName}
-                onChange={(e) => setCategoryName(e.target.value)}
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
               />
             </div>
             
@@ -295,14 +505,46 @@ export default function ModuleManagement() {
               <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
-                value={categoryDescription}
-                onChange={(e) => setCategoryDescription(e.target.value)}
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
                 rows={3}
               />
             </div>
             
             <div className="grid gap-2">
-              <Label>Select Videos</Label>
+              <Label htmlFor="tags">Tags (comma separated)</Label>
+              <Input
+                id="tags"
+                name="tags"
+                value={formData.tags}
+                onChange={handleInputChange}
+                placeholder="sales, marketing, onboarding"
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="thumbnail">Thumbnail URL</Label>
+              <Input
+                id="thumbnail"
+                name="thumbnail"
+                value={formData.thumbnail}
+                onChange={handleInputChange}
+                placeholder="https://example.com/image.jpg"
+              />
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="status"
+                checked={formData.status === "active"}
+                onCheckedChange={handleStatusChange}
+              />
+              <Label htmlFor="status">Active</Label>
+            </div>
+            
+            <div className="border-t pt-4">
+              <h3 className="font-medium mb-2">Select Videos</h3>
               <div className="border rounded-md p-2 max-h-40 overflow-y-auto">
                 {videos.map(video => (
                   <div key={video.id} className="flex items-center py-1">
@@ -310,25 +552,58 @@ export default function ModuleManagement() {
                       type="checkbox"
                       id={`video-${video.id}`}
                       checked={selectedVideos.includes(video.id)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedVideos([...selectedVideos, video.id]);
-                        } else {
-                          setSelectedVideos(selectedVideos.filter(id => id !== video.id));
-                        }
-                      }}
+                      onChange={() => handleVideoToggle(video.id)}
                       className="mr-2"
                     />
-                    <label htmlFor={`video-${video.id}`} className="text-sm">
+                    <label htmlFor={`video-${video.id}`} className="text-sm flex-1">
                       {video.title}
                     </label>
                   </div>
                 ))}
               </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Videos will be presented in the order selected
+              </p>
             </div>
             
-            <div className="grid gap-2">
-              <Label>Select Assessments</Label>
+            <div>
+              <h3 className="font-medium mb-2">Selected Videos Order</h3>
+              <div className="border rounded-md p-2 max-h-40 overflow-y-auto">
+                {selectedVideos.length > 0 ? (
+                  selectedVideos.map((videoId, index) => {
+                    const video = videos.find(v => v.id === videoId);
+                    return (
+                      <div key={videoId} className="flex items-center justify-between py-1">
+                        <span className="text-sm">{index + 1}. {video?.title}</span>
+                        <div className="flex space-x-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={index === 0}
+                            onClick={() => moveVideo(videoId, 'up')}
+                          >
+                            <ArrowUp className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={index === selectedVideos.length - 1}
+                            onClick={() => moveVideo(videoId, 'down')}
+                          >
+                            <ArrowDown className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-sm text-muted-foreground">No videos selected</p>
+                )}
+              </div>
+            </div>
+            
+            <div className="border-t pt-4">
+              <h3 className="font-medium mb-2">Select Assessments</h3>
               <div className="border rounded-md p-2 max-h-40 overflow-y-auto">
                 {assessments.map(assessment => (
                   <div key={assessment.id} className="flex items-center py-1">
@@ -336,20 +611,236 @@ export default function ModuleManagement() {
                       type="checkbox"
                       id={`assessment-${assessment.id}`}
                       checked={selectedAssessments.includes(assessment.id)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedAssessments([...selectedAssessments, assessment.id]);
-                        } else {
-                          setSelectedAssessments(selectedAssessments.filter(id => id !== assessment.id));
-                        }
-                      }}
+                      onChange={() => handleAssessmentToggle(assessment.id)}
                       className="mr-2"
                     />
-                    <label htmlFor={`assessment-${assessment.id}`} className="text-sm">
+                    <label htmlFor={`assessment-${assessment.id}`} className="text-sm flex-1">
                       {assessment.title}
                     </label>
                   </div>
                 ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Assessments will be presented in the order selected
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-medium mb-2">Selected Assessments Order</h3>
+              <div className="border rounded-md p-2 max-h-40 overflow-y-auto">
+                {selectedAssessments.length > 0 ? (
+                  selectedAssessments.map((assessmentId, index) => {
+                    const assessment = assessments.find(a => a.id === assessmentId);
+                    return (
+                      <div key={assessmentId} className="flex items-center justify-between py-1">
+                        <span className="text-sm">{index + 1}. {assessment?.title}</span>
+                        <div className="flex space-x-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={index === 0}
+                            onClick={() => moveAssessment(assessmentId, 'up')}
+                          >
+                            <ArrowUp className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={index === selectedAssessments.length - 1}
+                            onClick={() => moveAssessment(assessmentId, 'down')}
+                          >
+                            <ArrowDown className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-sm text-muted-foreground">No assessments selected</p>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateModule}>
+              Create Module
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Edit Module Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Training Module</DialogTitle>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            {/* Same form fields as create dialog */}
+            <div className="grid gap-2">
+              <Label htmlFor="edit-name">Module Name</Label>
+              <Input
+                id="edit-name"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                rows={3}
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="edit-tags">Tags (comma separated)</Label>
+              <Input
+                id="edit-tags"
+                name="tags"
+                value={formData.tags}
+                onChange={handleInputChange}
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="edit-thumbnail">Thumbnail URL</Label>
+              <Input
+                id="edit-thumbnail"
+                name="thumbnail"
+                value={formData.thumbnail}
+                onChange={handleInputChange}
+              />
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="edit-status"
+                checked={formData.status === "active"}
+                onCheckedChange={handleStatusChange}
+              />
+              <Label htmlFor="edit-status">Active</Label>
+            </div>
+            
+            <div className="border-t pt-4">
+              <h3 className="font-medium mb-2">Select Videos</h3>
+              <div className="border rounded-md p-2 max-h-40 overflow-y-auto">
+                {videos.map(video => (
+                  <div key={video.id} className="flex items-center py-1">
+                    <input
+                      type="checkbox"
+                      id={`edit-video-${video.id}`}
+                      checked={selectedVideos.includes(video.id)}
+                      onChange={() => handleVideoToggle(video.id)}
+                      className="mr-2"
+                    />
+                    <label htmlFor={`edit-video-${video.id}`} className="text-sm flex-1">
+                      {video.title}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="font-medium mb-2">Selected Videos Order</h3>
+              <div className="border rounded-md p-2 max-h-40 overflow-y-auto">
+                {selectedVideos.length > 0 ? (
+                  selectedVideos.map((videoId, index) => {
+                    const video = videos.find(v => v.id === videoId);
+                    return (
+                      <div key={videoId} className="flex items-center justify-between py-1">
+                        <span className="text-sm">{index + 1}. {video?.title}</span>
+                        <div className="flex space-x-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={index === 0}
+                            onClick={() => moveVideo(videoId, 'up')}
+                          >
+                            <ArrowUp className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={index === selectedVideos.length - 1}
+                            onClick={() => moveVideo(videoId, 'down')}
+                          >
+                            <ArrowDown className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-sm text-muted-foreground">No videos selected</p>
+                )}
+              </div>
+            </div>
+            
+            <div className="border-t pt-4">
+              <h3 className="font-medium mb-2">Select Assessments</h3>
+              <div className="border rounded-md p-2 max-h-40 overflow-y-auto">
+                {assessments.map(assessment => (
+                  <div key={assessment.id} className="flex items-center py-1">
+                    <input
+                      type="checkbox"
+                      id={`edit-assessment-${assessment.id}`}
+                      checked={selectedAssessments.includes(assessment.id)}
+                      onChange={() => handleAssessmentToggle(assessment.id)}
+                      className="mr-2"
+                    />
+                    <label htmlFor={`edit-assessment-${assessment.id}`} className="text-sm flex-1">
+                      {assessment.title}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="font-medium mb-2">Selected Assessments Order</h3>
+              <div className="border rounded-md p-2 max-h-40 overflow-y-auto">
+                {selectedAssessments.length > 0 ? (
+                  selectedAssessments.map((assessmentId, index) => {
+                    const assessment = assessments.find(a => a.id === assessmentId);
+                    return (
+                      <div key={assessmentId} className="flex items-center justify-between py-1">
+                        <span className="text-sm">{index + 1}. {assessment?.title}</span>
+                        <div className="flex space-x-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={index === 0}
+                            onClick={() => moveAssessment(assessmentId, 'up')}
+                          >
+                            <ArrowUp className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={index === selectedAssessments.length - 1}
+                            onClick={() => moveAssessment(assessmentId, 'down')}
+                          >
+                            <ArrowDown className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-sm text-muted-foreground">No assessments selected</p>
+                )}
               </div>
             </div>
           </div>
@@ -358,8 +849,8 @@ export default function ModuleManagement() {
             <Button variant="outline" onClick={() => setShowEditDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleUpdateCategory}>
-              Update Category
+            <Button onClick={handleUpdateModule}>
+              Update Module
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -371,12 +862,12 @@ export default function ModuleManagement() {
           <DialogHeader>
             <DialogTitle>Confirm Deletion</DialogTitle>
           </DialogHeader>
-          <p>Are you sure you want to delete this training category? This action cannot be undone.</p>
+          <p>Are you sure you want to delete this training module? This action cannot be undone.</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDeleteCategory}>
+            <Button variant="destructive" onClick={handleDeleteModule}>
               Delete
             </Button>
           </DialogFooter>
@@ -384,4 +875,6 @@ export default function ModuleManagement() {
       </Dialog>
     </div>
   );
-}
+};
+
+export default ModuleManagement;
