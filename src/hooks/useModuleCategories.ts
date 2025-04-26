@@ -12,6 +12,7 @@ export interface TrainingCategory {
   created_at: string;
   created_by: string;
   updated_at: string;
+  quiz_id?: string | null;
 }
 
 export const useModuleCategories = () => {

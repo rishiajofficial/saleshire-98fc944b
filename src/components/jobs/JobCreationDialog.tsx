@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, PencilLine, Eye } from "lucide-react";
+import { Plus, PencilLine, Eye, Check } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -25,8 +26,8 @@ interface JobFormProps {
   onSubmit: (values: any) => void;
   assessments: { id: string; title: string }[];
   trainingModules: { id: string; title: string }[];
-  mode: 'create' | 'edit' | 'view';
   categories: Array<{ id: string; name: string }>;
+  mode: 'create' | 'edit' | 'view';
 }
 
 const JobForm: React.FC<JobFormProps> = ({
@@ -219,6 +220,7 @@ interface JobCreationDialogProps {
   onJobUpdated?: (job: any) => void;
   assessments: { id: string; title: string }[];
   trainingModules: { id: string; title: string }[];
+  categories: Array<{ id: string; name: string }>;
   editingJob?: any;
   mode?: "create" | "edit" | "view";
   isOpen?: boolean;
@@ -230,6 +232,7 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
   onJobUpdated,
   assessments,
   trainingModules,
+  categories,
   editingJob,
   mode = "create",
   isOpen: externalIsOpen,
