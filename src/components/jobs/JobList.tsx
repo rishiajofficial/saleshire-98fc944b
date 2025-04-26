@@ -27,7 +27,7 @@ const JobList: React.FC<JobListProps> = ({
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [viewMode, setViewMode] = useState<"view" | "edit" | null>(null);
 
-  // Fetch job-related assessment and training modules
+  // Fetch job-related assessment, training modules and categories
   const fetchJobRelatedData = async (job: Job) => {
     // Fetch assessment
     const { data: assessmentData } = await supabase
@@ -51,7 +51,7 @@ const JobList: React.FC<JobListProps> = ({
       
     const selectedCategories = (categoriesData || []).map(item => item.category_id);
     
-    // Return enhanced job object with assessment and training module IDs
+    // Return enhanced job object with assessment, training module IDs and categories
     return {
       ...job,
       selectedAssessment: assessmentData?.assessment_id || "none",

@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Database } from "@/integrations/supabase/types";
 
-// Update the interface to match the database schema
+// Update the interface to match the new database schema
 export interface TrainingCategory {
   id: string;
   name: string;
@@ -12,7 +12,7 @@ export interface TrainingCategory {
   created_at: string;
   created_by: string;
   updated_at: string;
-  quiz_id: string | null; // Updated this to match the actual DB schema: quiz_id can be null but is required
+  quiz_ids: string[] | null; // Updated from quiz_id to quiz_ids array
 }
 
 export const useModuleCategories = () => {

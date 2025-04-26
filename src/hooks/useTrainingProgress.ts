@@ -23,7 +23,7 @@ export interface TrainingModuleProgress {
   status: 'completed' | 'in_progress' | 'locked';
   locked: boolean;
   videos: Video[];
-  quizId: string | null; // Store associated quiz ID
+  quizIds: string[] | null; // Updated to store multiple quiz IDs
   totalVideos: number;
   watchedVideos: number;
   quizCompleted: boolean;
@@ -71,24 +71,27 @@ export const useTrainingProgress = (): UseTrainingProgressReturn => {
 
     try {
       // --- Fetch all data concurrently ---
-      const [categoriesResult, videoResult, trainingProgressResult, quizResultsResult] = await Promise.all([
+      const [categoriesResult, videoResult, trainingProgressResult, quizResultsResult, categoryVideosResult] = await Promise.all([
         supabase
           .from('module_categories')
-          .select('*, quiz_id')
+          .select('*, quiz_ids')
           .order('name', { ascending: true }),
         supabase
           .from('videos')
           .select('*'),
         supabase
           .from('training_progress')
-          .select('video_id, completed')
+          .select('video_id, completed, module')
           .eq('user_id', user.id)
           .eq('completed', true),
         supabase
           .from('quiz_results')
           .select('module, passed')
           .eq('user_id', user.id)
-          .eq('passed', true)
+          .eq('passed', true),
+        supabase
+          .from('category_videos')
+          .select('category_id, video_id')
       ]);
 
       // --- Check for errors after all promises settle ---
@@ -96,16 +99,19 @@ export const useTrainingProgress = (): UseTrainingProgressReturn => {
       if (videoResult.error) throw new Error(`Videos fetch failed: ${videoResult.error.message}`);
       if (trainingProgressResult.error) throw new Error(`Training progress fetch failed: ${trainingProgressResult.error.message}`);
       if (quizResultsResult.error) throw new Error(`Quiz results fetch failed: ${quizResultsResult.error.message}`);
+      if (categoryVideosResult.error) throw new Error(`Category videos fetch failed: ${categoryVideosResult.error.message}`);
 
       const categories = categoriesResult.data || [];
       const videos = videoResult.data || [];
       const completedVideos = trainingProgressResult.data || [];
       const passedQuizzes = quizResultsResult.data || [];
+      const categoryVideos = categoryVideosResult.data || [];
 
       console.log("Hook: Fetched Categories:", categories);
       console.log("Hook: Fetched Videos:", videos);
       console.log("Hook: Fetched Completed Videos:", completedVideos);
       console.log("Hook: Fetched Passed Quizzes:", passedQuizzes);
+      console.log("Hook: Fetched Category Videos:", categoryVideos);
 
       // Create set of watched video IDs for quick lookup
       const watchedVideoIds = new Set(completedVideos.map(item => item.video_id));
@@ -113,24 +119,28 @@ export const useTrainingProgress = (): UseTrainingProgressReturn => {
       // Create set of passed quiz modules for quick lookup
       const passedQuizModules = new Set(passedQuizzes.map(quiz => quiz.module));
 
-      // Group videos by module/category
-      const videosByCategory: Record<string, Video[]> = {};
-      videos.forEach(video => {
-        const categoryName = video.module;
-        if (!videosByCategory[categoryName]) {
-          videosByCategory[categoryName] = [];
+      // Create map of videos by category
+      const videosByCategoryId: Record<string, Video[]> = {};
+      categoryVideos.forEach(cv => {
+        if (!videosByCategoryId[cv.category_id]) {
+          videosByCategoryId[cv.category_id] = [];
         }
-        videosByCategory[categoryName].push(video as Video);
+        
+        const video = videos.find(v => v.id === cv.video_id);
+        if (video) {
+          videosByCategoryId[cv.category_id].push(video as Video);
+        }
       });
 
       // --- Process modules with videos ---
       let previousModuleCompleted = true; // First module is always unlocked
       const formattedModules: TrainingModuleProgress[] = categories.map((category, index) => {
+        const categoryId = category.id;
         const categoryName = category.name;
-        const categoryVideos = videosByCategory[categoryName] || [];
+        const categoryVideos = videosByCategoryId[categoryId] || [];
         const totalVideos = categoryVideos.length;
         const watchedVideos = categoryVideos.filter(video => watchedVideoIds.has(video.id)).length;
-        const quizCompleted = passedQuizModules.has(categoryName);
+        const quizCompleted = passedQuizModules.has(categoryId);
         
         // Calculate module progress
         let moduleProgress = 0;
@@ -163,7 +173,7 @@ export const useTrainingProgress = (): UseTrainingProgressReturn => {
           status: status,
           locked: locked,
           videos: categoryVideos,
-          quizId: category.quiz_id,
+          quizIds: category.quiz_ids,
           totalVideos,
           watchedVideos,
           quizCompleted
@@ -227,7 +237,6 @@ export const useTrainingProgress = (): UseTrainingProgressReturn => {
     }
     // If user object is present (logged in), fetch data
     fetchTrainingData();
-
   }, [user, fetchTrainingData]);
 
   // Return state and refetch function

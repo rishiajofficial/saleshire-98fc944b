@@ -518,7 +518,7 @@ const CandidateDashboard = () => {
                   <div className="space-y-4">
                     {trainingModules.map((module) => (
                       <Link 
-                        to={`/training/module/${module.module}`}
+                        to={`/training/module/${module.id}`}
                         key={module.id} 
                         className={`block p-4 border rounded-lg hover:bg-muted/50 transition-all ${module.locked ? 'opacity-60 pointer-events-none' : ''}`}
                       >
@@ -539,7 +539,7 @@ const CandidateDashboard = () => {
                             <span className="text-green-600 flex items-center">
                               <CheckCircle2 className="h-3 w-3 mr-1" /> Quiz passed
                             </span>
-                          ) : module.quizId && module.watchedVideos === module.totalVideos ? (
+                          ) : module.quizIds && module.quizIds.length > 0 && module.watchedVideos === module.totalVideos ? (
                             <span className="text-blue-600 flex items-center">
                               <BookOpen className="h-3 w-3 mr-1" /> Quiz available
                             </span>

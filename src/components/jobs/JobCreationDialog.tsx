@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,7 +46,7 @@ const JobForm: React.FC<JobFormProps> = ({
     salary_range: job?.salary_range || "",
     selectedAssessment: job?.selectedAssessment || "none",
     selectedTrainingModule: job?.selectedTrainingModule || "none",
-    categories: job?.job_categories?.map((jc: any) => jc.category_id) || []
+    categories: job?.selectedCategories || []
   });
 
   useEffect(() => {
@@ -61,7 +60,7 @@ const JobForm: React.FC<JobFormProps> = ({
         salary_range: job.salary_range || "",
         selectedAssessment: job.selectedAssessment || "none",
         selectedTrainingModule: job.selectedTrainingModule || "none",
-        categories: job.job_categories?.map((jc: any) => jc.category_id) || []
+        categories: job.selectedCategories || []
       });
     }
   }, [job]);

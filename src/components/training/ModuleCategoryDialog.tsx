@@ -37,7 +37,8 @@ const ModuleCategoryDialog: React.FC<ModuleCategoryDialogProps> = ({ onCategoryC
       const { error } = await supabase.from("module_categories").insert({
         name: name.trim(),
         description: description.trim() || null,
-        created_by: user.id
+        created_by: user.id,
+        quiz_ids: [] // Initialize with empty array for quiz IDs
       });
 
       if (error) throw error;

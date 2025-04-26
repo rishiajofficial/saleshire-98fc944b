@@ -259,6 +259,42 @@ export type Database = {
           },
         ]
       }
+      category_videos: {
+        Row: {
+          category_id: string | null
+          created_at: string | null
+          id: string
+          video_id: string | null
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string | null
+          id?: string
+          video_id?: string | null
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string | null
+          id?: string
+          video_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_videos_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "module_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "category_videos_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       interviews: {
         Row: {
           candidate_id: string
@@ -546,7 +582,7 @@ export type Database = {
           description: string | null
           id: string
           name: string
-          quiz_id: string | null
+          quiz_ids: string[] | null
           updated_at: string
         }
         Insert: {
@@ -555,7 +591,7 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
-          quiz_id?: string | null
+          quiz_ids?: string[] | null
           updated_at?: string
         }
         Update: {
@@ -564,18 +600,10 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
-          quiz_id?: string | null
+          quiz_ids?: string[] | null
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "module_categories_quiz_id_fkey"
-            columns: ["quiz_id"]
-            isOneToOne: false
-            referencedRelation: "training_modules"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       profiles: {
         Row: {

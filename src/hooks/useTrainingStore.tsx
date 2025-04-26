@@ -19,12 +19,12 @@ interface QuizResult {
   answers: Record<string, string>;
 }
 
-export const useTrainingStore = (moduleId?: string) => {
+export const useTrainingStore = (categoryId?: string) => {
   const { user } = useAuth();
   const [isUpdating, setIsUpdating] = useState(false);
 
   const updateVideoProgress = useCallback(async (videoId: string, completed: boolean = true) => {
-    if (!user || !moduleId) return;
+    if (!user || !categoryId) return;
     
     try {
       setIsUpdating(true);
@@ -34,7 +34,7 @@ export const useTrainingStore = (moduleId?: string) => {
         .upsert({
           user_id: user.id,
           video_id: videoId,
-          module: moduleId,
+          module: categoryId, // Now using categoryId instead of moduleId
           completed,
           completed_at: completed ? new Date().toISOString() : null
         });
@@ -48,10 +48,10 @@ export const useTrainingStore = (moduleId?: string) => {
     } finally {
       setIsUpdating(false);
     }
-  }, [user, moduleId]);
+  }, [user, categoryId]);
 
   const submitQuizResults = useCallback(async (results: Omit<QuizResult, 'module'>) => {
-    if (!user || !moduleId) return;
+    if (!user || !categoryId) return;
     
     try {
       setIsUpdating(true);
@@ -60,7 +60,7 @@ export const useTrainingStore = (moduleId?: string) => {
         .from('quiz_results')
         .insert({
           user_id: user.id,
-          module: moduleId,
+          module: categoryId, // Now using categoryId instead of moduleId
           score: results.score,
           total_questions: results.total_questions,
           passed: results.passed,
@@ -77,7 +77,7 @@ export const useTrainingStore = (moduleId?: string) => {
     } finally {
       setIsUpdating(false);
     }
-  }, [user, moduleId]);
+  }, [user, categoryId]);
 
   return {
     updateVideoProgress,
