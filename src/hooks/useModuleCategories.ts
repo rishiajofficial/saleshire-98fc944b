@@ -12,7 +12,7 @@ export interface TrainingCategory {
   created_at: string;
   created_by: string;
   updated_at: string;
-  quiz_id?: string | null;
+  quiz_id: string | null; // Updated this to match the actual DB schema: quiz_id can be null but is required
 }
 
 export const useModuleCategories = () => {

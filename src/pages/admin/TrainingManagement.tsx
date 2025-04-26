@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -61,7 +60,7 @@ import { Database, TablesInsert } from "@/integrations/supabase/types";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSupabaseStorage } from '@/hooks/useSupabaseStorage';
 import ModuleCategoryDialog from "@/components/training/ModuleCategoryDialog";
-import { useModuleCategories } from "@/hooks/useModuleCategories";
+import { useModuleCategories, TrainingCategory } from "@/hooks/useModuleCategories";
 
 type Video = Database['public']['Tables']['videos']['Row'];
 type TrainingModule = Database['public']['Tables']['training_modules']['Row'];
@@ -113,7 +112,7 @@ const TrainingManagement = () => {
 
   const [useFileUpload, setUseFileUpload] = useState(true);
 
-  const [editingCategory, setEditingCategory] = useState<ModuleCategory | null>(null);
+  const [editingCategory, setEditingCategory] = useState<TrainingCategory | null>(null);
   const [editCategoryName, setEditCategoryName] = useState("");
   const [editCategoryDescription, setEditCategoryDescription] = useState("");
 
@@ -443,7 +442,7 @@ const TrainingManagement = () => {
     setShowEditQuizDialog(true);
   };
 
-  const handleEditCategoryClick = (category: ModuleCategory) => {
+  const handleEditCategoryClick = (category: TrainingCategory) => {
     setEditingCategory(category);
     setEditCategoryName(category.name);
     setEditCategoryDescription(category.description || "");
