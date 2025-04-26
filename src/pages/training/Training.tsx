@@ -82,7 +82,7 @@ const Training = () => {
     checkAccessAndFetchData();
   }, [user]);
 
-  // Simplified function to fetch all module categories 
+  // Modified function to fetch all module categories and their videos
   const fetchModuleCategories = async () => {
     try {
       console.log("Fetching all available training categories");
@@ -110,67 +110,76 @@ const Training = () => {
         setSelectedCategoryId(categoriesData[0].id);
       }
       
-      // For each category, fetch associated videos and quizzes
-      const categoriesWithContent: CategoryWithContent[] = [];
+      // Fetch all videos
+      const { data: allVideosData, error: allVideosError } = await supabase
+        .from('videos')
+        .select('*');
+        
+      if (allVideosError) {
+        console.error("Error fetching all videos:", allVideosError);
+        throw allVideosError;
+      }
       
-      for (const category of categoriesData) {
-        console.log("Processing category:", category.name);
+      console.log("All fetched videos:", allVideosData);
+      
+      // Fetch all category-video associations
+      const { data: categoryVideosData, error: categoryVideosError } = await supabase
+        .from('category_videos')
+        .select('*');
         
-        // Fetch videos associated with this category
-        const { data: categoryVideosData, error: categoryVideosError } = await supabase
-          .from('category_videos')
-          .select('video_id')
-          .eq('category_id', category.id);
-          
-        if (categoryVideosError) {
-          console.error("Error fetching category videos:", categoryVideosError);
-          throw categoryVideosError;
-        }
+      if (categoryVideosError) {
+        console.error("Error fetching category videos associations:", categoryVideosError);
+        throw categoryVideosError;
+      }
+      
+      console.log("Category-video associations:", categoryVideosData);
+      
+      // Process categories and assign videos
+      const categoriesWithContent: CategoryWithContent[] = categoriesData.map(category => {
+        // Find video IDs associated with this category
+        const categoryVideoIds = (categoryVideosData || [])
+          .filter(cv => cv.category_id === category.id)
+          .map(cv => cv.video_id);
         
-        console.log("Category videos data:", categoryVideosData);
+        console.log(`Videos IDs for category ${category.name}:`, categoryVideoIds);
         
-        // Fetch the actual video data for these IDs
-        let videos: any[] = [];
-        if (categoryVideosData && categoryVideosData.length > 0) {
-          const videoIds = categoryVideosData.map(item => item.video_id);
-          
-          const { data: videosData, error: videosError } = await supabase
-            .from('videos')
-            .select('*')
-            .in('id', videoIds);
-            
-          if (videosError) {
-            console.error("Error fetching videos:", videosError);
-            throw videosError;
-          }
-          
-          videos = videosData || [];
-          console.log("Videos for category:", category.name, videos);
-        }
+        // Find the actual video objects
+        const videos = (allVideosData || []).filter(video => 
+          categoryVideoIds.includes(video.id) || video.module === category.name
+        );
         
-        // Fetch quizzes associated with this category
+        console.log(`Videos for category ${category.name}:`, videos);
+        
+        // Fetch quizzes if quiz_ids are present
         let quizzes: any[] = [];
         if (category.quiz_ids && category.quiz_ids.length > 0) {
-          const { data: quizzesData, error: quizzesError } = await supabase
-            .from('assessments')
-            .select('*')
-            .in('id', category.quiz_ids);
-            
-          if (quizzesError) {
-            console.error("Error fetching quizzes:", quizzesError);
-            throw quizzesError;
-          }
-          
-          console.log("Quizzes data:", quizzesData);
-          quizzes = quizzesData || [];
-        } else {
-          console.log("No quiz_ids found for category:", category.name);
+          // We'll fetch quizzes asynchronously later if needed
+          console.log("Quiz IDs for category:", category.name, category.quiz_ids);
         }
         
-        categoriesWithContent.push({
+        return {
           ...category,
           videos,
           quizzes
+        };
+      });
+      
+      // Fetch all assessments and add to relevant categories
+      const { data: assessmentsData, error: assessmentsError } = await supabase
+        .from('assessments')
+        .select('*');
+        
+      if (!assessmentsError && assessmentsData) {
+        console.log("All assessments:", assessmentsData);
+        
+        // Add assessments to categories that reference them in quiz_ids
+        categoriesWithContent.forEach(category => {
+          if (category.quiz_ids && category.quiz_ids.length > 0) {
+            category.quizzes = assessmentsData.filter(assessment => 
+              category.quiz_ids?.includes(assessment.id)
+            );
+            console.log(`Quizzes for category ${category.name}:`, category.quizzes);
+          }
         });
       }
       

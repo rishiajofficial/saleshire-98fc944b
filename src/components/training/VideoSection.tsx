@@ -33,6 +33,9 @@ const VideoSection = ({ videos }: VideoSectionProps) => {
                 <p className="text-sm text-gray-600 mb-4 line-clamp-3">
                   {video.description || "No description available."}
                 </p>
+                <div className="text-xs text-gray-500 mb-4">
+                  Duration: {video.duration || 'N/A'}
+                </div>
                 <Button asChild className="w-full">
                   <Link to={`/training/module/${video.module}/${video.id}`}>
                     Watch Video

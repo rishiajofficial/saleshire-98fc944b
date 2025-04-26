@@ -22,6 +22,7 @@ export const useModuleData = (moduleId: string | undefined) => {
       if (!moduleId) return [];
       console.log("Fetching videos for module:", moduleId);
       
+      // First try to find videos through category_videos associations
       const { data: categoryVideosData, error: categoryVideosError } = await supabase
         .from('category_videos')
         .select('video_id')
@@ -32,26 +33,65 @@ export const useModuleData = (moduleId: string | undefined) => {
         throw categoryVideosError;
       }
       
-      if (!categoryVideosData || categoryVideosData.length === 0) {
-        console.log("No video IDs found for this category");
-        return [];
+      console.log("Category videos data:", categoryVideosData);
+      
+      // Get the category name to also find videos by module name
+      const { data: categoryData, error: categoryError } = await supabase
+        .from('module_categories')
+        .select('name')
+        .eq('id', moduleId)
+        .single();
+        
+      if (categoryError) {
+        console.error("Error fetching category name:", categoryError);
+        // Continue with what we have, don't throw here
       }
       
-      const videoIds = categoryVideosData.map(item => item.video_id);
-      console.log("Found video IDs:", videoIds);
+      let categoryName = categoryData?.name || '';
+      console.log("Category name:", categoryName);
       
-      const { data: videosData, error: videosError } = await supabase
-        .from('videos')
-        .select('*')
-        .in('id', videoIds);
+      // If we have video IDs from category_videos associations, fetch those videos
+      let allVideos: Video[] = [];
       
-      if (videosError) {
-        console.error("Error fetching videos:", videosError);
-        throw videosError;
+      if (categoryVideosData && categoryVideosData.length > 0) {
+        const videoIds = categoryVideosData.map(item => item.video_id);
+        console.log("Found video IDs from category_videos:", videoIds);
+        
+        const { data: videosData, error: videosError } = await supabase
+          .from('videos')
+          .select('*')
+          .in('id', videoIds);
+        
+        if (videosError) {
+          console.error("Error fetching videos by IDs:", videosError);
+          throw videosError;
+        }
+        
+        if (videosData) {
+          allVideos = [...allVideos, ...videosData];
+        }
       }
       
-      console.log("Fetched videos:", videosData);
-      return videosData || [];
+      // Also fetch videos by module name match
+      if (categoryName) {
+        const { data: moduleVideosData, error: moduleVideosError } = await supabase
+          .from('videos')
+          .select('*')
+          .eq('module', categoryName);
+        
+        if (moduleVideosError) {
+          console.error("Error fetching videos by module name:", moduleVideosError);
+          // Continue with what we have, don't throw here
+        } else if (moduleVideosData) {
+          // Add videos that aren't already in the list
+          const existingIds = new Set(allVideos.map(v => v.id));
+          const newVideos = moduleVideosData.filter(v => !existingIds.has(v.id));
+          allVideos = [...allVideos, ...newVideos];
+        }
+      }
+      
+      console.log("Final videos for module:", allVideos);
+      return allVideos;
     },
     enabled: !!moduleId
   });
