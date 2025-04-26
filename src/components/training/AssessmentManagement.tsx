@@ -48,6 +48,32 @@ const AssessmentManagement = () => {
     }
   };
 
+  const fetchAssessmentModules = async (assessmentId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("module_assessments")
+        .select(`
+          id,
+          module_id,
+          training_modules!module_id(
+            id,
+            title,
+            name,
+            description
+          )
+        `)
+        .eq("assessment_id", assessmentId)
+        .order("order");
+
+      if (error) throw error;
+      return data;
+    } catch (error: any) {
+      console.error('Error fetching assessment modules:', error);
+      toast.error('Failed to fetch assessment modules');
+      return [];
+    }
+  };
+
   const handleCreateAssessment = () => {
     navigate("/admin/assessment/create");
   };

@@ -71,7 +71,17 @@ const ModuleManagement = () => {
       // Fetch modules
       const { data: modulesData, error: modulesError } = await supabase
         .from("training_modules")
-        .select("*")
+        .select(`
+          id,
+          title,
+          name,
+          description,
+          tags,
+          status,
+          thumbnail,
+          created_at,
+          created_by
+        `)
         .order("name");
         
       if (modulesError) throw modulesError;
@@ -106,19 +116,31 @@ const ModuleManagement = () => {
 
   const fetchModuleRelations = async (moduleId: string) => {
     try {
-      // Fetch module videos
+      // Get module videos with their videos
       const { data: moduleVideosData, error: moduleVideosError } = await supabase
         .from("module_videos")
-        .select("*")
+        .select(`
+          id,
+          module_id,
+          video_id,
+          order,
+          videos:video_id(*)
+        `)
         .eq("module_id", moduleId)
         .order("order");
         
       if (moduleVideosError) throw moduleVideosError;
       
-      // Fetch module assessments
+      // Get module assessments with their assessments
       const { data: moduleAssessmentsData, error: moduleAssessmentsError } = await supabase
         .from("module_assessments")
-        .select("*")
+        .select(`
+          id,
+          module_id,
+          assessment_id,
+          order,
+          assessments:assessment_id(*)
+        `)
         .eq("module_id", moduleId)
         .order("order");
         
@@ -127,12 +149,11 @@ const ModuleManagement = () => {
       setModuleVideos(moduleVideosData || []);
       setModuleAssessments(moduleAssessmentsData || []);
       
-      // Set selected videos and assessments
-      setSelectedVideos((moduleVideosData || []).map(mv => mv.video_id));
-      setSelectedAssessments((moduleAssessmentsData || []).map(ma => ma.assessment_id));
-      
+      setSelectedVideos(moduleVideosData?.map(mv => mv.video_id) || []);
+      setSelectedAssessments(moduleAssessmentsData?.map(ma => ma.assessment_id) || []);
     } catch (error: any) {
-      toast.error(`Failed to fetch module content: ${error.message}`);
+      toast.error(`Failed to fetch module relations: ${error.message}`);
+      console.error("Error fetching module relations:", error);
     }
   };
 

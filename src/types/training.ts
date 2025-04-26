@@ -1,14 +1,11 @@
 export interface TrainingModule {
   id: string;
   title: string;
+  name: string;
   description: string | null;
-  thumbnail?: string | null;
-  tags?: string[] | null;
+  tags: string[] | null;
   status: 'active' | 'inactive';
-  videos: Video[];
-  assessments: Assessment[];
-  videoOrder?: string[] | null; // Array of video IDs in specified order
-  assessmentOrder?: string[] | null; // Array of assessment IDs in specified order
+  thumbnail: string | null;
   created_at?: string;
   updated_at?: string;
   created_by?: string;
@@ -24,6 +21,7 @@ export interface Video {
   created_at?: string;
   updated_at?: string;
   created_by?: string;
+  module: string;
 }
 
 export interface Assessment {
@@ -37,6 +35,7 @@ export interface Assessment {
   created_at?: string;
   updated_at?: string;
   created_by?: string;
+  difficulty?: string | null;
 }
 
 export interface AssessmentQuestion {
@@ -61,6 +60,28 @@ export interface TrainingProgress {
   timeSpent?: number; // Time in seconds
 }
 
+export interface ModuleVideo {
+  id: string;
+  module_id: string;
+  video_id: string;
+  order: number;
+  created_at?: string;
+}
+
+export interface ModuleAssessment {
+  id: string;
+  module_id: string;
+  assessment_id: string;
+  order: number;
+  created_at?: string;
+}
+
+export interface JobModule {
+  id: string;
+  job_id: string;
+  module_id: string;
+  created_at?: string;
+}
 export interface ModuleVideoRelation {
   moduleId: string;
   videoId: string;
