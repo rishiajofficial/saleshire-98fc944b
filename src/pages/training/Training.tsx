@@ -8,6 +8,8 @@ import TrainingHeader from "@/components/training/TrainingHeader";
 import CategorySelector from "@/components/training/CategorySelector";
 import VideoSection from "@/components/training/VideoSection";
 import AssessmentSection from "@/components/training/AssessmentSection";
+import { toast } from "sonner";
+import { useTrainingProgress } from "@/hooks/useTrainingProgress";
 
 export interface CategoryWithContent {
   id: string;
@@ -22,9 +24,11 @@ const Training = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
   const [selectedJob, setSelectedJob] = useState<any>(null);
-  const [jobs, setJobs] = useState<any[]>([]);
   const [categories, setCategories] = useState<CategoryWithContent[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  
+  // Use the shared training progress hook to maintain consistency
+  const { trainingModules, isLoading: isLoadingModules } = useTrainingProgress();
 
   useEffect(() => {
     if (!user) return;
@@ -65,10 +69,11 @@ const Training = () => {
         setSelectedJob(jobData);
         
         if (hasTrainingAccess) {
-          await fetchJobTrainingCategories(selectedJobId);
+          await fetchModuleCategories();
         }
       } catch (error) {
         console.error("Error in checkAccessAndFetchData:", error);
+        toast.error("Failed to load training data");
       } finally {
         setIsLoading(false);
       }
@@ -77,39 +82,16 @@ const Training = () => {
     checkAccessAndFetchData();
   }, [user]);
 
-  const fetchJobTrainingCategories = async (jobId: string) => {
+  // Simplified function to fetch all module categories 
+  const fetchModuleCategories = async () => {
     try {
-      console.log("Fetching training categories for job:", jobId);
+      console.log("Fetching all available training categories");
       
-      // Fetch categories associated with the job
-      const { data: jobCategoriesData, error: jobCategoriesError } = await supabase
-        .from('job_categories')
-        .select('category_id')
-        .eq('job_id', jobId);
-        
-      if (jobCategoriesError) {
-        console.error("Error fetching job categories:", jobCategoriesError);
-        throw jobCategoriesError;
-      }
-      
-      console.log("Job categories data:", jobCategoriesData);
-      
-      if (!jobCategoriesData || jobCategoriesData.length === 0) {
-        // No categories found for this job
-        console.log("No categories found for this job");
-        setCategories([]);
-        return;
-      }
-      
-      // Extract category IDs
-      const categoryIds = jobCategoriesData.map(item => item.category_id);
-      console.log("Category IDs:", categoryIds);
-      
-      // Fetch detailed category information
+      // Fetch all available categories
       const { data: categoriesData, error: categoriesError } = await supabase
         .from('module_categories')
         .select('*')
-        .in('id', categoryIds);
+        .order('name');
         
       if (categoriesError) {
         console.error("Error fetching categories data:", categoriesError);
@@ -118,7 +100,7 @@ const Training = () => {
       
       console.log("Categories data:", categoriesData);
       
-      if (!categoriesData) {
+      if (!categoriesData || categoriesData.length === 0) {
         setCategories([]);
         return;
       }
@@ -137,7 +119,7 @@ const Training = () => {
         // Fetch videos associated with this category
         const { data: categoryVideosData, error: categoryVideosError } = await supabase
           .from('category_videos')
-          .select('videos:video_id(*)')
+          .select('video_id')
           .eq('category_id', category.id);
           
         if (categoryVideosError) {
@@ -147,11 +129,24 @@ const Training = () => {
         
         console.log("Category videos data:", categoryVideosData);
         
-        const videos = categoryVideosData
-          ? categoryVideosData.map(item => item.videos).filter(Boolean)
-          : [];
-        
-        console.log("Processed videos:", videos);
+        // Fetch the actual video data for these IDs
+        let videos: any[] = [];
+        if (categoryVideosData && categoryVideosData.length > 0) {
+          const videoIds = categoryVideosData.map(item => item.video_id);
+          
+          const { data: videosData, error: videosError } = await supabase
+            .from('videos')
+            .select('*')
+            .in('id', videoIds);
+            
+          if (videosError) {
+            console.error("Error fetching videos:", videosError);
+            throw videosError;
+          }
+          
+          videos = videosData || [];
+          console.log("Videos for category:", category.name, videos);
+        }
         
         // Fetch quizzes associated with this category
         let quizzes: any[] = [];
@@ -182,7 +177,8 @@ const Training = () => {
       console.log("Final categories with content:", categoriesWithContent);
       setCategories(categoriesWithContent);
     } catch (error) {
-      console.error("Error fetching job training categories:", error);
+      console.error("Error fetching module categories:", error);
+      toast.error("Failed to load training categories");
     }
   };
   
@@ -190,7 +186,7 @@ const Training = () => {
     setSelectedCategoryId(categoryId);
   };
 
-  if (isLoading) {
+  if (isLoading || isLoadingModules) {
     return (
       <MainLayout>
         <div className="flex justify-center items-center py-12">
@@ -246,7 +242,7 @@ const Training = () => {
           </>
         ) : (
           <div className="text-center py-12">
-            <p className="text-gray-500">No training content available for this job.</p>
+            <p className="text-gray-500">No training content available. Please check back later.</p>
           </div>
         )}
       </div>

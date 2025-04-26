@@ -12,6 +12,8 @@ interface VideoListProps {
 }
 
 const VideoList = ({ moduleId, videos, watchedVideos }: VideoListProps) => {
+  console.log("VideoList props:", { moduleId, videos, watchedVideos });
+  
   if (!videos || videos.length === 0) {
     return (
       <div className="text-center p-12">
@@ -25,7 +27,7 @@ const VideoList = ({ moduleId, videos, watchedVideos }: VideoListProps) => {
   }
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-6 my-6">
       {videos.map((video) => {
         const isWatched = watchedVideos.includes(video.id);
         
@@ -46,7 +48,7 @@ const VideoList = ({ moduleId, videos, watchedVideos }: VideoListProps) => {
             <CardContent>
               <div className="flex items-center justify-between">
                 <div className="text-sm text-muted-foreground">
-                  Duration: {video.duration}
+                  Duration: {video.duration || 'N/A'}
                   {isWatched && <span className="ml-2 text-green-500">Completed</span>}
                 </div>
                 <Button asChild>

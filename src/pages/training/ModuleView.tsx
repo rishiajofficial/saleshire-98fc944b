@@ -7,6 +7,7 @@ import ModuleHeader from "@/components/training/ModuleHeader";
 import VideoList from "@/components/training/VideoList";
 import ModuleQuiz from "@/components/training/ModuleQuiz";
 import { useModuleData } from "@/hooks/useModuleData";
+import { toast } from "sonner";
 
 const ModuleView = () => {
   const { moduleId } = useParams<{ moduleId: string }>();
@@ -15,7 +16,8 @@ const ModuleView = () => {
     moduleDetails, 
     videoProgressData, 
     quizResultData, 
-    isLoading 
+    isLoading,
+    error 
   } = useModuleData(moduleId);
 
   const watchedVideos = React.useMemo(() => {
@@ -27,11 +29,28 @@ const ModuleView = () => {
       moduleVideos.every(video => watchedVideos.includes(video.id));
   }, [moduleVideos, watchedVideos]);
 
+  React.useEffect(() => {
+    if (error) {
+      toast.error("Failed to load module data: " + error);
+    }
+  }, [error]);
+
   if (isLoading) {
     return (
       <MainLayout>
         <div className="flex justify-center items-center h-screen">
           <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (!moduleDetails) {
+    return (
+      <MainLayout>
+        <div className="container mx-auto py-8 text-center">
+          <h2 className="text-2xl font-semibold">Module Not Found</h2>
+          <p className="text-gray-500 mt-2">The requested training module could not be found.</p>
         </div>
       </MainLayout>
     );
@@ -46,6 +65,9 @@ const ModuleView = () => {
     ? Math.round((watchedVideos.length / moduleVideos.length) * 100)
     : 0;
 
+  console.log("Module videos:", moduleVideos);
+  console.log("Watched videos:", watchedVideos);
+
   return (
     <MainLayout title="Training Module">
       <div className="container mx-auto py-8">
@@ -58,11 +80,17 @@ const ModuleView = () => {
           quizCompleted={!!quizResultData}
         />
 
-        <VideoList
-          moduleId={moduleId || ''}
-          videos={moduleVideos || []}
-          watchedVideos={watchedVideos}
-        />
+        {moduleVideos && moduleVideos.length > 0 ? (
+          <VideoList
+            moduleId={moduleId || ''}
+            videos={moduleVideos}
+            watchedVideos={watchedVideos}
+          />
+        ) : (
+          <div className="text-center p-8 bg-gray-50 rounded-lg border">
+            <p className="text-gray-500">No videos available for this module.</p>
+          </div>
+        )}
 
         <div className="mt-6">
           <ModuleQuiz
