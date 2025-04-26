@@ -5,11 +5,23 @@ import { Book } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-interface AssessmentSectionProps {
-  quizzes: any[];
+interface Assessment {
+  id: string;
+  title: string;
+  description?: string | null;
+  difficulty?: string | null;
 }
 
-const AssessmentSection = ({ quizzes }: AssessmentSectionProps) => {
+interface AssessmentSectionProps {
+  quizzes: Assessment[];
+  moduleId?: string;
+}
+
+const AssessmentSection = ({ quizzes, moduleId }: AssessmentSectionProps) => {
+  React.useEffect(() => {
+    console.log("AssessmentSection rendered with quizzes:", quizzes);
+  }, [quizzes]);
+
   return (
     <div>
       <h3 className="text-lg font-semibold mb-4 flex items-center">
@@ -20,7 +32,7 @@ const AssessmentSection = ({ quizzes }: AssessmentSectionProps) => {
         <p className="text-gray-500 py-4">No assessments available for this category.</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {quizzes.map((quiz: any) => (
+          {quizzes.map((quiz: Assessment) => (
             <Card key={quiz.id}>
               <CardHeader>
                 <CardTitle className="text-md font-semibold">{quiz.title}</CardTitle>
@@ -33,7 +45,7 @@ const AssessmentSection = ({ quizzes }: AssessmentSectionProps) => {
                   Difficulty: {quiz.difficulty || "Not specified"}
                 </p>
                 <Button asChild className="w-full">
-                  <Link to={`/training/assessment/${quiz.id}`}>
+                  <Link to={`/training/quiz/${moduleId || quiz.id}`}>
                     Take Assessment
                   </Link>
                 </Button>

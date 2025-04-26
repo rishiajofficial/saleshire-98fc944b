@@ -5,11 +5,21 @@ import { Video } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-interface VideoSectionProps {
-  videos: any[];
+interface VideoData {
+  id: string;
+  title: string;
+  description?: string | null;
+  url: string;
+  duration?: string | null;
+  module: string;
 }
 
-const VideoSection = ({ videos }: VideoSectionProps) => {
+interface VideoSectionProps {
+  videos: VideoData[];
+  moduleId?: string;
+}
+
+const VideoSection = ({ videos, moduleId }: VideoSectionProps) => {
   React.useEffect(() => {
     console.log("VideoSection rendered with videos:", videos);
   }, [videos]);
@@ -24,7 +34,7 @@ const VideoSection = ({ videos }: VideoSectionProps) => {
         <p className="text-gray-500 py-4">No videos available for this category.</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {videos.map((video: any) => (
+          {videos.map((video: VideoData) => (
             <Card key={video.id}>
               <CardHeader>
                 <CardTitle className="text-md font-semibold">{video.title}</CardTitle>
@@ -37,7 +47,7 @@ const VideoSection = ({ videos }: VideoSectionProps) => {
                   Duration: {video.duration || 'N/A'}
                 </div>
                 <Button asChild className="w-full">
-                  <Link to={`/training/module/${video.module}/${video.id}`}>
+                  <Link to={`/training/video/${moduleId || video.module}/${video.id}`}>
                     Watch Video
                   </Link>
                 </Button>

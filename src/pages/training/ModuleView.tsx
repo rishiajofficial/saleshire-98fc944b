@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
 import { Loader2 } from "lucide-react";
@@ -21,7 +21,8 @@ const ModuleView = () => {
   } = useModuleData(moduleId);
 
   const watchedVideos = React.useMemo(() => {
-    return (videoProgressData || []).map(item => item.video_id);
+    if (!videoProgressData) return [];
+    return videoProgressData.map(item => item.video_id);
   }, [videoProgressData]);
 
   const allVideosWatched = React.useMemo(() => {
@@ -29,13 +30,13 @@ const ModuleView = () => {
       moduleVideos.every(video => watchedVideos.includes(video.id));
   }, [moduleVideos, watchedVideos]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     console.log("ModuleView rendered with:", {
       moduleId,
-      moduleVideos,
-      moduleDetails,
-      videoProgressData,
-      watchedVideos
+      moduleVideos: moduleVideos || [],
+      moduleDetails: moduleDetails || null,
+      videoProgressData: videoProgressData || [],
+      watchedVideos: watchedVideos || []
     });
     
     if (error) {
@@ -69,12 +70,15 @@ const ModuleView = () => {
     return name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' ');
   };
 
-  const progress = moduleVideos && moduleVideos.length > 0
-    ? Math.round((watchedVideos.length / moduleVideos.length) * 100)
+  const totalVideos = moduleVideos?.length || 0;
+  const watchedCount = watchedVideos?.length || 0;
+  
+  console.log("Module videos count:", totalVideos);
+  console.log("Watched videos count:", watchedCount);
+  
+  const progress = totalVideos > 0
+    ? Math.round((watchedCount / totalVideos) * 100)
     : 0;
-
-  console.log("Module videos:", moduleVideos);
-  console.log("Watched videos:", watchedVideos);
 
   return (
     <MainLayout title="Training Module">
@@ -82,8 +86,8 @@ const ModuleView = () => {
         <ModuleHeader
           title={formatModuleName(moduleDetails?.name)}
           description={moduleDetails?.description}
-          watchedCount={watchedVideos.length}
-          totalVideos={moduleVideos?.length || 0}
+          watchedCount={watchedCount}
+          totalVideos={totalVideos}
           progress={progress}
           quizCompleted={!!quizResultData}
         />

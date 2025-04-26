@@ -15,6 +15,19 @@ export const TrainingService = {
   // Get videos for a category
   async getVideosForCategory(categoryId: string): Promise<any[]> {
     try {
+      // First get the category name to use as a fallback
+      const { data: categoryData, error: categoryError } = await supabase
+        .from('module_categories')
+        .select('name')
+        .eq('id', categoryId)
+        .single();
+        
+      if (categoryError) {
+        console.error("Error fetching category name:", categoryError);
+      }
+      
+      const categoryName = categoryData?.name || '';
+      
       // Get videos associated through category_videos table
       const { data: categoryVideos, error: categoryVideosError } = await supabase
         .from('category_videos')
@@ -23,20 +36,39 @@ export const TrainingService = {
       
       if (categoryVideosError) throw categoryVideosError;
       
-      if (!categoryVideos || categoryVideos.length === 0) {
-        return [];
+      let allVideos: any[] = [];
+      
+      if (categoryVideos && categoryVideos.length > 0) {
+        // Get the actual videos by IDs
+        const videoIds = categoryVideos.map(item => item.video_id);
+        const { data: videos, error: videosError } = await supabase
+          .from('videos')
+          .select('*')
+          .in('id', videoIds);
+        
+        if (videosError) throw videosError;
+        
+        if (videos) {
+          allVideos = [...videos];
+        }
       }
       
-      // Get the actual videos
-      const videoIds = categoryVideos.map(item => item.video_id);
-      const { data: videos, error: videosError } = await supabase
-        .from('videos')
-        .select('*')
-        .in('id', videoIds);
+      // Also get videos by module name as a fallback
+      if (categoryName) {
+        const { data: moduleVideos, error: moduleVideosError } = await supabase
+          .from('videos')
+          .select('*')
+          .eq('module', categoryName);
+          
+        if (!moduleVideosError && moduleVideos) {
+          // Add videos that aren't already in the list
+          const existingIds = new Set(allVideos.map(v => v.id));
+          const newVideos = moduleVideos.filter(v => !existingIds.has(v.id));
+          allVideos = [...allVideos, ...newVideos];
+        }
+      }
       
-      if (videosError) throw videosError;
-      
-      return videos || [];
+      return allVideos;
     } catch (error: any) {
       console.error("Error fetching videos for category:", error);
       return [];
@@ -94,6 +126,41 @@ export const TrainingService = {
       console.error("Error unlinking video from category:", error);
       toast.error(`Failed to remove video from category: ${error.message}`);
       return false;
+    }
+  },
+  
+  // Get user's training progress for a specific module or category
+  async getUserProgress(userId: string, moduleId: string): Promise<any[]> {
+    try {
+      // First get the module name to use for querying by both ID and name
+      const { data: moduleData, error: moduleError } = await supabase
+        .from('module_categories')
+        .select('name')
+        .eq('id', moduleId)
+        .single();
+      
+      if (moduleError) {
+        console.error("Error fetching module name:", moduleError);
+      }
+      
+      const moduleName = moduleData?.name || '';
+      
+      // Query by both module ID and module name
+      const { data, error } = await supabase
+        .from('training_progress')
+        .select('*')
+        .eq('user_id', userId)
+        .or(`module.eq.${moduleId},module.eq.${moduleName}`)
+        .eq('completed', true);
+      
+      if (error) {
+        throw error;
+      }
+      
+      return data || [];
+    } catch (error: any) {
+      console.error("Error fetching user progress:", error);
+      return [];
     }
   }
 };

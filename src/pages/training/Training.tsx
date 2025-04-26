@@ -17,6 +17,7 @@ export interface CategoryWithContent {
   description: string | null;
   videos: any[];
   quizzes: any[];
+  quiz_ids?: string[]; // Make it optional to fix TS error
 }
 
 const Training = () => {
@@ -150,17 +151,22 @@ const Training = () => {
         
         console.log(`Videos for category ${category.name}:`, videos);
         
-        // Fetch quizzes if quiz_ids are present
-        let quizzes: any[] = [];
-        if (category.quiz_ids && category.quiz_ids.length > 0) {
-          // We'll fetch quizzes asynchronously later if needed
-          console.log("Quiz IDs for category:", category.name, category.quiz_ids);
+        // Store quiz_ids from the category
+        let quizIdsArray = category.quiz_ids || [];
+        console.log(`Quiz IDs for category ${category.name}:`, quizIdsArray);
+        
+        if (!quizIdsArray || quizIdsArray.length === 0) {
+          console.log(`No quiz_ids found for category: ${category.name}`);
         }
+        
+        // Initialize empty quizzes array to be populated later
+        let quizzes: any[] = [];
         
         return {
           ...category,
           videos,
-          quizzes
+          quizzes,
+          quiz_ids: quizIdsArray
         };
       });
       
@@ -244,8 +250,15 @@ const Training = () => {
                   )}
                 </div>
                 
-                <VideoSection videos={selectedCategory.videos} />
-                <AssessmentSection quizzes={selectedCategory.quizzes} />
+                <VideoSection 
+                  videos={selectedCategory.videos} 
+                  moduleId={selectedCategory.id}
+                />
+                
+                <AssessmentSection 
+                  quizzes={selectedCategory.quizzes}
+                  moduleId={selectedCategory.id} 
+                />
               </div>
             )}
           </>

@@ -22,20 +22,7 @@ export const useModuleData = (moduleId: string | undefined) => {
       if (!moduleId) return [];
       console.log("Fetching videos for module:", moduleId);
       
-      // First try to find videos through category_videos associations
-      const { data: categoryVideosData, error: categoryVideosError } = await supabase
-        .from('category_videos')
-        .select('video_id')
-        .eq('category_id', moduleId);
-        
-      if (categoryVideosError) {
-        console.error("Error fetching category videos:", categoryVideosError);
-        throw categoryVideosError;
-      }
-      
-      console.log("Category videos data:", categoryVideosData);
-      
-      // Get the category name to also find videos by module name
+      // First get the category details to use the name as a fallback search
       const { data: categoryData, error: categoryError } = await supabase
         .from('module_categories')
         .select('name')
@@ -50,7 +37,19 @@ export const useModuleData = (moduleId: string | undefined) => {
       let categoryName = categoryData?.name || '';
       console.log("Category name:", categoryName);
       
-      // If we have video IDs from category_videos associations, fetch those videos
+      // Get videos through category_videos associations
+      const { data: categoryVideosData, error: categoryVideosError } = await supabase
+        .from('category_videos')
+        .select('video_id')
+        .eq('category_id', moduleId);
+        
+      if (categoryVideosError) {
+        console.error("Error fetching category videos:", categoryVideosError);
+        throw categoryVideosError;
+      }
+      
+      console.log("Category videos data:", categoryVideosData);
+      
       let allVideos: Video[] = [];
       
       if (categoryVideosData && categoryVideosData.length > 0) {
@@ -68,11 +67,12 @@ export const useModuleData = (moduleId: string | undefined) => {
         }
         
         if (videosData) {
-          allVideos = [...allVideos, ...videosData];
+          console.log("Videos fetched by IDs:", videosData);
+          allVideos = [...videosData];
         }
       }
       
-      // Also fetch videos by module name match
+      // Also fetch videos by module name match as a fallback
       if (categoryName) {
         const { data: moduleVideosData, error: moduleVideosError } = await supabase
           .from('videos')
@@ -81,8 +81,8 @@ export const useModuleData = (moduleId: string | undefined) => {
         
         if (moduleVideosError) {
           console.error("Error fetching videos by module name:", moduleVideosError);
-          // Continue with what we have, don't throw here
         } else if (moduleVideosData) {
+          console.log("Videos fetched by module name:", moduleVideosData);
           // Add videos that aren't already in the list
           const existingIds = new Set(allVideos.map(v => v.id));
           const newVideos = moduleVideosData.filter(v => !existingIds.has(v.id));
@@ -129,7 +129,7 @@ export const useModuleData = (moduleId: string | undefined) => {
           .from('training_progress')
           .select('*')
           .eq('user_id', user.id)
-          .eq('module', moduleId)
+          .or(`module.eq.${moduleId},module.eq.${moduleDetails?.name || ''}`)
           .eq('completed', true);
         
         if (error) {
@@ -144,7 +144,7 @@ export const useModuleData = (moduleId: string | undefined) => {
         return [];
       }
     },
-    enabled: !!moduleId && !!user
+    enabled: !!moduleId && !!user && !!moduleDetails
   });
 
   const { data: quizResultData, isLoading: quizLoading } = useQuery({
@@ -158,7 +158,7 @@ export const useModuleData = (moduleId: string | undefined) => {
           .from('quiz_results')
           .select('*')
           .eq('user_id', user.id)
-          .eq('module', moduleId)
+          .or(`module.eq.${moduleId},module.eq.${moduleDetails?.name || ''}`)
           .eq('passed', true)
           .maybeSingle();
         
@@ -173,7 +173,7 @@ export const useModuleData = (moduleId: string | undefined) => {
         return null;
       }
     },
-    enabled: !!moduleId && !!user
+    enabled: !!moduleId && !!user && !!moduleDetails
   });
 
   const error = videosError || detailsError;
