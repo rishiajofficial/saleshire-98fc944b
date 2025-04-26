@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,12 +49,10 @@ const AssessmentManagement = () => {
   };
 
   const handleCreateAssessment = () => {
-    // Navigate to the assessment creation page
     navigate("/admin/assessment/create");
   };
 
   const handleEditAssessment = (assessment: Assessment) => {
-    // Navigate to the assessment edit page
     navigate(`/admin/assessment/${assessment.id}/edit`);
   };
 
@@ -68,10 +65,9 @@ const AssessmentManagement = () => {
     try {
       if (!selectedAssessment) return;
 
-      // Check if assessment is used in any training modules
       const { data: moduleAssessments, error: checkError } = await supabase
         .from("module_assessments")
-        .select("module_id")
+        .select("*")
         .eq("assessment_id", selectedAssessment.id);
 
       if (checkError) throw checkError;
@@ -98,7 +94,6 @@ const AssessmentManagement = () => {
   };
 
   const handleViewAssessment = (assessment: Assessment) => {
-    // Navigate to the assessment view page
     navigate(`/admin/assessment/${assessment.id}`);
   };
 

@@ -1,4 +1,3 @@
-
 export interface TrainingModule {
   id: string;
   title: string;

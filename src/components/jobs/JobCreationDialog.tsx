@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -233,9 +232,9 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
       setLoading(true);
       const { data, error } = await supabase
         .from("training_modules")
-        .select("id, name")
+        .select("id, title as name")
         .eq("status", "active")
-        .order("name");
+        .order("title");
 
       if (error) throw error;
       setModules(data || []);

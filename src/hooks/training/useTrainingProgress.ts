@@ -94,7 +94,7 @@ export function useTrainingProgress(userId?: string) {
         .from('training_modules')
         .select(`
           id, 
-          name,
+          name as title,
           description,
           status,
           thumbnail
@@ -112,7 +112,7 @@ export function useTrainingProgress(userId?: string) {
             .select(`
               video_id,
               order,
-              videos (*)
+              videos:video_id (*)
             `)
             .eq('module_id', module.id)
             .order('order');
@@ -125,7 +125,7 @@ export function useTrainingProgress(userId?: string) {
             .select(`
               assessment_id,
               order,
-              assessments (*)
+              assessments:assessment_id (*)
             `)
             .eq('module_id', module.id)
             .order('order');
@@ -158,7 +158,7 @@ export function useTrainingProgress(userId?: string) {
           
           return {
             id: module.id,
-            title: module.name,
+            title: module.title,
             description: module.description,
             status,
             progress,

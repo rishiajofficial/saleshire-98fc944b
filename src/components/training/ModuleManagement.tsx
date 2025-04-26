@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Edit, Trash2, Check, ArrowUp, ArrowDown, DraggableIcon } from "lucide-react";
+import { Plus, Edit, Trash2, Check, ArrowUp, ArrowDown } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { Video, Assessment } from "@/types/training";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +25,18 @@ interface Module {
   created_by: string;
 }
 
+interface ModuleVideo {
+  id: string;
+  video_id: string;
+  order: number;
+}
+
+interface ModuleAssessment {
+  id: string;
+  assessment_id: string;
+  order: number;
+}
+
 const ModuleManagement = () => {
   const [modules, setModules] = useState<Module[]>([]);
   const [videos, setVideos] = useState<Video[]>([]);
@@ -37,8 +48,8 @@ const ModuleManagement = () => {
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
   const [selectedVideos, setSelectedVideos] = useState<string[]>([]);
   const [selectedAssessments, setSelectedAssessments] = useState<string[]>([]);
-  const [moduleVideos, setModuleVideos] = useState<{id: string, video_id: string, order: number}[]>([]);
-  const [moduleAssessments, setModuleAssessments] = useState<{id: string, assessment_id: string, order: number}[]>([]);
+  const [moduleVideos, setModuleVideos] = useState<ModuleVideo[]>([]);
+  const [moduleAssessments, setModuleAssessments] = useState<ModuleAssessment[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -681,7 +692,6 @@ const ModuleManagement = () => {
           </DialogHeader>
           
           <div className="grid gap-4 py-4">
-            {/* Same form fields as create dialog */}
             <div className="grid gap-2">
               <Label htmlFor="edit-name">Module Name</Label>
               <Input
