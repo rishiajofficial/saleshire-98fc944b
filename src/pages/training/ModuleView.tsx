@@ -53,7 +53,7 @@ const ModuleView = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('module_categories')
-        .select('*, quiz_id')
+        .select('*, quiz_ids')
         .eq('name', moduleId)
         .single();
       
@@ -249,7 +249,8 @@ const ModuleView = () => {
             );
           })}
 
-          {moduleDetails?.quiz_id && (
+          {/* Updated to use quiz_ids array instead of quiz_id */}
+          {moduleDetails?.quiz_ids && moduleDetails.quiz_ids.length > 0 && (
             <Card className={`${!allVideosWatched ? "opacity-75" : ""} ${quizCompleted ? "border-green-200" : ""}`}>
               <CardHeader>
                 <CardTitle className="flex items-center">
