@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -872,7 +873,7 @@ const TrainingManagement = () => {
                           <SelectValue placeholder="Select assessment (optional)" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">None</SelectItem>
+                          <SelectItem value="none">None</SelectItem>
                           {!isLoadingAssessments && assessments?.map(assessment => (
                             <SelectItem key={assessment.id} value={assessment.id}>
                               {assessment.title}
@@ -1008,14 +1009,14 @@ const TrainingManagement = () => {
                     <div className="space-y-2">
                       <Label htmlFor="edit-quiz-assessment">Associated Assessment</Label>
                       <Select 
-                        value={editQuizId || ""} 
-                        onValueChange={value => setEditQuizId(value || null)}
+                        value={editQuizId || "none"} 
+                        onValueChange={value => setEditQuizId(value === "none" ? null : value)}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select assessment (optional)" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">None</SelectItem>
+                          <SelectItem value="none">None</SelectItem>
                           {!isLoadingAssessments && assessments?.map(assessment => (
                             <SelectItem key={assessment.id} value={assessment.id}>
                               {assessment.title}
