@@ -1,44 +1,20 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from "@/components/ui/card";
-import {
-  Check,
-  Clock,
-  FileText,
-  PlayCircle,
-  BookOpen,
-  Briefcase,
-  CalendarPlus,
-  ArrowRight,
-  CheckCircle2,
-  AlertCircle,
-  Eye,
-  Bell,
-  Loader2,
-  Lock,
-  XCircle
-} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { formatDistanceToNow } from 'date-fns';
 import { Tables } from "@/integrations/supabase/types";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useTrainingProgress, TrainingModuleProgress } from "@/hooks/useTrainingProgress";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { useTrainingProgress } from "@/hooks/useTrainingProgress";
 import ErrorMessage from "@/components/ui/error-message";
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { StatusCard } from "@/components/dashboard/StatusCard";
+import { NotificationsCard } from "@/components/dashboard/NotificationsCard";
+import { HiringJourneyCard } from "@/components/dashboard/HiringJourneyCard";
+import { TrainingCard } from "@/components/dashboard/TrainingCard";
+import { ApplicationPrompt } from "@/components/dashboard/ApplicationPrompt";
 
 type CandidateProfile = Tables<'candidates'>;
 type AssessmentResult = Tables<'assessment_results'> & { profiles?: { name?: string | null } | null };
@@ -70,7 +46,6 @@ const CandidateDashboard = () => {
 
   const { 
     trainingModules, 
-    progress: trainingProgressState,
     isLoading: isLoadingTraining, 
     error: trainingError, 
     refetch: refetchTraining 
@@ -228,30 +203,14 @@ const CandidateDashboard = () => {
     };
   }, [user?.id]);
 
-  const getModuleStatusBadge = (module: TrainingModuleProgress) => {
-    switch (module.status) {
-      case "completed":
-        return (
-          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-            <CheckCircle2 className="mr-1 h-3 w-3" /> Completed
-          </Badge>
-        );
-      case "in_progress":
-        return (
-          <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-            <PlayCircle className="mr-1 h-3 w-3" /> In Progress
-          </Badge>
-        );
-      case "locked":
-        return (
-          <Badge variant="secondary">
-            <Lock className="mr-1 h-3 w-3" /> Locked
-          </Badge>
-        );
-      default:
-        return null;
-    }
-  };
+  const showApplicationPrompt = 
+    !dashboardState.applicationSubmitted && 
+    (dashboardState.candidateData?.status?.toLowerCase() === 'applied' || 
+     dashboardState.candidateData?.status?.toLowerCase() === 'screening');
+
+  const canAccessTraining = dashboardState.candidateData?.status === 'hr_approved' || 
+                           dashboardState.candidateData?.status === 'training' ||
+                           dashboardState.currentStep >= 3;
 
   if (isLoading) {
     return (
@@ -266,125 +225,13 @@ const CandidateDashboard = () => {
   if (error) {
     return (
       <MainLayout>
-         <ErrorMessage 
-           title="Error Loading Dashboard" 
-           message={error} 
-         />
+        <ErrorMessage 
+          title="Error Loading Dashboard" 
+          message={error} 
+        />
       </MainLayout>
     );
   }
-
-  const getStepNumber = (step: string) => {
-    switch (step) {
-      case "application":
-        return 1;
-      case "hrReview":
-        return 2;
-      case "training":
-        return 3;
-      case "managerInterview":
-        return 4;
-      case "paidProject":
-        return 5;
-      default:
-        return 0;
-    }
-  };
-
-  const getStepStatusBadge = (status: string) => {
-    switch (status) {
-      case "completed":
-        return (
-          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-            <Check className="mr-1 h-3 w-3" /> Completed
-          </Badge>
-        );
-      case "in_progress":
-        return (
-          <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-            <Clock className="mr-1 h-3 w-3" /> In Progress
-          </Badge>
-        );
-      case "pending":
-        return (
-          <Badge variant="outline" className="text-muted-foreground">
-            Pending
-          </Badge>
-        );
-      default:
-        return null;
-    }
-  };
-
-  const getCurrentStepName = () => {
-    switch (dashboardState.currentStep) {
-      case 1: return "Application in Progress";
-      case 2: return "HR Review";
-      case 3: return "Training Phase";
-      case 4: return "Manager Interview";
-      case 5: return "Paid Project";
-      case 6: return "Hired";
-      case 7: return "Process Ended";
-      default:
-        return "Applied";
-    }
-  };
-
-  const getCurrentStepDescription = () => {
-    switch (dashboardState.currentStep) {
-      case 1: return "Complete your application and initial screening assessment.";
-      case 2: return "Your application is being reviewed by HR. They will evaluate your qualifications and screening results.";
-      case 3: return "Complete the required training modules and skill assessments.";
-      case 4: return "Prepare for your interview with a regional manager.";
-      case 5: return "Complete a paid project to demonstrate your skills in a real-world scenario.";
-      case 6: return "Congratulations! You have been hired.";
-      case 7: return "Thank you for your application. The process has concluded.";
-      default:
-        return "Complete your application to begin the hiring process.";
-    }
-  };
-
-  const getStatusBadge = () => {
-    const currentStep = dashboardState.currentStep;
-    const candidateStatus = dashboardState.candidateData?.status?.toLowerCase();
-
-    let statusText = "Unknown";
-    let statusIcon = <Clock className="mr-1 h-3 w-3" />;
-    let badgeClass = "bg-gray-100 text-gray-800";
-
-    if (candidateStatus === 'hired') {
-        statusText = "Hired";
-        statusIcon = <CheckCircle2 className="mr-1 h-3 w-3" />;
-        badgeClass = "bg-green-100 text-green-800";
-    } else if (candidateStatus === 'rejected' || candidateStatus === 'archived') {
-        statusText = candidateStatus === 'archived' ? "Archived" : "Not Selected";
-        statusIcon = <XCircle className="mr-1 h-3 w-3" />;
-        badgeClass = "bg-red-100 text-red-800";
-    } else {
-        switch (currentStep) {
-            case 1: statusText = "Application in Progress"; badgeClass = "bg-blue-100 text-blue-800"; break;
-            case 2: statusText = "HR Review Phase"; badgeClass = "bg-yellow-100 text-yellow-800"; break;
-            case 3: statusText = "Training Phase"; badgeClass = "bg-purple-100 text-purple-800"; break;
-            case 4: statusText = "Manager Interview Phase"; badgeClass = "bg-green-100 text-green-800"; break;
-            case 5: statusText = "Paid Project Phase"; badgeClass = "bg-orange-100 text-orange-800"; break;
-            default: statusText = "Applied"; badgeClass = "bg-gray-100 text-gray-800";
-        }
-    }
-
-    return (
-      <Badge className={`${badgeClass} hover:${badgeClass}`}> 
-        {statusIcon} {statusText}
-      </Badge>
-    );
-  };
-
-  const showApplicationPrompt = 
-    !dashboardState.applicationSubmitted && 
-    (dashboardState.candidateData?.status?.toLowerCase() === 'applied' || dashboardState.candidateData?.status?.toLowerCase() === 'screening');
-
-  const canAccessTraining = dashboardState.candidateData?.status === 'hr_approved' || 
-                           dashboardState.candidateData?.status === 'training' ||
-                           dashboardState.currentStep >= 3;
 
   return (
     <MainLayout>
@@ -393,217 +240,38 @@ const CandidateDashboard = () => {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Candidate Dashboard</h1>
             <p className="text-muted-foreground mt-2">
-                Welcome back, {profile?.name || 'Candidate'}
+              Welcome back, {profile?.name || 'Candidate'}
             </p>
           </div>
 
-          {showApplicationPrompt && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start">
-            <AlertCircle className="text-amber-500 h-5 w-5 mr-2 mt-0.5" />
-            <div>
-              <h3 className="font-medium text-amber-800">Application Required</h3>
-              <p className="text-sm text-amber-700 mt-1">
-                You need to complete your application before proceeding with the hiring process.
-              </p>
-              <Button 
-                size="sm" 
-                className="mt-3 bg-amber-600 hover:bg-amber-700"
-                asChild
-              >
-                <Link to="/application">
-                  Complete Application Now
-                </Link>
-              </Button>
+          {showApplicationPrompt && <ApplicationPrompt />}
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+            <div className="md:col-span-8 space-y-6">
+              <HiringJourneyCard 
+                currentStep={dashboardState.currentStep}
+                applicationSubmitted={dashboardState.applicationSubmitted}
+              />
+
+              <TrainingCard 
+                canAccessTraining={canAccessTraining}
+                trainingModules={trainingModules}
+                isLoadingTraining={isLoadingTraining}
+              />
+            </div>
+
+            <div className="md:col-span-4 space-y-6">
+              <StatusCard 
+                currentStep={dashboardState.currentStep}
+                candidateStatus={dashboardState.candidateData?.status}
+              />
+
+              <NotificationsCard 
+                notifications={dashboardState.notifications}
+              />
             </div>
           </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-          <div className="md:col-span-8 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Your Hiring Journey</CardTitle>
-                <CardDescription>
-                  Track your progress through the hiring process
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="relative">
-                  <div className="flex items-center justify-between mb-8">
-                      <div className="w-full absolute top-4 left-0 right-0">
-                      <div className="h-1 bg-secondary w-full"></div>
-                    </div>
-                    {["application", "hrReview", "training", "managerInterview", "paidProject"].map(
-                        (stepKey, index) => {
-                          const stepNumber = getStepNumber(stepKey);
-                          let status = 'pending';
-                          if (stepKey === 'application') {
-                              status = dashboardState.applicationSubmitted ? 'completed' : (dashboardState.currentStep === 1 ? 'in_progress' : 'pending');
-                          } else if (stepNumber < dashboardState.currentStep) {
-                              status = 'completed';
-                          } else if (stepNumber === dashboardState.currentStep) {
-                              status = 'in_progress';
-                          } else {
-                              status = 'pending';
-                          }
-
-                          const stepDisplayNames = {
-                            application: "Application",
-                            hrReview: "HR Review",
-                            training: "Training",
-                            managerInterview: "Manager Interview",
-                            paidProject: "Paid Project"
-                          };
-
-                          return (
-                        <div
-                          key={index}
-                          className="relative flex flex-col items-center text-center z-10"
-                          style={{ width: "20%" }}
-                        >
-                             <Tooltip>
-                              <TooltipTrigger>
-                          <div
-                                  className={`flex items-center justify-center h-8 w-8 rounded-full text-sm transition-colors duration-300 ${
-                                    status === "completed"
-                                ? "bg-green-500 text-white"
-                                    : status === "in_progress"
-                                    ? "bg-primary text-white ring-2 ring-primary/50 ring-offset-2"
-                                : "bg-muted text-muted-foreground"
-                            }`}
-                          >
-                                  {status === "completed" ? (
-                              <Check className="h-5 w-5" />
-                            ) : (
-                                    stepNumber
-                            )}
-                          </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>
-                                    {stepDisplayNames[stepKey as keyof typeof stepDisplayNames]} ({status})
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
-                            <p className={`mt-2 text-xs font-medium ${status !== 'pending' ? 'text-foreground' : 'text-muted-foreground'}`}>
-                                {stepDisplayNames[stepKey as keyof typeof stepDisplayNames]}
-                            </p>
-                          </div>
-                        );
-                      }
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Training Progress</CardTitle>
-                <CardDescription>
-                  {canAccessTraining 
-                    ? "Complete these modules to advance in the hiring process."
-                    : "Training modules will be available after HR reviews and approves your application."}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {!canAccessTraining ? (
-                  <Alert>
-                    <AlertTitle>Training Locked</AlertTitle>
-                    <AlertDescription>
-                      The training section will be unlocked after HR reviews and approves your application.
-                    </AlertDescription>
-                  </Alert>
-                ) : (
-                  <div className="space-y-4">
-                    {trainingModules.map((module) => (
-                      <Link 
-                        to={`/training/module/${module.id}`}
-                        key={module.id} 
-                        className={`block p-4 border rounded-lg hover:bg-muted/50 transition-all ${module.locked ? 'opacity-60 pointer-events-none' : ''}`}
-                      >
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="font-medium">{module.title}</span>
-                          {getModuleStatusBadge(module)}
-                        </div>
-                        
-                        <div className="mb-2">
-                          <Progress value={module.progress} className="h-2" />
-                        </div>
-                        
-                        <div className="flex justify-between items-center text-xs text-muted-foreground">
-                          <span>
-                            {module.watchedVideos} of {module.totalVideos} videos completed
-                          </span>
-                          {module.quizCompleted ? (
-                            <span className="text-green-600 flex items-center">
-                              <CheckCircle2 className="h-3 w-3 mr-1" /> Quiz passed
-                            </span>
-                          ) : module.quizIds && module.quizIds.length > 0 && module.watchedVideos === module.totalVideos ? (
-                            <span className="text-blue-600 flex items-center">
-                              <BookOpen className="h-3 w-3 mr-1" /> Quiz available
-                            </span>
-                          ) : null}
-                        </div>
-                      </Link>
-                    ))}
-                    {trainingModules.length === 0 && (
-                      <p className="text-center text-muted-foreground py-4">No training modules available yet.</p>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-              <CardFooter>
-                <Button 
-                  onClick={() => navigate('/training')} 
-                  disabled={!canAccessTraining || isLoadingTraining}
-                >
-                  Go to Training Center <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </CardFooter>
-            </Card>
-          </div>
-
-          <div className="md:col-span-4 space-y-6">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle>Application Status</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center">
-                    {getStatusBadge()}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle>Notifications</CardTitle>
-              </CardHeader>
-              <CardContent>
-                  <div className="space-y-4 max-h-60 overflow-y-auto">
-                    {dashboardState.notifications.length === 0 ? (
-                       <p className="text-sm text-muted-foreground text-center py-4">No recent notifications.</p>
-                    ) : (
-                      dashboardState.notifications.map((log) => (
-                        <div
-                          key={log.id}
-                          className={`p-3 rounded-lg border`}
-                        >
-                          <p className="text-sm font-medium">
-                              {log.action.replace(/_/g, ' ')} - <span className="text-muted-foreground">{formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}</span>
-                          </p>
-                          {log.details && <p className="text-xs text-muted-foreground">{JSON.stringify(log.details)}</p>}
-                        </div>
-                      ))
-                    )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </div>
-        
-      </div>
       </TooltipProvider>
     </MainLayout>
   );
