@@ -33,6 +33,7 @@ export const useModuleData = (moduleId: string | undefined) => {
       }
       
       if (!categoryVideosData || categoryVideosData.length === 0) {
+        console.log("No video IDs found for this category");
         return [];
       }
       

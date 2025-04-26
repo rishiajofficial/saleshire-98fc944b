@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from "react-router-dom";
 import { Video, Play, CheckCircle } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
@@ -14,6 +14,13 @@ interface VideoListProps {
 const VideoList = ({ moduleId, videos, watchedVideos }: VideoListProps) => {
   console.log("VideoList props:", { moduleId, videos, watchedVideos });
   
+  useEffect(() => {
+    // Additional debugging to help identify the issue
+    console.log("VideoList mounted with videos:", videos);
+    console.log("moduleId:", moduleId);
+    console.log("watchedVideos:", watchedVideos);
+  }, [videos, moduleId, watchedVideos]);
+
   if (!videos || videos.length === 0) {
     return (
       <div className="text-center p-12">

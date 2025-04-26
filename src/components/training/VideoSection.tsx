@@ -10,6 +10,10 @@ interface VideoSectionProps {
 }
 
 const VideoSection = ({ videos }: VideoSectionProps) => {
+  React.useEffect(() => {
+    console.log("VideoSection rendered with videos:", videos);
+  }, [videos]);
+
   return (
     <div>
       <h3 className="text-lg font-semibold mb-4 flex items-center">
@@ -30,7 +34,7 @@ const VideoSection = ({ videos }: VideoSectionProps) => {
                   {video.description || "No description available."}
                 </p>
                 <Button asChild className="w-full">
-                  <Link to={`/training/video/${video.id}`}>
+                  <Link to={`/training/module/${video.module}/${video.id}`}>
                     Watch Video
                   </Link>
                 </Button>

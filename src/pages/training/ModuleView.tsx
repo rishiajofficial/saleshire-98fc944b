@@ -30,10 +30,18 @@ const ModuleView = () => {
   }, [moduleVideos, watchedVideos]);
 
   React.useEffect(() => {
+    console.log("ModuleView rendered with:", {
+      moduleId,
+      moduleVideos,
+      moduleDetails,
+      videoProgressData,
+      watchedVideos
+    });
+    
     if (error) {
       toast.error("Failed to load module data: " + error);
     }
-  }, [error]);
+  }, [error, moduleId, moduleVideos, moduleDetails, videoProgressData, watchedVideos]);
 
   if (isLoading) {
     return (
