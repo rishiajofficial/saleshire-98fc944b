@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { TrainingModule, Video } from "@/types";
+import { TrainingModule, Video } from "@/types/training";
 import { useTrainingProgress } from "./useTrainingProgress";
 
 export function useTrainingModulesList(userId?: string) {
@@ -16,9 +16,9 @@ export function useTrainingModulesList(userId?: string) {
       
       // Get all training modules
       const { data: modulesData, error: modulesError } = await supabase
-        .from('training_modules')
+        .from('module_categories')
         .select('*')
-        .order('order_index', { ascending: true });
+        .order('name', { ascending: true });
         
       if (modulesError) throw modulesError;
       
@@ -29,35 +29,37 @@ export function useTrainingModulesList(userId?: string) {
       
       if (videosError) throw videosError;
       
-      // Get required modules
-      const { data: requiredModules, error: requiredError } = await supabase
-        .from('required_modules')
+      // Get video-category relationships
+      const { data: categoryVideos, error: categoryVideosError } = await supabase
+        .from('category_videos')
         .select('*');
-        
-      if (requiredError) throw requiredError;
+      
+      if (categoryVideosError) throw categoryVideosError;
         
       // Map of module IDs to their videos
-      const moduleVideosMap: Record<string, any[]> = {};
-      videosData.forEach(video => {
-        if (!moduleVideosMap[video.module]) {
-          moduleVideosMap[video.module] = [];
-        }
-        moduleVideosMap[video.module].push(video);
-      });
+      const moduleVideosMap: Record<string, Video[]> = {};
       
-      // Dependencies map (which modules are required for which)
-      const moduleDependencies: Record<string, string[]> = {};
-      requiredModules?.forEach(req => {
-        if (!moduleDependencies[req.module_id]) {
-          moduleDependencies[req.module_id] = [];
+      // Build the video map from category_videos relationships
+      categoryVideos?.forEach(relation => {
+        const categoryId = relation.category_id;
+        const videoId = relation.video_id;
+        
+        if (!moduleVideosMap[categoryId]) {
+          moduleVideosMap[categoryId] = [];
         }
-        moduleDependencies[req.module_id].push(req.required_module_id);
+        
+        const video = videosData?.find(v => v.id === videoId);
+        if (video) {
+          moduleVideosMap[categoryId].push(video as Video);
+        }
       });
       
       // Create training modules with progress info
       const trainingModules: TrainingModule[] = [];
       
-      for (const moduleData of modulesData) {
+      let previousCompleted = true; // First module is always unlocked
+      
+      for (const moduleData of modulesData || []) {
         const videos = moduleVideosMap[moduleData.id] || [];
         const quizIds = moduleData.quiz_ids || [];
         
@@ -65,20 +67,12 @@ export function useTrainingModulesList(userId?: string) {
         const progress = calculateModuleProgress(videos, quizIds);
         
         // Determine if module should be locked
-        let locked = false;
-        if (moduleDependencies[moduleData.id]) {
-          locked = moduleDependencies[moduleData.id].some(requiredModuleId => {
-            const requiredModule = trainingModules.find(m => m.id === requiredModuleId);
-            return requiredModule ? requiredModule.progress < 100 : true;
-          });
-        }
+        const locked = !previousCompleted;
         
         // Count watched videos
-        const watchedVideos = videos.filter(video => {
-          const videoLen = parseFloat(video.duration || '0');
-          const watched = videoProgress[video.id] || 0;
-          return videoLen > 0 && watched / videoLen >= 0.9;
-        }).length;
+        const watchedVideos = videos.filter(video => 
+          videoProgress[video.id]
+        ).length;
         
         // Check if quiz is completed
         const quizCompleted = quizIds.every(quizId => 
@@ -91,11 +85,11 @@ export function useTrainingModulesList(userId?: string) {
           status = progress >= 100 ? "completed" : "in_progress";
         }
         
-        trainingModules.push({
+        const module: TrainingModule = {
           id: moduleData.id,
-          title: moduleData.title,
+          title: moduleData.name,
           description: moduleData.description,
-          module: moduleData.module,
+          module: moduleData.name.toLowerCase(),
           progress,
           status,
           locked,
@@ -104,7 +98,12 @@ export function useTrainingModulesList(userId?: string) {
           totalVideos: videos.length,
           watchedVideos,
           quizCompleted
-        });
+        };
+        
+        trainingModules.push(module);
+        
+        // Update for next iteration
+        previousCompleted = progress >= 100;
       }
       
       setModules(trainingModules);

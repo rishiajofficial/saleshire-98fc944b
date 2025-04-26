@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { TrainingModule, Video } from "@/types";
+import { Video } from "@/types/training";
 
 export function useTrainingProgress(userId?: string) {
   const [moduleProgress, setModuleProgress] = useState<Record<string, number>>({});
@@ -15,14 +15,15 @@ export function useTrainingProgress(userId?: string) {
     
     // Get video progress data
     const { data: videoProgressData } = await supabase
-      .from('video_progress')
+      .from('training_progress')
       .select('*')
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .eq('completed', true);
 
     // Build video progress lookup
     const videoProgressLookup: Record<string, number> = {};
     videoProgressData?.forEach(item => {
-      videoProgressLookup[item.video_id] = item.progress_seconds || 0;
+      videoProgressLookup[item.video_id] = 0; // Since we're tracking completion, not seconds
     });
     setVideoProgress(videoProgressLookup);
     
@@ -36,9 +37,9 @@ export function useTrainingProgress(userId?: string) {
     const quizScoresLookup: Record<string, number> = {};
     const completedQuizIds: string[] = [];
     quizData?.forEach(item => {
-      quizScoresLookup[item.quiz_id] = item.score || 0;
-      if (item.completed) {
-        completedQuizIds.push(item.quiz_id);
+      quizScoresLookup[item.module] = item.score || 0; // Using module as key instead of quiz_id
+      if (item.passed) {
+        completedQuizIds.push(item.module);
       }
     });
     setQuizScores(quizScoresLookup);
@@ -57,16 +58,12 @@ export function useTrainingProgress(userId?: string) {
   ) => {
     if (!videos.length && !quizIds.length) return 0;
     
-    // Count completed videos (watched more than 90%)
+    // Count completed videos
     let completedItems = 0;
     const totalItems = videos.length + quizIds.length;
     
     videos.forEach(video => {
-      const videoLen = parseFloat(video.duration || '0');
-      const watched = videoProgress[video.id] || 0;
-      
-      // If watched more than 90% of video
-      if (videoLen > 0 && watched / videoLen >= 0.9) {
+      if (videoProgress[video.id]) {
         completedItems++;
       }
     });
