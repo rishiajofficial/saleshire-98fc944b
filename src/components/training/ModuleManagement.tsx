@@ -13,6 +13,7 @@ import { Plus, Edit, Trash2, Check, ArrowUp, ArrowDown } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { TrainingModule, ModuleVideo, ModuleAssessment } from "@/types/training";
 import { Badge } from "@/components/ui/badge";
+import { ModuleList } from "./ModuleList";
 
 interface Module {
   id: string;
@@ -59,7 +60,7 @@ const ModuleManagement = () => {
       // Fetch modules
       const { data: modulesData, error: modulesError } = await supabase
         .from("training_modules")
-        .select("*")
+        .select("id, title, description")
         .order("title");
         
       if (modulesError) {
@@ -125,7 +126,7 @@ const ModuleManagement = () => {
         .from("module_videos")
         .select("*")
         .eq("module_id", moduleId)
-        .order("order");
+        .order("order_number");
         
       if (videoError) {
         console.error("Error fetching module videos:", videoError);
@@ -138,7 +139,7 @@ const ModuleManagement = () => {
           id: relation.id || '',
           module_id: relation.module_id || '',
           video_id: relation.video_id || '',
-          order: relation.order || 0,
+          order: relation.order_number || 0, // Map order_number to order for compatibility
           created_at: relation.created_at
         }));
         
@@ -150,7 +151,7 @@ const ModuleManagement = () => {
         .from("module_assessments")
         .select("*")
         .eq("module_id", moduleId)
-        .order("order");
+        .order("order_number");
         
       if (assessmentError) {
         console.error("Error fetching module assessments:", assessmentError);
@@ -163,7 +164,7 @@ const ModuleManagement = () => {
           id: relation.id || '',
           module_id: relation.module_id || '',
           assessment_id: relation.assessment_id || '',
-          order: relation.order || 0,
+          order: relation.order_number || 0, // Map order_number to order for compatibility
           created_at: relation.created_at
         }));
         
@@ -303,7 +304,7 @@ const ModuleManagement = () => {
         const videoRelations = selectedVideos.map((videoId, index) => ({
           module_id: moduleId,
           video_id: videoId,
-          order: index
+          order_number: index
         }));
           
         const { error: videoInsertError } = await supabase
@@ -321,7 +322,7 @@ const ModuleManagement = () => {
         const assessmentRelations = selectedAssessments.map((assessmentId, index) => ({
           module_id: moduleId,
           assessment_id: assessmentId,
-          order: index
+          order_number: index
         }));
         
         const { error: assessmentInsertError } = await supabase
@@ -378,7 +379,7 @@ const ModuleManagement = () => {
         const videoRelations = selectedVideos.map((videoId, index) => ({
           module_id: selectedModule.id,
           video_id: videoId,
-          order: index
+          order_number: index
         }));
         
         const { error: createVideosError } = await supabase
@@ -408,7 +409,7 @@ const ModuleManagement = () => {
         const assessmentRelations = selectedAssessments.map((assessmentId, index) => ({
           module_id: selectedModule.id,
           assessment_id: assessmentId,
-          order: index
+          order_number: index
         }));
         
         const { error: createAssessmentsError } = await supabase
@@ -434,10 +435,11 @@ const ModuleManagement = () => {
       if (!selectedModule) return;
       
       // Check if the module is used in any jobs
+      // Use direct query instead of RPC to avoid type issues
       const { count, error: jobCheckError } = await supabase
-        .from("job_modules")
-        .select('id', { count: 'exact', head: true })
-        .eq("module_id", selectedModule.id);
+        .from("job_training")
+        .select('*', { count: 'exact', head: true })
+        .eq("training_module_id", selectedModule.id);
         
       if (jobCheckError) throw jobCheckError;
       
@@ -486,55 +488,11 @@ const ModuleManagement = () => {
         </Button>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {modules.map((module) => (
-          <Card key={module.id} className="overflow-hidden">
-            <CardHeader className="relative">
-              {module.status === "inactive" && (
-                <Badge variant="outline" className="absolute top-2 right-2">
-                  Inactive
-                </Badge>
-              )}
-              <CardTitle className="flex justify-between items-center">
-                <span className="truncate">{module.title}</span>
-                <div className="flex space-x-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleOpenEditDialog(module)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleOpenDeleteDialog(module)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                {module.description || "No description provided"}
-              </p>
-              {module.tags && module.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 mb-2">
-                  {module.tags.map((tag, index) => (
-                    <Badge key={index} variant="secondary" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Created: {new Date(module.created_at).toLocaleDateString()}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <ModuleList 
+        modules={modules} 
+        onEdit={handleOpenEditDialog} 
+        onDelete={handleOpenDeleteDialog}
+      />
       
       {modules.length === 0 && !loading && (
         <div className="text-center py-12">

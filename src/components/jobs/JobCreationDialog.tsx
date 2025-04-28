@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,9 +23,20 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
+interface JobFormValues {
+  title: string;
+  description: string;
+  department: string;
+  location: string;
+  employment_type: string;
+  salary_range: string;
+  selectedAssessment: string;
+  selectedModules: string[];
+}
+
 interface JobFormProps {
   job?: any;
-  onSubmit: (values: any) => void;
+  onSubmit: (values: JobFormValues) => void;
   assessments: { id: string; title: string }[];
   modules: Array<{ id: string; name: string }>;
   mode: 'create' | 'edit' | 'view';
@@ -39,7 +49,7 @@ const JobForm: React.FC<JobFormProps> = ({
   modules,
   mode
 }) => {
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<JobFormValues>({
     title: job?.title || "",
     description: job?.description || "",
     department: job?.department || "",
@@ -195,8 +205,8 @@ const JobForm: React.FC<JobFormProps> = ({
 };
 
 interface JobCreationDialogProps {
-  onJobCreated?: (job: any) => void;
-  onJobUpdated?: (job: any) => void;
+  onJobCreated?: (job: JobFormValues) => void;
+  onJobUpdated?: (job: JobFormValues & { id?: string }) => void;
   assessments: { id: string; title: string }[];
   categories?: Array<{ id: string; name: string }>;
   editingJob?: any;
@@ -263,7 +273,7 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
     if (onClose) onClose();
   };
 
-  const handleSubmit = (form: any) => {
+  const handleSubmit = (form: JobFormValues) => {
     if (mode === "edit" && onJobUpdated) {
       onJobUpdated({ 
         ...editingJob, 

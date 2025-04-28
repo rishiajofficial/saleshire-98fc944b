@@ -1,24 +1,14 @@
 
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Plus, Edit, Trash2, Clock, FileText } from "lucide-react";
-import { Loader2 } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
-interface Assessment {
-  id: string;
-  title: string;
-  description: string | null;
-  difficulty: string | null;
-  time_limit: number | null;
-  created_at: string;
-  updated_at: string;
-}
+import { Assessment } from "@/types/training";
+import { AssessmentList } from "./AssessmentList";
 
 const AssessmentManagement = () => {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
@@ -51,8 +41,8 @@ const AssessmentManagement = () => {
 
   const fetchAssessmentModules = async (assessmentId: string) => {
     try {
-      // Use direct query instead of RPC since it's not in the types
-      const { data, count, error } = await supabase
+      // Use direct query instead of RPC
+      const { count, error } = await supabase
         .from("module_assessments")
         .select('id', { count: 'exact', head: true })
         .eq("assessment_id", assessmentId);
@@ -129,52 +119,12 @@ const AssessmentManagement = () => {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {assessments.map((assessment) => (
-          <Card key={assessment.id} className="overflow-hidden">
-            <CardHeader>
-              <CardTitle className="flex justify-between items-center">
-                <span className="truncate">{assessment.title}</span>
-                <div className="flex space-x-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEditAssessment(assessment)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleOpenDeleteDialog(assessment)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-2">
-                {assessment.description || "No description"}
-              </p>
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span className="flex items-center">
-                  <Clock className="h-3 w-3 mr-1" />
-                  {assessment.time_limit ? `${assessment.time_limit} minutes` : "No time limit"}
-                </span>
-                <span>Difficulty: {assessment.difficulty || "Not specified"}</span>
-              </div>
-              <Button 
-                variant="link" 
-                className="px-0 mt-2" 
-                onClick={() => handleViewAssessment(assessment)}
-              >
-                <FileText className="h-4 w-4 mr-1" /> View Questions
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <AssessmentList 
+        assessments={assessments} 
+        onEdit={handleEditAssessment} 
+        onDelete={handleOpenDeleteDialog}
+        onView={handleViewAssessment}
+      />
 
       {assessments.length === 0 && (
         <div className="text-center py-12">

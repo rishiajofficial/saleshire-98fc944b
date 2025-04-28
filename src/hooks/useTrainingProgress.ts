@@ -1,9 +1,10 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
-// Reusable types (consider moving to a shared types file if used elsewhere)
+// Reusable types
 interface Video {
   id: string;
   title: string;
@@ -73,8 +74,7 @@ export const useTrainingProgress = (): UseTrainingProgressReturn => {
       const [categoriesResult, videoResult, trainingProgressResult, quizResultsResult, categoryVideosResult] = await Promise.all([
         supabase
           .from('module_categories')
-          .select('*, quiz_ids')
-          .order('name', { ascending: true }),
+          .select('id, name, description, quiz_ids'),
         supabase
           .from('videos')
           .select('*'),
@@ -106,6 +106,7 @@ export const useTrainingProgress = (): UseTrainingProgressReturn => {
       const passedQuizzes = quizResultsResult.data || [];
       const categoryVideos = categoryVideosResult.data || [];
 
+      // Debug logs
       console.log("Hook: Fetched Categories:", categories);
       console.log("Hook: Fetched Videos:", videos);
       console.log("Hook: Fetched Completed Videos:", completedVideos);

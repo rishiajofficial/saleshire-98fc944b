@@ -22,6 +22,8 @@ export interface Video {
   url: string;
   duration: string | null;
   thumbnail?: string | null;
+  file_path?: string | null;
+  file_size?: number | null;
   created_at?: string;
   updated_at?: string;
   created_by?: string;
@@ -33,6 +35,7 @@ export interface Assessment {
   title: string;
   description?: string | null;
   timeLimit?: number | null;
+  time_limit?: number | null; // Added for database compatibility
   passingScore?: number;
   randomizeQuestions?: boolean;
   questions?: AssessmentQuestion[];
@@ -68,7 +71,8 @@ export interface ModuleVideo {
   id: string;
   module_id: string;
   video_id: string;
-  order: number;
+  order_number?: number;
+  order?: number; // For compatibility with older code
   created_at?: string;
 }
 
@@ -76,7 +80,8 @@ export interface ModuleAssessment {
   id: string;
   module_id: string;
   assessment_id: string;
-  order: number;
+  order_number?: number;
+  order?: number; // For compatibility with older code
   created_at?: string;
 }
 
