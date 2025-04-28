@@ -1,15 +1,31 @@
-import React, { useEffect } from 'react';
-import useJobs from '@/hooks/useJobs';
+import React, { useEffect, useState } from 'react';
+import { useJobs } from '@/hooks/useJobs';
 import JobCreationDialog from '@/components/jobs/JobCreationDialog';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const JobManagementPage = () => {
   const { jobs, loading, error, fetchJobs, createJob, updateJob, deleteJob } = useJobs();
+  const [assessments, setAssessments] = useState<{ id: string; title: string }[]>([]);
   
   useEffect(() => {
     fetchJobs();
+    fetchAssessments();
   }, [fetchJobs]);
+  
+  const fetchAssessments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('assessments')
+        .select('id, title');
+      
+      if (error) throw error;
+      setAssessments(data || []);
+    } catch (err: any) {
+      toast.error(`Failed to fetch assessments: ${err.message}`);
+    }
+  };
   
   if (loading) {
     return <div>Loading...</div>;
@@ -55,7 +71,10 @@ const JobManagementPage = () => {
   return (
     <div>
       <h1>Job Management</h1>
-      <JobCreationDialog onJobCreated={handleJobCreated} />
+      <JobCreationDialog 
+        onJobCreated={handleJobCreated}
+        assessments={assessments}
+      />
       <div>
         {jobs.map(job => (
           <div key={job.id}>
@@ -65,7 +84,12 @@ const JobManagementPage = () => {
             <p>Location: {job.location}</p>
             <p>Employment Type: {job.employment_type}</p>
             <p>Salary Range: {job.salary_range}</p>
-            <JobCreationDialog mode="edit" editingJob={job} onJobUpdated={handleJobUpdated} />
+            <JobCreationDialog 
+              mode="edit" 
+              editingJob={job} 
+              onJobUpdated={handleJobUpdated}
+              assessments={assessments}
+            />
             <Button onClick={() => handleJobDeleted(job.id)}>Delete</Button>
           </div>
         ))}
