@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Plus, Edit, Trash2, Clock } from "lucide-react";
 import { Video } from "@/types/training";
 import { Loader2 } from "lucide-react";
+import { VideoUploadDialog } from './VideoUploadDialog';
 
 const VideoManagement = () => {
   const [videos, setVideos] = useState<Video[]>([]);
@@ -50,13 +50,29 @@ const VideoManagement = () => {
   };
 
   const handleOpenAddDialog = () => {
-    setFormData({
-      title: "",
-      description: "",
-      url: "",
-      duration: "",
-    });
     setShowAddDialog(true);
+  };
+
+  const handleVideoAdded = async (videoData: { url: string; filePath?: string; fileSize?: number }) => {
+    try {
+      const { data, error } = await supabase.from("videos").insert({
+        title: formData.title,
+        description: formData.description || null,
+        url: videoData.url,
+        duration: formData.duration || null,
+        file_path: videoData.filePath,
+        file_size: videoData.fileSize,
+        created_by: user?.id,
+        module: "", // Legacy field, keeping for compatibility
+      }).select();
+
+      if (error) throw error;
+      toast.success("Video added successfully");
+      setShowAddDialog(false);
+      fetchVideos();
+    } catch (error: any) {
+      toast.error(`Failed to add video: ${error.message}`);
+    }
   };
 
   const handleOpenEditDialog = (video: Video) => {
@@ -78,31 +94,6 @@ const VideoManagement = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-  };
-
-  const handleAddVideo = async () => {
-    try {
-      if (!formData.title || !formData.url) {
-        toast.error("Title and URL are required");
-        return;
-      }
-
-      const { data, error } = await supabase.from("videos").insert({
-        title: formData.title,
-        description: formData.description || null,
-        url: formData.url,
-        duration: formData.duration || null,
-        created_by: user?.id,
-        module: ""  // Legacy field, keeping for compatibility
-      }).select();
-
-      if (error) throw error;
-      toast.success("Video added successfully");
-      setShowAddDialog(false);
-      fetchVideos();
-    } catch (error: any) {
-      toast.error(`Failed to add video: ${error.message}`);
-    }
   };
 
   const handleUpdateVideo = async () => {
@@ -226,61 +217,12 @@ const VideoManagement = () => {
         </div>
       )}
 
-      {/* Add Video Dialog */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New Video</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                name="title"
-                value={formData.title}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="url">Video URL</Label>
-              <Input
-                id="url"
-                name="url"
-                type="url"
-                value={formData.url}
-                onChange={handleInputChange}
-                placeholder="https://example.com/video.mp4"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="duration">Duration</Label>
-              <Input
-                id="duration"
-                name="duration"
-                value={formData.duration}
-                onChange={handleInputChange}
-                placeholder="e.g., 5:30"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAddVideo}>Add Video</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Replace the Add Video Dialog with the new VideoUploadDialog */}
+      <VideoUploadDialog
+        open={showAddDialog}
+        onClose={() => setShowAddDialog(false)}
+        onVideoAdded={handleVideoAdded}
+      />
 
       {/* Edit Video Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>

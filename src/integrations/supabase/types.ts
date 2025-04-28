@@ -578,6 +578,45 @@ export type Database = {
           },
         ]
       }
+      module_assessments: {
+        Row: {
+          assessment_id: string | null
+          created_at: string
+          id: string
+          module_id: string | null
+          order_number: number
+        }
+        Insert: {
+          assessment_id?: string | null
+          created_at?: string
+          id?: string
+          module_id?: string | null
+          order_number?: number
+        }
+        Update: {
+          assessment_id?: string | null
+          created_at?: string
+          id?: string
+          module_id?: string | null
+          order_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "module_assessments_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "module_assessments_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "training_modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       module_categories: {
         Row: {
           created_at: string
@@ -607,6 +646,45 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      module_videos: {
+        Row: {
+          created_at: string
+          id: string
+          module_id: string | null
+          order_number: number
+          video_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          module_id?: string | null
+          order_number?: number
+          video_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          module_id?: string | null
+          order_number?: number
+          video_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "module_videos_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "training_modules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "module_videos_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -921,9 +999,13 @@ export type Database = {
           created_by: string
           description: string | null
           duration: string
+          file_path: string | null
+          file_size: number | null
           id: string
           module: string
+          thumbnail: string | null
           title: string
+          upload_status: string | null
           url: string
         }
         Insert: {
@@ -931,9 +1013,13 @@ export type Database = {
           created_by: string
           description?: string | null
           duration: string
+          file_path?: string | null
+          file_size?: number | null
           id?: string
           module: string
+          thumbnail?: string | null
           title: string
+          upload_status?: string | null
           url: string
         }
         Update: {
@@ -941,9 +1027,13 @@ export type Database = {
           created_by?: string
           description?: string | null
           duration?: string
+          file_path?: string | null
+          file_size?: number | null
           id?: string
           module?: string
+          thumbnail?: string | null
           title?: string
+          upload_status?: string | null
           url?: string
         }
         Relationships: [
