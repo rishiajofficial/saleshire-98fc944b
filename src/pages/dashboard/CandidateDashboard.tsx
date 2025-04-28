@@ -3,7 +3,7 @@ import React from 'react';
 import { Loader2 } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
 import { useAuth } from '@/contexts/AuthContext';
-import { useTrainingProgress } from '@/hooks/useTrainingProgress';
+import { useTrainingModulesList } from '@/hooks/training/useTrainingModulesList';
 import { useCandidateDashboardData } from '@/hooks/useCandidateDashboardData';
 import ErrorMessage from '@/components/ui/error-message';
 import { StatusCard } from '@/components/dashboard/StatusCard';
@@ -28,10 +28,10 @@ const CandidateDashboard = () => {
   } = useCandidateDashboardData(user?.id);
 
   const { 
-    trainingModules, 
-    isLoading: isLoadingTraining, 
+    modules: trainingModules, 
+    loading: isLoadingTraining, 
     error: trainingError,
-  } = useTrainingProgress();
+  } = useTrainingModulesList();
 
   const isLoading = dashboardLoading || isLoadingTraining;
   const error = trainingError || dashboardError;

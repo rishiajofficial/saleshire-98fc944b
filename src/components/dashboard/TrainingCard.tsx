@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, CheckCircle2, Lock, PlayCircle, BookOpen } from "lucide-react";
-import { TrainingModuleProgress } from "@/hooks/useTrainingProgress";
+import { TrainingModuleProgress } from "@/types/training";
 
 interface TrainingCardProps {
   canAccessTraining: boolean;
@@ -63,39 +63,40 @@ export const TrainingCard = ({ canAccessTraining, trainingModules, isLoadingTrai
           </Alert>
         ) : (
           <div className="space-y-4">
-            {trainingModules.map((module) => (
-              <Link 
-                to={`/training/module/${module.id}`}
-                key={module.id} 
-                className={`block p-4 border rounded-lg hover:bg-muted/50 transition-all ${module.locked ? 'opacity-60 pointer-events-none' : ''}`}
-              >
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-medium">{module.title}</span>
-                  {getModuleStatusBadge(module)}
-                </div>
-                
-                <div className="mb-2">
-                  <Progress value={module.progress} className="h-2" />
-                </div>
-                
-                <div className="flex justify-between items-center text-xs text-muted-foreground">
-                  <span>
-                    {module.watchedVideos} of {module.totalVideos} videos completed
-                  </span>
-                  {module.quizCompleted ? (
-                    <span className="text-green-600 flex items-center">
-                      <CheckCircle2 className="h-3 w-3 mr-1" /> Quiz passed
+            {trainingModules.length === 0 ? (
+              <p className="text-center text-muted-foreground py-4">No training modules available for your job application.</p>
+            ) : (
+              trainingModules.map((module) => (
+                <Link 
+                  to={`/training/module/${module.id}`}
+                  key={module.id} 
+                  className={`block p-4 border rounded-lg hover:bg-muted/50 transition-all ${module.locked ? 'opacity-60 pointer-events-none' : ''}`}
+                >
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="font-medium">{module.title}</span>
+                    {getModuleStatusBadge(module)}
+                  </div>
+                  
+                  <div className="mb-2">
+                    <Progress value={module.progress} className="h-2" />
+                  </div>
+                  
+                  <div className="flex justify-between items-center text-xs text-muted-foreground">
+                    <span>
+                      {module.watchedVideos} of {module.totalVideos} videos completed
                     </span>
-                  ) : module.quizIds && module.quizIds.length > 0 && module.watchedVideos === module.totalVideos ? (
-                    <span className="text-blue-600 flex items-center">
-                      <BookOpen className="h-3 w-3 mr-1" /> Quiz available
-                    </span>
-                  ) : null}
-                </div>
-              </Link>
-            ))}
-            {trainingModules.length === 0 && (
-              <p className="text-center text-muted-foreground py-4">No training modules available yet.</p>
+                    {module.quizCompleted ? (
+                      <span className="text-green-600 flex items-center">
+                        <CheckCircle2 className="h-3 w-3 mr-1" /> Quiz passed
+                      </span>
+                    ) : module.quizIds && module.quizIds.length > 0 && module.watchedVideos === module.totalVideos ? (
+                      <span className="text-blue-600 flex items-center">
+                        <BookOpen className="h-3 w-3 mr-1" /> Quiz available
+                      </span>
+                    ) : null}
+                  </div>
+                </Link>
+              ))
             )}
           </div>
         )}
