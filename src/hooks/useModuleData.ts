@@ -27,7 +27,7 @@ export const useModuleData = (moduleId: string | undefined) => {
         .from('module_categories')
         .select('name')
         .eq('id', moduleId)
-        .single();
+        .maybeSingle(); // Changed from single() to maybeSingle()
         
       if (categoryError) {
         console.error("Error fetching category name:", categoryError);
@@ -105,7 +105,7 @@ export const useModuleData = (moduleId: string | undefined) => {
         .from('module_categories')
         .select('*')
         .eq('id', moduleId)
-        .single();
+        .maybeSingle(); // Changed from single() to maybeSingle()
       
       if (error) {
         console.error("Error fetching module details:", error);
@@ -160,7 +160,7 @@ export const useModuleData = (moduleId: string | undefined) => {
           .eq('user_id', user.id)
           .or(`module.eq.${moduleId},module.eq.${moduleDetails?.name || ''}`)
           .eq('passed', true)
-          .maybeSingle();
+          .maybeSingle(); // Changed from single() to maybeSingle()
         
         if (error && error.code !== 'PGRST116') {
           console.error("Error fetching quiz results:", error);
