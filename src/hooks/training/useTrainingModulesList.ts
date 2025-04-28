@@ -23,22 +23,48 @@ export const useTrainingModulesList = () => {
       try {
         setLoading(true);
         
-        // Fetch all training modules
+        // Get candidate's job application first
+        const { data: jobApplicationData, error: jobAppError } = await supabase
+          .from('job_applications')
+          .select('job_id')
+          .eq('candidate_id', user?.id)
+          .single();
+          
+        if (jobAppError) throw jobAppError;
+        
+        if (!jobApplicationData?.job_id) {
+          setModules([]);
+          return;
+        }
+
+        // Get the job's training modules
+        const { data: jobTrainingData, error: jobTrainingError } = await supabase
+          .from('job_training')
+          .select('training_module_id')
+          .eq('job_id', jobApplicationData.job_id);
+          
+        if (jobTrainingError) throw jobTrainingError;
+
+        // Extract module IDs
+        const moduleIds = jobTrainingData?.map(jt => jt.training_module_id) || [];
+        
+        // Fetch training modules
         const { data: modulesData, error: modulesError } = await supabase
           .from('training_modules')
           .select('*')
+          .in('id', moduleIds)
           .order('title', { ascending: true });
           
         if (modulesError) throw modulesError;
         
-        // Fetch videos for each module
+        // Fetch videos for the modules
         const { data: videosData, error: videosError } = await supabase
           .from('videos')
           .select('*');
           
         if (videosError) throw videosError;
         
-        // Prepare module data
+        // Process the modules
         const processedModules: TrainingModuleProgress[] = [];
         let prevComplete = true; // First module is always unlocked
         
@@ -106,7 +132,7 @@ export const useTrainingModulesList = () => {
     };
 
     fetchModules();
-  }, [videoProgress, completedAssessments, calculateModuleProgress]);
+  }, [videoProgress, completedAssessments, calculateModuleProgress, user?.id]);
 
   return { modules, loading, error };
 };
