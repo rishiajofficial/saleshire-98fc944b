@@ -58,11 +58,13 @@ const AssessmentManagement = () => {
   };
 
   const handleCreateAssessment = () => {
-    navigate("/admin/assessment/create");
+    // Updated route path
+    navigate("/training-management/assessments/create");
   };
 
   const handleEditAssessment = (assessment: Assessment) => {
-    navigate(`/admin/assessment/${assessment.id}/edit`);
+    // Updated route path
+    navigate(`/training-management/assessments/${assessment.id}/edit`);
   };
 
   const handleOpenDeleteDialog = (assessment: Assessment) => {
@@ -99,7 +101,8 @@ const AssessmentManagement = () => {
   };
 
   const handleViewAssessment = (assessment: Assessment) => {
-    navigate(`/admin/assessment/${assessment.id}`);
+    // Updated route path
+    navigate(`/training-management/assessments/${assessment.id}`);
   };
 
   if (loading) {

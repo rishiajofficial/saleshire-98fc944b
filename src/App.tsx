@@ -148,6 +148,23 @@ const App = () => {
                 </ProtectedRoute>
               } />
               
+              {/* Assessment management routes */}
+              <Route path="/training-management/assessments/create" element={
+                <ProtectedRoute allowedRoles={['admin', 'hr']}>
+                  <AssessmentDetails />
+                </ProtectedRoute>
+              } />
+              <Route path="/training-management/assessments/:assessmentId" element={
+                <ProtectedRoute allowedRoles={['admin', 'hr']}>
+                  <AssessmentDetails />
+                </ProtectedRoute>
+              } />
+              <Route path="/training-management/assessments/:assessmentId/edit" element={
+                <ProtectedRoute allowedRoles={['admin', 'hr']}>
+                  <AssessmentDetails />
+                </ProtectedRoute>
+              } />
+              
               <Route path="/assessments/results/:resultId" element={
                 <ProtectedRoute allowedRoles={['admin', 'hr', 'director']}>
                   <AssessmentResultDetails />
