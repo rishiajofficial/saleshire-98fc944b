@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +32,29 @@ interface JobFormValues {
   salary_range: string;
   selectedAssessment: string;
   selectedModules: string[];
+  id?: string;
+  status?: string;
+  archived?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  created_by?: string;
+}
+
+interface EditingJob {
+  id: string;
+  title: string;
+  description: string;
+  department: string;
+  location: string;
+  employment_type: string;
+  salary_range: string;
+  selectedAssessment: string;
+  selectedModules: string[];
+  status?: string;
+  archived?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  created_by?: string;
 }
 
 interface JobFormProps {
@@ -206,12 +228,6 @@ const JobForm: React.FC<JobFormProps> = ({
   );
 };
 
-// Define a more specific type for editingJob to avoid excessive type instantiation
-interface EditingJob extends JobFormValues {
-  id?: string;
-  [key: string]: any; // Allow for additional properties
-}
-
 interface JobCreationDialogProps {
   onJobCreated?: (job: JobFormValues) => void;
   onJobUpdated?: (job: EditingJob) => void;
@@ -227,7 +243,7 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
   onJobCreated,
   onJobUpdated,
   assessments,
-  categories, // Deprecated, keeping for compatibility
+  categories,
   editingJob,
   mode = "create",
   isOpen: externalIsOpen,
@@ -257,7 +273,6 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
 
       if (error) throw error;
       
-      // Format modules properly with id and name
       const formattedModules = data ? data.map(module => ({
         id: module.id,
         name: module.title || 'Untitled Module'
@@ -283,7 +298,6 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
 
   const handleSubmit = (form: JobFormValues) => {
     if (mode === "edit" && onJobUpdated && editingJob) {
-      // Explicitly type this to avoid infinite type instantiation
       const updatedJob: EditingJob = { 
         ...editingJob, 
         ...form,

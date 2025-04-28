@@ -1,17 +1,76 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { TrainingModule, Video } from "@/types/training";
-import { useTrainingProgress } from "./useTrainingProgress";
+import { toast } from "sonner";
 
 export function useTrainingModulesList(userId?: string) {
   const [modules, setModules] = useState<TrainingModule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const { videoProgress, completedQuizzes, calculateModuleProgress } = useTrainingProgress(userId);
+  const [videoProgress, setVideoProgress] = useState<Record<string, boolean>>({});
+  const [completedAssessments, setCompletedAssessments] = useState<string[]>([]);
+
+  // Helper function to calculate module progress without relying on external hook
+  const calculateModuleProgress = useCallback((videos: Video[], quizIds: string[] = []) => {
+    const totalContent = videos.length + quizIds.length;
+    if (totalContent === 0) return 100; // If no content, consider it complete
+
+    let completedCount = 0;
+    videos.forEach(video => {
+      if (videoProgress[video.id]) {
+        completedCount++;
+      }
+    });
+    quizIds.forEach(quizId => {
+      if (completedAssessments.includes(quizId)) {
+        completedCount++;
+      }
+    });
+
+    return (completedCount / totalContent) * 100;
+  }, [videoProgress, completedAssessments]);
+
+  // Fetch video progress and quiz completions
+  const fetchUserProgress = useCallback(async (uid: string) => {
+    try {
+      // Fetch video progress
+      const { data: userVideoProgress, error: videoError } = await supabase
+        .from('training_progress')
+        .select('*')
+        .eq('user_id', uid)
+        .eq('completed', true);
+        
+      if (videoError) throw videoError;
+      
+      const progress: Record<string, boolean> = {};
+      userVideoProgress?.forEach(item => {
+        progress[item.video_id] = true;
+      });
+      setVideoProgress(progress);
+      
+      // Fetch completed quizzes
+      const { data: quizResults, error: quizError } = await supabase
+        .from('quiz_results')
+        .select('*')
+        .eq('user_id', uid)
+        .eq('passed', true);
+        
+      if (quizError) throw quizError;
+      
+      setCompletedAssessments(quizResults?.map(quiz => quiz.module) || []);
+    } catch (err) {
+      console.error("Error fetching user progress:", err);
+    }
+  }, []);
 
   const fetchModules = useCallback(async () => {
     try {
       setLoading(true);
+      
+      if (userId) {
+        await fetchUserProgress(userId);
+      }
       
       // Get all training modules
       const { data: modulesData, error: modulesError } = await supabase
@@ -75,28 +134,27 @@ export function useTrainingModulesList(userId?: string) {
         
         // Check if quiz is completed
         const quizCompleted = quizIds.every(quizId => 
-          completedQuizzes.includes(quizId)
+          completedAssessments.includes(quizId)
         );
         
         // Determine status based on progress
-        let status: "completed" | "in_progress" | "locked" = "locked";
-        if (!locked) {
-          status = progress >= 100 ? "completed" : "in_progress";
-        }
+        const statusValue = locked ? "locked" : (progress >= 100 ? "completed" : "in_progress");
         
         const module: TrainingModule = {
           id: moduleData.id,
           title: moduleData.name,
           description: moduleData.description,
           module: moduleData.name.toLowerCase(),
+          status: statusValue as any, // Type casting since our TrainingModule now supports these values
           progress,
-          status,
           locked,
           videos,
           quizIds,
           totalVideos: videos.length,
           watchedVideos,
-          quizCompleted
+          quizCompleted,
+          tags: null,
+          thumbnail: null
         };
         
         trainingModules.push(module);
@@ -112,7 +170,7 @@ export function useTrainingModulesList(userId?: string) {
     } finally {
       setLoading(false);
     }
-  }, [userId, videoProgress, completedQuizzes, calculateModuleProgress]);
+  }, [userId, videoProgress, completedAssessments, calculateModuleProgress]);
 
   useEffect(() => {
     fetchModules();

@@ -4,7 +4,7 @@ export interface TrainingModule {
   title: string;
   description: string | null;
   tags: string[] | null;
-  status: 'active' | 'inactive';
+  status: 'active' | 'inactive' | 'completed' | 'in_progress' | 'locked';
   thumbnail: string | null;
   created_at?: string;
   updated_at?: string;
@@ -13,6 +13,14 @@ export interface TrainingModule {
   content?: string | null;
   video_url?: string | null;
   quiz_id?: string | null;
+  // Additional fields used in the UI
+  progress?: number;
+  locked?: boolean;
+  videos?: Video[];
+  quizIds?: string[] | null;
+  totalVideos?: number;
+  watchedVideos?: number;
+  quizCompleted?: boolean;
 }
 
 export interface Video {
@@ -28,6 +36,7 @@ export interface Video {
   updated_at?: string;
   created_by?: string;
   module: string;
+  upload_status?: string;
 }
 
 export interface Assessment {
@@ -35,7 +44,7 @@ export interface Assessment {
   title: string;
   description?: string | null;
   timeLimit?: number | null;
-  time_limit?: number | null; // Added for database compatibility
+  time_limit?: number | null;
   passingScore?: number;
   randomizeQuestions?: boolean;
   questions?: AssessmentQuestion[];
@@ -100,4 +109,58 @@ export interface ModuleAssessmentRelation {
   moduleId: string;
   assessmentId: string;
   order: number;
+}
+
+export interface TrainingProgressItem {
+  moduleId: string;
+  moduleName: string;
+  moduleDescription: string | null;
+  progress: number;
+  completedVideos: number;
+  totalVideos: number;
+  completedAssessments: number;
+  totalAssessments: number;
+  startedAt: string | null;
+  completedAt: string | null;
+  timeSpent: number;
+}
+
+// Interface for database table structure
+export interface TrainingProgressRecord {
+  id: string;
+  user_id: string;
+  video_id: string;
+  module: string;
+  completed: boolean;
+  completed_at?: string | null;
+  started_at?: string | null;
+  time_spent?: number | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// Interface for assessment scores
+export interface AssessmentScoreRecord {
+  id?: string;
+  user_id: string;
+  assessment_id: string;
+  score: number;
+  passed: boolean;
+  completed_at?: string | null;
+  created_at?: string;
+}
+
+export interface TrainingModuleProgress {
+  id: string;
+  title: string;
+  description: string | null;
+  module: string;
+  progress: number;
+  status: 'completed' | 'in_progress' | 'locked';
+  locked: boolean;
+  videos: Video[];
+  quizIds: string[] | null;
+  totalVideos: number;
+  watchedVideos: number;
+  quizCompleted: boolean;
 }

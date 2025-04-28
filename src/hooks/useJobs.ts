@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -60,7 +59,7 @@ export const useJobs = () => {
 
         // Fetch job training modules
         const { data: modulesData, error: modulesError } = await supabase
-          .from("job_training")  // Fix: changed from job_modules to job_training
+          .from("job_training")
           .select("job_id, training_module_id")
           .in("job_id", jobIds);
 
@@ -125,11 +124,11 @@ export const useJobs = () => {
       if (selectedModules && selectedModules.length > 0) {
         const moduleInserts = selectedModules.map((moduleId) => ({
           job_id: data.id,
-          training_module_id: moduleId,  // Fix: changed from module_id to training_module_id
+          training_module_id: moduleId,
         }));
 
         const { error: modulesError } = await supabase
-          .from("job_training")  // Fix: changed from job_modules to job_training
+          .from("job_training")
           .insert(moduleInserts);
 
         if (modulesError) throw modulesError;
@@ -176,17 +175,17 @@ export const useJobs = () => {
       }
 
       // Handle modules - first delete existing
-      await supabase.from("job_training").delete().eq("job_id", id);  // Fix: changed from job_modules to job_training
+      await supabase.from("job_training").delete().eq("job_id", id);
 
       // Create associated modules if any
       if (selectedModules && selectedModules.length > 0) {
         const moduleInserts = selectedModules.map((moduleId) => ({
           job_id: id,
-          training_module_id: moduleId,  // Fix: changed from module_id to training_module_id
+          training_module_id: moduleId,
         }));
 
         const { error: modulesError } = await supabase
-          .from("job_training")  // Fix: changed from job_modules to job_training
+          .from("job_training")
           .insert(moduleInserts);
 
         if (modulesError) throw modulesError;

@@ -1,20 +1,8 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-
-interface TrainingProgressItem {
-  moduleId: string;
-  moduleName: string;
-  moduleDescription: string | null;
-  progress: number;
-  completedVideos: number;
-  totalVideos: number;
-  completedAssessments: number;
-  totalAssessments: number;
-  startedAt: string | null;
-  completedAt: string | null;
-  timeSpent: number;
-}
+import { TrainingProgressItem } from '@/types/training';
 
 export function useCandidateTrainingProgress(candidateId?: string) {
   const [progress, setProgress] = useState<TrainingProgressItem[]>([]);
@@ -56,7 +44,7 @@ export function useCandidateTrainingProgress(candidateId?: string) {
 
       if (moduleAssessmentsError) throw moduleAssessmentsError;
 
-      // Fetch user's video progress
+      // Fetch user's training progress
       const { data: videoProgress, error: videoProgressError } = await supabase
         .from('training_progress')
         .select('*')
@@ -64,16 +52,16 @@ export function useCandidateTrainingProgress(candidateId?: string) {
 
       if (videoProgressError) throw videoProgressError;
 
-      // Fetch user's assessment progress
-      const { data: assessmentProgress, error: assessmentProgressError } = await supabase
+      // Fetch user's assessment results
+      const { data: assessmentResults, error: assessmentResultsError } = await supabase
         .from('assessment_results')
         .select('*')
-        .eq('user_id', userId);
+        .eq('candidate_id', userId);
 
-      if (assessmentProgressError) throw assessmentProgressError;
+      if (assessmentResultsError) throw assessmentResultsError;
 
       // Calculate progress for each module
-      const progressItems: TrainingProgressItem[] = modules.map(module => {
+      const progressItems: TrainingProgressItem[] = modules?.map(module => {
         // Get videos for this module
         const moduleVideoIds = moduleVideos
           .filter(mv => mv.module_id === module.id)
@@ -86,13 +74,13 @@ export function useCandidateTrainingProgress(candidateId?: string) {
 
         // Count completed videos
         const completedVideos = videoProgress
-          .filter(vp => moduleVideoIds.includes(vp.video_id) && vp.completed)
-          .length;
+          ?.filter(vp => moduleVideoIds.includes(vp.video_id) && vp.completed)
+          .length || 0;
 
-        // Count completed assessments
-        const completedAssessments = assessmentProgress
-          .filter(ap => moduleAssessmentIds.includes(ap.assessment_id) && ap.passed)
-          .length;
+        // Count completed assessments with passing score
+        const completedAssessments = assessmentResults
+          ?.filter(ar => moduleAssessmentIds.includes(ar.assessment_id) && ar.completed && ar.score >= 70) // Assuming 70% is passing
+          .length || 0;
 
         // Calculate overall progress
         const totalItems = moduleVideoIds.length + moduleAssessmentIds.length;
@@ -101,25 +89,24 @@ export function useCandidateTrainingProgress(candidateId?: string) {
           ? Math.round((completedItems / totalItems) * 100) 
           : 0;
 
-        // Calculate time spent
+        // Calculate time spent - default to 0 if property doesn't exist
         const timeSpent = videoProgress
-          .filter(vp => moduleVideoIds.includes(vp.video_id))
-          .reduce((total, vp) => total + (vp.time_spent || 0), 0);
+          ?.filter(vp => moduleVideoIds.includes(vp.video_id))
+          .reduce((total, vp) => total + ((vp as any).time_spent || 0), 0) || 0;
 
-        // Find earliest started_at
-        const startedVideos = videoProgress
-          .filter(vp => moduleVideoIds.includes(vp.video_id) && vp.started_at);
+        // Find earliest start date from video progress
+        const videoStartDates = videoProgress
+          ?.filter(vp => moduleVideoIds.includes(vp.video_id))
+          .map(vp => (vp as any).started_at as string | null)
+          .filter(Boolean) as string[];
         
-        const startedAt = startedVideos.length > 0
-          ? startedVideos.reduce((earliest, vp) => {
-              const vpDate = vp.started_at ? new Date(vp.started_at) : null;
-              return vpDate && (!earliest || vpDate < earliest) ? vpDate : earliest;
-            }, null as Date | null)?.toISOString()
+        const startedAt = videoStartDates.length > 0
+          ? new Date(Math.min(...videoStartDates.map(date => new Date(date).getTime()))).toISOString()
           : null;
 
-        // Find latest completed_at if all items are completed
+        // Find latest completion date if all items are completed
         const completedAt = totalItems > 0 && completedItems === totalItems
-          ? new Date().toISOString() // This is a simplification; ideally would use actual completion timestamps
+          ? new Date().toISOString() // This is a simplification
           : null;
 
         return {
@@ -135,7 +122,7 @@ export function useCandidateTrainingProgress(candidateId?: string) {
           completedAt,
           timeSpent
         };
-      });
+      }) || [];
 
       setProgress(progressItems);
     } catch (error: any) {

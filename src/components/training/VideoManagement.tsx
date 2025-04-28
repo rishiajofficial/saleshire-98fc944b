@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -119,17 +118,15 @@ const VideoManagement = () => {
         return;
       }
 
-      // Fix: Create a properly typed videoData object
-      const videoData = {
+      const videoData: Partial<Video> = {
         title: formData.title,
         description: formData.description || null,
         duration: formData.duration || "0:00",
         module: formData.module,
         created_by: user.id,
-        url: formData.url // Set default URL, will be overwritten if file upload
+        url: formData.url
       };
 
-      // Handle file upload if needed
       if (uploadMethod === 'file' && videoFile) {
         const uploadResult = await uploadVideo(videoFile);
         
@@ -139,9 +136,9 @@ const VideoManagement = () => {
         }
         
         videoData.url = uploadResult.url;
-        if (uploadResult.filePath) videoData.file_path = uploadResult.filePath;
-        if (uploadResult.fileSize) videoData.file_size = uploadResult.fileSize;
-        if (uploadResult.thumbnail) videoData.thumbnail = uploadResult.thumbnail;
+        videoData.file_path = uploadResult.filePath;
+        videoData.file_size = uploadResult.fileSize;
+        videoData.thumbnail = uploadResult.thumbnail;
       }
 
       const { data, error } = await supabase
@@ -167,15 +164,13 @@ const VideoManagement = () => {
         return;
       }
 
-      // Fix: Create a properly typed videoData object
-      const videoData = {
+      const videoData: Partial<Video> = {
         title: formData.title,
         description: formData.description || null,
         duration: formData.duration || "0:00",
         module: formData.module
       };
 
-      // Handle file upload if needed
       if (uploadMethod === 'file' && videoFile) {
         const uploadResult = await uploadVideo(videoFile);
         
@@ -185,9 +180,9 @@ const VideoManagement = () => {
         }
         
         videoData.url = uploadResult.url;
-        if (uploadResult.filePath) videoData.file_path = uploadResult.filePath;
-        if (uploadResult.fileSize) videoData.file_size = uploadResult.fileSize;
-        if (uploadResult.thumbnail) videoData.thumbnail = uploadResult.thumbnail;
+        videoData.file_path = uploadResult.filePath;
+        videoData.file_size = uploadResult.fileSize;
+        videoData.thumbnail = uploadResult.thumbnail;
       } else if (uploadMethod === 'url' && formData.url !== selectedVideo.url) {
         videoData.url = formData.url;
       }
@@ -211,7 +206,6 @@ const VideoManagement = () => {
     try {
       if (!selectedVideo) return;
       
-      // First check if the video is used in any modules
       const { count, error: checkError } = await supabase
         .from('module_videos')
         .select('*', { count: 'exact', head: true })
@@ -225,7 +219,6 @@ const VideoManagement = () => {
         return;
       }
       
-      // Delete video from storage if file_path exists
       if (selectedVideo.file_path) {
         const { error: storageError } = await supabase.storage
           .from('training_videos')
@@ -233,7 +226,6 @@ const VideoManagement = () => {
           
         if (storageError) {
           console.error("Error removing video file:", storageError);
-          // Continue with deletion even if storage removal fails
         }
       }
       
@@ -336,7 +328,6 @@ const VideoManagement = () => {
         </div>
       )}
       
-      {/* Create Video Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -459,7 +450,6 @@ const VideoManagement = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Edit Video Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -579,7 +569,6 @@ const VideoManagement = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Delete Video Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
@@ -603,5 +592,4 @@ const VideoManagement = () => {
   );
 };
 
-// Make sure to add a default export to fix the module import error
 export default VideoManagement;

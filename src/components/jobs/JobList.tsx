@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,23 @@ import { JobApplicationsDialog } from "./JobApplicationsDialog";
 import { DeleteJobDialog } from "./DeleteJobDialog";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { supabase } from "@/integrations/supabase/client";
+
+interface EditingJob {
+  id: string;
+  title: string;
+  description: string;
+  department: string;
+  location: string;
+  employment_type: string;
+  salary_range: string;
+  selectedAssessment: string;
+  selectedModules: string[];
+  status?: string;
+  archived?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  created_by?: string;
+}
 
 interface JobListProps {
   jobs: Job[];
@@ -27,7 +43,7 @@ const JobList: React.FC<JobListProps> = ({
   assessments,
   categories
 }) => {
-  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [selectedJob, setSelectedJob] = useState<EditingJob | null>(null);
   const [viewMode, setViewMode] = useState<"view" | "edit" | null>(null);
   const [showApplications, setShowApplications] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState<string | null>(null);
@@ -35,7 +51,7 @@ const JobList: React.FC<JobListProps> = ({
 
   const filteredJobs = jobs.filter(job => job.archived === (filter === "archived"));
 
-  const fetchJobRelatedData = async (job: Job) => {
+  const fetchJobRelatedData = async (job: Job): Promise<EditingJob> => {
     const { data: assessmentData } = await supabase
       .from('job_assessments')
       .select('assessment_id')
@@ -45,21 +61,24 @@ const JobList: React.FC<JobListProps> = ({
     const { data: trainingData } = await supabase
       .from('job_training')
       .select('training_module_id')
-      .eq('job_id', job.id)
-      .maybeSingle();
+      .eq('job_id', job.id);
       
     const { data: categoriesData } = await supabase
       .from('job_categories')
       .select('category_id')
       .eq('job_id', job.id);
       
+    const selectedModules = trainingData?.map(item => item.training_module_id) || [];
     const selectedCategories = (categoriesData || []).map(item => item.category_id);
     
     return {
       ...job,
       selectedAssessment: assessmentData?.assessment_id || "none",
-      selectedTrainingModule: trainingData?.training_module_id || "none",
-      selectedCategories: selectedCategories || []
+      selectedModules: selectedModules,
+      department: job.department || "",
+      location: job.location || "",
+      employment_type: job.employment_type || "",
+      salary_range: job.salary_range || ""
     };
   };
 
