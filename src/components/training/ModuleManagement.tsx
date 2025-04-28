@@ -17,7 +17,6 @@ import { Badge } from "@/components/ui/badge";
 interface Module {
   id: string;
   title: string;
-  name: string;
   description: string | null;
   tags: string[] | null;
   status: 'active' | 'inactive';
@@ -40,7 +39,7 @@ const ModuleManagement = () => {
   const [moduleVideos, setModuleVideos] = useState<ModuleVideo[]>([]);
   const [moduleAssessments, setModuleAssessments] = useState<ModuleAssessment[]>([]);
   const [formData, setFormData] = useState({
-    name: "",
+    title: "",
     description: "",
     tags: "",
     status: "active" as 'active' | 'inactive',
@@ -72,16 +71,25 @@ const ModuleManagement = () => {
         `)
         .order("title");
         
-      if (modulesError) throw modulesError;
-      
-      // Format modules to match our Module interface
-      const formattedModules = (modulesData || []).map(module => ({
-        ...module,
-        name: module.title, // Use title as name
-        tags: module.tags || [],
-        status: module.status || 'active',
-        thumbnail: module.thumbnail || null
-      }));
+      if (modulesError) {
+        console.error("Error fetching modules:", modulesError);
+        toast.error(`Failed to fetch modules: ${modulesError.message}`);
+        setModules([]);
+      } else {
+        // Format modules to match our Module interface
+        const formattedModules = (modulesData || []).map(module => ({
+          id: module.id,
+          title: module.title || '',
+          description: module.description || null,
+          tags: module.tags || [],
+          status: module.status || 'active',
+          thumbnail: module.thumbnail || null,
+          created_at: module.created_at,
+          created_by: module.created_by
+        }));
+        
+        setModules(formattedModules);
+      }
       
       // Fetch videos
       const { data: videosData, error: videosError } = await supabase
@@ -89,7 +97,13 @@ const ModuleManagement = () => {
         .select("*")
         .order("title");
         
-      if (videosError) throw videosError;
+      if (videosError) {
+        console.error("Error fetching videos:", videosError);
+        toast.error(`Failed to fetch videos: ${videosError.message}`);
+        setVideos([]);
+      } else {
+        setVideos(videosData || []);
+      }
       
       // Fetch assessments
       const { data: assessmentsData, error: assessmentsError } = await supabase
@@ -97,11 +111,13 @@ const ModuleManagement = () => {
         .select("*")
         .order("title");
         
-      if (assessmentsError) throw assessmentsError;
-      
-      setModules(formattedModules);
-      setVideos(videosData || []);
-      setAssessments(assessmentsData || []);
+      if (assessmentsError) {
+        console.error("Error fetching assessments:", assessmentsError);
+        toast.error(`Failed to fetch assessments: ${assessmentsError.message}`);
+        setAssessments([]);
+      } else {
+        setAssessments(assessmentsData || []);
+      }
       
     } catch (error: any) {
       toast.error(`Failed to fetch data: ${error.message}`);
@@ -113,38 +129,69 @@ const ModuleManagement = () => {
 
   const fetchModuleRelations = async (moduleId: string) => {
     try {
-      // Use RPC or direct SQL query instead of trying to join
-      const { data: moduleVideosData, error: moduleVideosError } = await supabase
-        .from("module_videos")
-        .select("id, module_id, video_id, order")
-        .eq("module_id", moduleId)
-        .order("order");
+      // Use direct SQL queries instead of trying to use module_videos/module_assessments
+      const { data: videoRelations, error: videoError } = await supabase
+        .rpc('get_module_videos', { module_id_param: moduleId });
         
-      if (moduleVideosError) throw moduleVideosError;
-      
-      const { data: moduleAssessmentsData, error: moduleAssessmentsError } = await supabase
-        .from("module_assessments")
-        .select("id, module_id, assessment_id, order")
-        .eq("module_id", moduleId)
-        .order("order");
+      if (videoError) {
+        console.error("Error fetching module videos:", videoError);
+        toast.error(`Failed to fetch module videos: ${videoError.message}`);
         
-      if (moduleAssessmentsError) throw moduleAssessmentsError;
+        // Fallback to empty arrays if rpc fails
+        setModuleVideos([]);
+        setSelectedVideos([]);
+      } else {
+        // Format video relations
+        const formattedVideoRelations: ModuleVideo[] = (videoRelations || []).map(relation => ({
+          id: relation.id || '',
+          module_id: moduleId,
+          video_id: relation.video_id || '',
+          order: relation.order || 0,
+          created_at: relation.created_at
+        }));
+        
+        setModuleVideos(formattedVideoRelations);
+        setSelectedVideos(formattedVideoRelations.map(mv => mv.video_id));
+      }
       
-      setModuleVideos(moduleVideosData || []);
-      setModuleAssessments(moduleAssessmentsData || []);
-      
-      // Set selected IDs for the form
-      setSelectedVideos((moduleVideosData || []).map(mv => mv.video_id));
-      setSelectedAssessments((moduleAssessmentsData || []).map(ma => ma.assessment_id));
+      const { data: assessmentRelations, error: assessmentError } = await supabase
+        .rpc('get_module_assessments', { module_id_param: moduleId });
+        
+      if (assessmentError) {
+        console.error("Error fetching module assessments:", assessmentError);
+        toast.error(`Failed to fetch module assessments: ${assessmentError.message}`);
+        
+        // Fallback to empty arrays if rpc fails
+        setModuleAssessments([]);
+        setSelectedAssessments([]);
+      } else {
+        // Format assessment relations
+        const formattedAssessmentRelations: ModuleAssessment[] = (assessmentRelations || []).map(relation => ({
+          id: relation.id || '',
+          module_id: moduleId,
+          assessment_id: relation.assessment_id || '',
+          order: relation.order || 0,
+          created_at: relation.created_at
+        }));
+        
+        setModuleAssessments(formattedAssessmentRelations);
+        setSelectedAssessments(formattedAssessmentRelations.map(ma => ma.assessment_id));
+      }
     } catch (error: any) {
       toast.error(`Failed to fetch module relations: ${error.message}`);
       console.error("Error fetching module relations:", error);
+      
+      // Set empty arrays as fallback
+      setModuleVideos([]);
+      setModuleAssessments([]);
+      setSelectedVideos([]);
+      setSelectedAssessments([]);
     }
   };
 
   const handleOpenCreateDialog = () => {
     setFormData({
-      name: "",
+      title: "",
       description: "",
       tags: "",
       status: "active",
@@ -158,7 +205,7 @@ const ModuleManagement = () => {
   const handleOpenEditDialog = async (module: Module) => {
     setSelectedModule(module);
     setFormData({
-      name: module.name,
+      title: module.title,
       description: module.description || "",
       tags: module.tags ? module.tags.join(", ") : "",
       status: module.status || "active",
@@ -233,7 +280,7 @@ const ModuleManagement = () => {
 
   const handleCreateModule = async () => {
     try {
-      if (!formData.name) {
+      if (!formData.title) {
         toast.error("Module name is required");
         return;
       }
@@ -243,11 +290,11 @@ const ModuleManagement = () => {
         return;
       }
 
-      // Create the module with both name and title fields
+      // Create the module with title field
       const { data: moduleData, error: moduleError } = await supabase
         .from("training_modules")
         .insert({
-          title: formData.name, // Set title from name
+          title: formData.title,
           description: formData.description || null,
           tags: formData.tags ? formData.tags.split(",").map(tag => tag.trim()) : null,
           status: formData.status,
@@ -260,34 +307,54 @@ const ModuleManagement = () => {
       
       const moduleId = moduleData[0].id;
       
-      // Create module-video relations
+      // Create module-video relations using a custom function
       if (selectedVideos.length > 0) {
-        const videoRelations = selectedVideos.map((videoId, index) => ({
-          module_id: moduleId,
-          video_id: videoId,
-          order: index
-        }));
-        
         const { error: videoRelationError } = await supabase
-          .from("module_videos")
-          .insert(videoRelations);
+          .rpc('create_module_videos', { 
+            module_id_param: moduleId,
+            video_ids_param: selectedVideos,
+            // Convert selectedVideos array index to the order
+            orders_param: selectedVideos.map((_, index) => index)
+          });
           
-        if (videoRelationError) throw videoRelationError;
+        if (videoRelationError) {
+          console.error("Error creating module videos:", videoRelationError);
+          // Fallback to direct insert if RPC fails
+          const videoRelations = selectedVideos.map((videoId, index) => ({
+            module_id: moduleId,
+            video_id: videoId,
+            order: index
+          }));
+          
+          for (const relation of videoRelations) {
+            await supabase.from("module_videos").insert(relation);
+          }
+        }
       }
       
-      // Create module-assessment relations
+      // Create module-assessment relations using a custom function
       if (selectedAssessments.length > 0) {
-        const assessmentRelations = selectedAssessments.map((assessmentId, index) => ({
-          module_id: moduleId,
-          assessment_id: assessmentId,
-          order: index
-        }));
-        
         const { error: assessmentRelationError } = await supabase
-          .from("module_assessments")
-          .insert(assessmentRelations);
+          .rpc('create_module_assessments', { 
+            module_id_param: moduleId,
+            assessment_ids_param: selectedAssessments,
+            // Convert selectedAssessments array index to the order
+            orders_param: selectedAssessments.map((_, index) => index)
+          });
           
-        if (assessmentRelationError) throw assessmentRelationError;
+        if (assessmentRelationError) {
+          console.error("Error creating module assessments:", assessmentRelationError);
+          // Fallback to direct insert if RPC fails
+          const assessmentRelations = selectedAssessments.map((assessmentId, index) => ({
+            module_id: moduleId,
+            assessment_id: assessmentId,
+            order: index
+          }));
+          
+          for (const relation of assessmentRelations) {
+            await supabase.from("module_assessments").insert(relation);
+          }
+        }
       }
       
       toast.success("Training module created successfully");
@@ -301,16 +368,16 @@ const ModuleManagement = () => {
   const handleUpdateModule = async () => {
     try {
       if (!selectedModule) return;
-      if (!formData.name) {
+      if (!formData.title) {
         toast.error("Module name is required");
         return;
       }
 
-      // Update the title field (and NOT name since it doesn't exist in the schema)
+      // Update the module
       const { error: moduleError } = await supabase
         .from("training_modules")
         .update({
-          title: formData.name, // Update title, not name
+          title: formData.title,
           description: formData.description || null,
           tags: formData.tags ? formData.tags.split(",").map(tag => tag.trim()) : null,
           status: formData.status,
@@ -321,47 +388,79 @@ const ModuleManagement = () => {
       if (moduleError) throw moduleError;
       
       // Update module-video relations
-      // First delete existing relations
-      await supabase
-        .from("module_videos")
-        .delete()
-        .eq("module_id", selectedModule.id);
-      
-      // Then create new relations
-      if (selectedVideos.length > 0) {
-        const videoRelations = selectedVideos.map((videoId, index) => ({
-          module_id: selectedModule.id,
-          video_id: videoId,
-          order: index
-        }));
+      // First delete existing relations using RPC
+      const { error: deleteVideosError } = await supabase
+        .rpc('delete_module_videos', { module_id_param: selectedModule.id });
         
-        const { error: videoRelationError } = await supabase
+      if (deleteVideosError) {
+        console.error("Error deleting module videos:", deleteVideosError);
+        // Fallback to direct delete
+        await supabase
           .from("module_videos")
-          .insert(videoRelations);
+          .delete()
+          .eq("module_id", selectedModule.id);
+      }
+      
+      // Then create new video relations
+      if (selectedVideos.length > 0) {
+        const { error: createVideosError } = await supabase
+          .rpc('create_module_videos', { 
+            module_id_param: selectedModule.id,
+            video_ids_param: selectedVideos,
+            orders_param: selectedVideos.map((_, index) => index)
+          });
           
-        if (videoRelationError) throw videoRelationError;
+        if (createVideosError) {
+          console.error("Error creating module videos:", createVideosError);
+          // Fallback to direct insert
+          const videoRelations = selectedVideos.map((videoId, index) => ({
+            module_id: selectedModule.id,
+            video_id: videoId,
+            order: index
+          }));
+          
+          for (const relation of videoRelations) {
+            await supabase.from("module_videos").insert(relation);
+          }
+        }
       }
       
       // Update module-assessment relations
-      // First delete existing relations
-      await supabase
-        .from("module_assessments")
-        .delete()
-        .eq("module_id", selectedModule.id);
-      
-      // Then create new relations
-      if (selectedAssessments.length > 0) {
-        const assessmentRelations = selectedAssessments.map((assessmentId, index) => ({
-          module_id: selectedModule.id,
-          assessment_id: assessmentId,
-          order: index
-        }));
+      // First delete existing relations using RPC
+      const { error: deleteAssessmentsError } = await supabase
+        .rpc('delete_module_assessments', { module_id_param: selectedModule.id });
         
-        const { error: assessmentRelationError } = await supabase
+      if (deleteAssessmentsError) {
+        console.error("Error deleting module assessments:", deleteAssessmentsError);
+        // Fallback to direct delete
+        await supabase
           .from("module_assessments")
-          .insert(assessmentRelations);
+          .delete()
+          .eq("module_id", selectedModule.id);
+      }
+      
+      // Then create new assessment relations
+      if (selectedAssessments.length > 0) {
+        const { error: createAssessmentsError } = await supabase
+          .rpc('create_module_assessments', { 
+            module_id_param: selectedModule.id,
+            assessment_ids_param: selectedAssessments,
+            orders_param: selectedAssessments.map((_, index) => index)
+          });
           
-        if (assessmentRelationError) throw assessmentRelationError;
+        if (createAssessmentsError) {
+          console.error("Error creating module assessments:", createAssessmentsError);
+          // Fallback to direct insert
+          const assessmentRelations = selectedAssessments.map((assessmentId, index) => ({
+            module_id: selectedModule.id,
+            assessment_id: assessmentId,
+            order: index
+          }));
+          
+          for (const relation of assessmentRelations) {
+            await supabase.from("module_assessments").insert(relation);
+          }
+        }
       }
       
       toast.success("Training module updated successfully");
@@ -377,23 +476,25 @@ const ModuleManagement = () => {
       if (!selectedModule) return;
       
       // Check if the module is used in any jobs
-      const { data: jobModules, error: jobCheckError } = await supabase
+      const { count, error: jobCheckError } = await supabase
         .from("job_modules")
-        .select("job_id")
+        .select('id', { count: 'exact', head: true })
         .eq("module_id", selectedModule.id);
         
       if (jobCheckError) throw jobCheckError;
       
-      if (jobModules && jobModules.length > 0) {
+      if (count && count > 0) {
         toast.error("Cannot delete module as it is used in one or more job postings");
         setShowDeleteDialog(false);
         return;
       }
       
-      // Delete module relations first (cascading should handle this, but we'll do it explicitly)
+      // Delete module relations first
       await Promise.all([
-        supabase.from("module_videos").delete().eq("module_id", selectedModule.id),
-        supabase.from("module_assessments").delete().eq("module_id", selectedModule.id)
+        supabase.rpc('delete_module_videos', { module_id_param: selectedModule.id })
+          .catch(() => supabase.from("module_videos").delete().eq("module_id", selectedModule.id)),
+        supabase.rpc('delete_module_assessments', { module_id_param: selectedModule.id })
+          .catch(() => supabase.from("module_assessments").delete().eq("module_id", selectedModule.id))
       ]);
       
       // Delete the module
@@ -439,7 +540,7 @@ const ModuleManagement = () => {
                 </Badge>
               )}
               <CardTitle className="flex justify-between items-center">
-                <span className="truncate">{module.name}</span>
+                <span className="truncate">{module.title}</span>
                 <div className="flex space-x-2">
                   <Button
                     variant="ghost"
@@ -498,8 +599,8 @@ const ModuleManagement = () => {
               <Label htmlFor="name">Module Name</Label>
               <Input
                 id="name"
-                name="name"
-                value={formData.name}
+                name="title" 
+                value={formData.title}
                 onChange={handleInputChange}
               />
             </div>
@@ -688,8 +789,8 @@ const ModuleManagement = () => {
               <Label htmlFor="edit-name">Module Name</Label>
               <Input
                 id="edit-name"
-                name="name"
-                value={formData.name}
+                name="title"
+                value={formData.title}
                 onChange={handleInputChange}
               />
             </div>

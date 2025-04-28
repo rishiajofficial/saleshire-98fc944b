@@ -240,10 +240,10 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
       if (error) throw error;
       
       // Format modules properly with id and name
-      const formattedModules = (data || []).map(module => ({
+      const formattedModules = data ? data.map(module => ({
         id: module.id,
         name: module.title || 'Untitled Module'
-      }));
+      })) : [];
       
       setModules(formattedModules);
     } catch (error: any) {

@@ -2,7 +2,6 @@
 export interface TrainingModule {
   id: string;
   title: string;
-  name: string;
   description: string | null;
   tags: string[] | null;
   status: 'active' | 'inactive';

@@ -51,16 +51,24 @@ const AssessmentManagement = () => {
 
   const fetchAssessmentModules = async (assessmentId: string) => {
     try {
-      // Use a standard join to check if an assessment is used in modules
-      const { data, error } = await supabase
-        .from("module_assessments")
-        .select("module_id")
-        .eq("assessment_id", assessmentId);
-
-      if (error) throw error;
+      // Use SQL query to check if an assessment is used in modules
+      const { count, error } = await supabase
+        .rpc('count_module_assessments', { assessment_id_param: assessmentId });
       
-      // Return the count of related modules
-      return data ? data.length : 0;
+      if (error) {
+        console.error('Error counting module assessments:', error);
+        // Fallback to direct count
+        const { data, error: countError } = await supabase
+          .from("module_assessments")
+          .select('id', { count: 'exact', head: true })
+          .eq("assessment_id", assessmentId);
+          
+        if (countError) throw countError;
+        return data?.length || 0;
+      }
+      
+      // Return the count from RPC
+      return count || 0;
     } catch (error: any) {
       console.error('Error fetching assessment modules:', error);
       toast.error('Failed to fetch assessment modules');
