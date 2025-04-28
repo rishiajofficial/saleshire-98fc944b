@@ -72,7 +72,6 @@ export interface ModuleVideo {
   module_id: string;
   video_id: string;
   order_number?: number;
-  order?: number; // For compatibility with older code
   created_at?: string;
 }
 
@@ -81,7 +80,6 @@ export interface ModuleAssessment {
   module_id: string;
   assessment_id: string;
   order_number?: number;
-  order?: number; // For compatibility with older code
   created_at?: string;
 }
 

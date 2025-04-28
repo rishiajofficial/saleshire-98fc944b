@@ -1,190 +1,158 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Video, Assessment, TrainingProgress } from "@/types/training";
+import { TrainingModule, Video, Assessment } from "@/types/training";
 
-export interface TrainingModuleProgress {
-  id: string;
-  title: string;
-  description: string | null;
-  status: 'completed' | 'in_progress' | 'locked';
-  progress: number;
-  videos: Video[];
-  assessments: Assessment[];
-  watchedVideos: number;
-  totalVideos: number;
-  passedAssessments: number;
-  totalAssessments: number;
+interface TrainingModuleProgress {
+  moduleId: string;
+  videoProgress: Record<string, boolean>;
+  assessmentScores: Record<string, number>;
+  completedAssessments: string[];
   completed: boolean;
 }
 
 export function useTrainingProgress(userId?: string) {
+  const [trainingModules, setTrainingModules] = useState<TrainingModuleProgress[]>([]);
   const [videoProgress, setVideoProgress] = useState<Record<string, boolean>>({});
   const [assessmentScores, setAssessmentScores] = useState<Record<string, number>>({});
   const [completedAssessments, setCompletedAssessments] = useState<string[]>([]);
-  const [trainingModules, setTrainingModules] = useState<TrainingModuleProgress[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string>("");
 
-  // Fetch all progress data when userId changes
-  const fetchProgressData = useCallback(async () => {
+  const fetchTrainingData = useCallback(async () => {
     if (!userId) {
+      console.log("Not fetching training data: no user ID");
       setIsLoading(false);
       return;
     }
-    
+
     setIsLoading(true);
-    setError(null);
-    
+    setError("");
+
     try {
-      // Get video progress data
-      const { data: videoProgressData, error: videoError } = await supabase
-        .from('training_progress')
+      // Fetch all video progress for the user
+      const { data: videoProgressData, error: videoProgressError } = await supabase
+        .from('user_video_progress')
         .select('*')
-        .eq('user_id', userId)
-        .eq('completed', true);
+        .eq('user_id', userId);
 
-      if (videoError) throw videoError;
+      if (videoProgressError) throw videoProgressError;
 
-      // Build video progress lookup
-      const videoProgressLookup: Record<string, boolean> = {};
+      // Transform video progress data into a simple boolean map
+      const initialVideoProgress: Record<string, boolean> = {};
       videoProgressData?.forEach(item => {
-        videoProgressLookup[item.video_id] = true;
+        initialVideoProgress[item.video_id] = item.completed;
       });
-      setVideoProgress(videoProgressLookup);
-      
-      // Get assessment scores and completion status
-      const { data: assessmentData, error: assessmentError } = await supabase
-        .from('assessment_results')
+      setVideoProgress(initialVideoProgress);
+
+      // Fetch all assessment scores for the user
+      const { data: assessmentScoresData, error: assessmentScoresError } = await supabase
+        .from('user_assessment_scores')
         .select('*')
-        .eq('candidate_id', userId)
-        .eq('completed', true);
+        .eq('user_id', userId);
 
-      if (assessmentError) throw assessmentError;
+      if (assessmentScoresError) throw assessmentScoresError;
 
-      // Build assessment scores lookup
-      const scoresLookup: Record<string, number> = {};
-      const completedAssessmentsIds: string[] = [];
-      
-      assessmentData?.forEach(item => {
-        scoresLookup[item.assessment_id] = item.score;
-        if (item.score >= 70) { // Assuming passing is 70%
-          completedAssessmentsIds.push(item.assessment_id);
+      // Transform assessment scores data into a simple score map
+      const initialAssessmentScores: Record<string, number> = {};
+      const initialCompletedAssessments: string[] = [];
+      assessmentScoresData?.forEach(item => {
+        initialAssessmentScores[item.assessment_id] = item.score;
+        if (item.passed) {
+          initialCompletedAssessments.push(item.assessment_id);
         }
       });
-      
-      setAssessmentScores(scoresLookup);
-      setCompletedAssessments(completedAssessmentsIds);
-      
-      // Fetch all training modules
-      await fetchTrainingModules();
-      
-    } catch (error: any) {
-      console.error('Error fetching training progress:', error);
-      setError(error.message);
+      setAssessmentScores(initialAssessmentScores);
+      setCompletedAssessments(initialCompletedAssessments);
+
+    } catch (err: any) {
+      console.error("Error fetching training data:", err);
+      setError(err.message || "Failed to fetch training data");
     } finally {
       setIsLoading(false);
     }
   }, [userId]);
-  
-  const fetchTrainingModules = async () => {
-    try {
-      // Fetch modules
-      const { data: modulesData, error: modulesError } = await supabase
-        .from('training_modules')
-        .select(`
-          id, 
-          name as title,
-          description,
-          status,
-          thumbnail
-        `)
-        .eq('status', 'active');
-      
-      if (modulesError) throw modulesError;
-      
-      // For each module, fetch videos and assessments
-      const modulesWithContent = await Promise.all(
-        (modulesData || []).map(async module => {
-          // Get videos for this module
-          const { data: moduleVideos, error: videosError } = await supabase
-            .from('module_videos')
-            .select(`
-              video_id,
-              order,
-              videos:video_id (*)
-            `)
-            .eq('module_id', module.id)
-            .order('order');
-          
-          if (videosError) throw videosError;
-          
-          // Get assessments for this module
-          const { data: moduleAssessments, error: assessmentsError } = await supabase
-            .from('module_assessments')
-            .select(`
-              assessment_id,
-              order,
-              assessments:assessment_id (*)
-            `)
-            .eq('module_id', module.id)
-            .order('order');
-          
-          if (assessmentsError) throw assessmentsError;
-          
-          // Extract videos and assessments from nested response
-          const videos = moduleVideos?.map(mv => mv.videos) || [];
-          const assessments = moduleAssessments?.map(ma => ma.assessments) || [];
-          
-          // Calculate progress
-          const watchedVideos = videos.filter(v => v && videoProgress[v.id]).length;
-          const passedAssessments = assessments.filter(a => a && completedAssessments.includes(a.id)).length;
-          
-          const totalVideos = videos.length;
-          const totalAssessments = assessments.length;
-          const totalItems = totalVideos + totalAssessments;
-          const completedItems = watchedVideos + passedAssessments;
-          
-          const progress = totalItems ? Math.round((completedItems / totalItems) * 100) : 0;
-          const completed = progress === 100;
-          
-          // Determine module status
-          let status: 'completed' | 'in_progress' | 'locked' = 'locked';
-          if (completed) {
-            status = 'completed';
-          } else if (watchedVideos > 0 || passedAssessments > 0) {
-            status = 'in_progress';
-          }
-          
-          return {
-            id: module.id,
-            title: module.title,
-            description: module.description,
-            status,
-            progress,
-            videos,
-            assessments,
-            watchedVideos,
-            totalVideos,
-            passedAssessments,
-            totalAssessments,
-            completed
-          };
-        })
+
+  useEffect(() => {
+    fetchTrainingData();
+  }, [fetchTrainingData]);
+
+  const markVideoAsComplete = async (videoId: string) => {
+    if (!userId) {
+      toast.error("You must be logged in to track progress");
+      return;
+    }
+
+    setVideoProgress(prev => ({ ...prev, [videoId]: true }));
+
+    const { error } = await supabase
+      .from('user_video_progress')
+      .upsert(
+        { user_id: userId, video_id: videoId, completed: true },
+        { onConflict: 'user_id, video_id', ignoreDuplicates: false }
       );
-      
-      setTrainingModules(modulesWithContent);
-      
-    } catch (error: any) {
-      console.error('Error fetching training modules:', error);
-      setError(error.message);
+
+    if (error) {
+      console.error("Error marking video as complete:", error);
+      toast.error("Failed to save video progress");
+      // Revert local state on error
+      setVideoProgress(prev => ({ ...prev, [videoId]: false }));
     }
   };
-  
-  useEffect(() => {
-    fetchProgressData();
-  }, [fetchProgressData]);
-  
+
+  const submitAssessment = async (assessmentId: string, score: number, passed: boolean) => {
+    if (!userId) {
+      toast.error("You must be logged in to submit assessments");
+      return;
+    }
+
+    setAssessmentScores(prev => ({ ...prev, [assessmentId]: score }));
+    if (passed) {
+      setCompletedAssessments(prev => [...prev, assessmentId]);
+    }
+
+    const { error } = await supabase
+      .from('user_assessment_scores')
+      .upsert(
+        { user_id: userId, assessment_id: assessmentId, score: score, passed: passed },
+        { onConflict: 'user_id, assessment_id', ignoreDuplicates: false }
+      );
+
+    if (error) {
+      console.error("Error submitting assessment:", error);
+      toast.error("Failed to submit assessment");
+      // Revert local state on error
+      setAssessmentScores(prev => {
+        const newState = { ...prev };
+        delete newState[assessmentId];
+        return newState;
+      });
+      setCompletedAssessments(prev => prev.filter(id => id !== assessmentId));
+    }
+  };
+
+  const calculateModuleProgress = (videos: Video[], quizIds: string[]): number => {
+    const totalContent = videos.length + quizIds.length;
+    if (totalContent === 0) return 100; // If no content, consider it complete
+
+    let completedCount = 0;
+    videos.forEach(video => {
+      if (videoProgress[video.id]) {
+        completedCount++;
+      }
+    });
+    quizIds.forEach(quizId => {
+      if (completedAssessments.includes(quizId)) {
+        completedCount++;
+      }
+    });
+
+    return (completedCount / totalContent) * 100;
+  };
+
+  const refetch = () => {
+    fetchTrainingData();
+  };
+
   return {
     trainingModules,
     videoProgress,
@@ -192,6 +160,9 @@ export function useTrainingProgress(userId?: string) {
     completedAssessments,
     isLoading,
     error,
-    refetch: fetchProgressData
+    markVideoAsComplete,
+    submitAssessment,
+    calculateModuleProgress,
+    refetch
   };
 }

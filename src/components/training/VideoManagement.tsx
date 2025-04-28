@@ -119,12 +119,14 @@ const VideoManagement = () => {
         return;
       }
 
-      let videoData: Partial<Video> = {
+      // Fix: Create a properly typed videoData object
+      const videoData = {
         title: formData.title,
         description: formData.description || null,
         duration: formData.duration || "0:00",
         module: formData.module,
-        created_by: user.id
+        created_by: user.id,
+        url: formData.url // Set default URL, will be overwritten if file upload
       };
 
       // Handle file upload if needed
@@ -137,11 +139,9 @@ const VideoManagement = () => {
         }
         
         videoData.url = uploadResult.url;
-        videoData.file_path = uploadResult.filePath;
-        videoData.file_size = uploadResult.fileSize;
-        videoData.thumbnail = uploadResult.thumbnail;
-      } else {
-        videoData.url = formData.url;
+        if (uploadResult.filePath) videoData.file_path = uploadResult.filePath;
+        if (uploadResult.fileSize) videoData.file_size = uploadResult.fileSize;
+        if (uploadResult.thumbnail) videoData.thumbnail = uploadResult.thumbnail;
       }
 
       const { data, error } = await supabase
@@ -167,7 +167,8 @@ const VideoManagement = () => {
         return;
       }
 
-      let videoData: Partial<Video> = {
+      // Fix: Create a properly typed videoData object
+      const videoData = {
         title: formData.title,
         description: formData.description || null,
         duration: formData.duration || "0:00",
@@ -184,9 +185,9 @@ const VideoManagement = () => {
         }
         
         videoData.url = uploadResult.url;
-        videoData.file_path = uploadResult.filePath;
-        videoData.file_size = uploadResult.fileSize;
-        videoData.thumbnail = uploadResult.thumbnail;
+        if (uploadResult.filePath) videoData.file_path = uploadResult.filePath;
+        if (uploadResult.fileSize) videoData.file_size = uploadResult.fileSize;
+        if (uploadResult.thumbnail) videoData.thumbnail = uploadResult.thumbnail;
       } else if (uploadMethod === 'url' && formData.url !== selectedVideo.url) {
         videoData.url = formData.url;
       }
@@ -602,4 +603,5 @@ const VideoManagement = () => {
   );
 };
 
+// Make sure to add a default export to fix the module import error
 export default VideoManagement;

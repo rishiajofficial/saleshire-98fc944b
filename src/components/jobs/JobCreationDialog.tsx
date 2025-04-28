@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -178,6 +179,7 @@ const JobForm: React.FC<JobFormProps> = ({
               variant={form.selectedModules.includes(module.id) ? "default" : "outline"}
               size="sm"
               onClick={() => {
+                if (isView) return;
                 setForm(prev => ({
                   ...prev,
                   selectedModules: prev.selectedModules.includes(module.id)
@@ -204,12 +206,18 @@ const JobForm: React.FC<JobFormProps> = ({
   );
 };
 
+// Define a more specific type for editingJob to avoid excessive type instantiation
+interface EditingJob extends JobFormValues {
+  id?: string;
+  [key: string]: any; // Allow for additional properties
+}
+
 interface JobCreationDialogProps {
   onJobCreated?: (job: JobFormValues) => void;
-  onJobUpdated?: (job: JobFormValues & { id?: string }) => void;
+  onJobUpdated?: (job: EditingJob) => void;
   assessments: { id: string; title: string }[];
   categories?: Array<{ id: string; name: string }>;
-  editingJob?: any;
+  editingJob?: EditingJob;
   mode?: "create" | "edit" | "view";
   isOpen?: boolean;
   onClose?: () => void;
@@ -274,12 +282,14 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
   };
 
   const handleSubmit = (form: JobFormValues) => {
-    if (mode === "edit" && onJobUpdated) {
-      onJobUpdated({ 
+    if (mode === "edit" && onJobUpdated && editingJob) {
+      // Explicitly type this to avoid infinite type instantiation
+      const updatedJob: EditingJob = { 
         ...editingJob, 
         ...form,
         selectedAssessment: form.selectedAssessment === "none" ? null : form.selectedAssessment
-      });
+      };
+      onJobUpdated(updatedJob);
     } else if (onJobCreated) {
       const processedForm = {
         ...form,

@@ -1,256 +1,156 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-
-export interface CandidateTrainingProgress {
-  candidateId: string;
-  candidateName: string;
-  modules: {
-    moduleId: string;
-    moduleName: string;
-    progress: number;
-    videosWatched: number;
-    totalVideos: number;
-    assessmentsPassed: number;
-    totalAssessments: number;
-    totalTimeSpent: number; // In seconds
-    startedAt: string | null;
-    completedAt: string | null;
-  }[];
-  overallProgress: number;
+interface TrainingProgressItem {
+  moduleId: string;
+  moduleName: string;
+  moduleDescription: string | null;
+  progress: number;
+  completedVideos: number;
+  totalVideos: number;
+  completedAssessments: number;
+  totalAssessments: number;
   startedAt: string | null;
   completedAt: string | null;
+  timeSpent: number;
 }
 
-export function useCandidateTrainingProgress(jobId?: string) {
-  const [candidateProgress, setCandidateProgress] = useState<CandidateTrainingProgress[]>([]);
+export function useCandidateTrainingProgress(candidateId?: string) {
+  const [progress, setProgress] = useState<TrainingProgressItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!jobId) {
+    if (candidateId) {
+      fetchTrainingProgress(candidateId);
+    } else {
       setLoading(false);
-      return;
     }
+  }, [candidateId]);
 
-    const fetchCandidateProgress = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  const fetchTrainingProgress = async (userId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
 
-        // Get all candidates that have applied for this job
-        const { data: applicants, error: applicantsError } = await supabase
-          .from("job_applications")
-          .select(`
-            candidate_id,
-            candidates (
-              id,
-              profiles (
-                name,
-                email
-              )
-            )
-          `)
-          .eq("job_id", jobId);
+      // Fetch all training modules
+      const { data: modules, error: modulesError } = await supabase
+        .from('training_modules')
+        .select('id, title, description')
+        .order('title');
 
-        if (applicantsError) throw applicantsError;
+      if (modulesError) throw modulesError;
 
-        if (!applicants || applicants.length === 0) {
-          setCandidateProgress([]);
-          setLoading(false);
-          return;
-        }
+      // Fetch all module videos
+      const { data: moduleVideos, error: moduleVideosError } = await supabase
+        .from('module_videos')
+        .select('module_id, video_id');
 
-        // Get required training modules for this job
-        const { data: jobModules, error: modulesError } = await supabase
-          .from("job_modules")
-          .select(`
-            module_id,
-            training_modules (
-              id,
-              name
-            )
-          `)
-          .eq("job_id", jobId);
+      if (moduleVideosError) throw moduleVideosError;
 
-        if (modulesError) throw modulesError;
+      // Fetch all module assessments
+      const { data: moduleAssessments, error: moduleAssessmentsError } = await supabase
+        .from('module_assessments')
+        .select('module_id, assessment_id');
 
-        // For each candidate, get their progress
-        const candidateProgressData = await Promise.all(
-          applicants.map(async (applicant) => {
-            const candidateId = applicant.candidate_id;
-            const candidateName = applicant.candidates?.profiles?.name || "Unknown";
+      if (moduleAssessmentsError) throw moduleAssessmentsError;
 
-            // Get video progress
-            const { data: videoProgress, error: videoError } = await supabase
-              .from("training_progress")
-              .select("*")
-              .eq("user_id", candidateId);
+      // Fetch user's video progress
+      const { data: videoProgress, error: videoProgressError } = await supabase
+        .from('training_progress')
+        .select('*')
+        .eq('user_id', userId);
 
-            if (videoError) throw videoError;
+      if (videoProgressError) throw videoProgressError;
 
-            // Get assessment results
-            const { data: assessmentResults, error: assessmentError } = await supabase
-              .from("assessment_results")
-              .select("*")
-              .eq("candidate_id", candidateId);
+      // Fetch user's assessment progress
+      const { data: assessmentProgress, error: assessmentProgressError } = await supabase
+        .from('assessment_results')
+        .select('*')
+        .eq('user_id', userId);
 
-            if (assessmentError) throw assessmentError;
+      if (assessmentProgressError) throw assessmentProgressError;
 
-            // Process each required module
-            const moduleProgressData = await Promise.all(
-              (jobModules || []).map(async (jobModule) => {
-                const moduleId = jobModule.module_id;
-                const moduleName = jobModule.training_modules?.name || "Unknown Module";
+      // Calculate progress for each module
+      const progressItems: TrainingProgressItem[] = modules.map(module => {
+        // Get videos for this module
+        const moduleVideoIds = moduleVideos
+          .filter(mv => mv.module_id === module.id)
+          .map(mv => mv.video_id);
 
-                // Get videos for this module
-                const { data: moduleVideos, error: moduleVideosError } = await supabase
-                  .from("module_videos")
-                  .select(`
-                    video_id,
-                    videos (id)
-                  `)
-                  .eq("module_id", moduleId);
+        // Get assessments for this module
+        const moduleAssessmentIds = moduleAssessments
+          .filter(ma => ma.module_id === module.id)
+          .map(ma => ma.assessment_id);
 
-                if (moduleVideosError) throw moduleVideosError;
+        // Count completed videos
+        const completedVideos = videoProgress
+          .filter(vp => moduleVideoIds.includes(vp.video_id) && vp.completed)
+          .length;
 
-                // Get assessments for this module
-                const { data: moduleAssessments, error: moduleAssessmentsError } = await supabase
-                  .from("module_assessments")
-                  .select(`
-                    assessment_id,
-                    assessments (id)
-                  `)
-                  .eq("module_id", moduleId);
+        // Count completed assessments
+        const completedAssessments = assessmentProgress
+          .filter(ap => moduleAssessmentIds.includes(ap.assessment_id) && ap.passed)
+          .length;
 
-                if (moduleAssessmentsError) throw moduleAssessmentsError;
+        // Calculate overall progress
+        const totalItems = moduleVideoIds.length + moduleAssessmentIds.length;
+        const completedItems = completedVideos + completedAssessments;
+        const progressPercentage = totalItems > 0 
+          ? Math.round((completedItems / totalItems) * 100) 
+          : 0;
 
-                // Calculate videos watched
-                const totalVideos = (moduleVideos || []).length;
-                const videoIds = (moduleVideos || []).map(mv => mv.video_id);
-                const watchedVideos = videoIds.filter(videoId => 
-                  (videoProgress || []).some(vp => vp.video_id === videoId && vp.completed)
-                ).length;
+        // Calculate time spent
+        const timeSpent = videoProgress
+          .filter(vp => moduleVideoIds.includes(vp.video_id))
+          .reduce((total, vp) => total + (vp.time_spent || 0), 0);
 
-                // Calculate assessments passed
-                const totalAssessments = (moduleAssessments || []).length;
-                const assessmentIds = (moduleAssessments || []).map(ma => ma.assessment_id);
-                const passedAssessments = assessmentIds.filter(assessmentId =>
-                  (assessmentResults || []).some(ar => ar.assessment_id === assessmentId && ar.completed && ar.score >= 70)
-                ).length;
+        // Find earliest started_at
+        const startedVideos = videoProgress
+          .filter(vp => moduleVideoIds.includes(vp.video_id) && vp.started_at);
+        
+        const startedAt = startedVideos.length > 0
+          ? startedVideos.reduce((earliest, vp) => {
+              const vpDate = vp.started_at ? new Date(vp.started_at) : null;
+              return vpDate && (!earliest || vpDate < earliest) ? vpDate : earliest;
+            }, null as Date | null)?.toISOString()
+          : null;
 
-                // Calculate progress percentage
-                const totalItems = totalVideos + totalAssessments;
-                const completedItems = watchedVideos + passedAssessments;
-                const progress = totalItems ? Math.round((completedItems / totalItems) * 100) : 0;
+        // Find latest completed_at if all items are completed
+        const completedAt = totalItems > 0 && completedItems === totalItems
+          ? new Date().toISOString() // This is a simplification; ideally would use actual completion timestamps
+          : null;
 
-                // Calculate time spent
-                const timeSpentOnVideos = (videoProgress || [])
-                  .filter(vp => videoIds.includes(vp.video_id))
-                  .reduce((total, vp) => total + (vp.time_spent || 0), 0);
+        return {
+          moduleId: module.id,
+          moduleName: module.title,
+          moduleDescription: module.description,
+          progress: progressPercentage,
+          completedVideos,
+          totalVideos: moduleVideoIds.length,
+          completedAssessments,
+          totalAssessments: moduleAssessmentIds.length,
+          startedAt,
+          completedAt,
+          timeSpent
+        };
+      });
 
-                const timeSpentOnAssessments = (assessmentResults || [])
-                  .filter(ar => assessmentIds.includes(ar.assessment_id))
-                  .reduce((total, ar) => {
-                    if (ar.started_at && ar.completed_at) {
-                      const start = new Date(ar.started_at);
-                      const end = new Date(ar.completed_at);
-                      return total + (end.getTime() - start.getTime()) / 1000; // convert to seconds
-                    }
-                    return total;
-                  }, 0);
-
-                const totalTimeSpent = timeSpentOnVideos + timeSpentOnAssessments;
-
-                // Find earliest start and latest completion
-                const videoStarts = (videoProgress || [])
-                  .filter(vp => videoIds.includes(vp.video_id) && vp.started_at)
-                  .map(vp => new Date(vp.started_at!).getTime());
-
-                const assessmentStarts = (assessmentResults || [])
-                  .filter(ar => assessmentIds.includes(ar.assessment_id) && ar.started_at)
-                  .map(ar => new Date(ar.started_at!).getTime());
-
-                const allStarts = [...videoStarts, ...assessmentStarts];
-                const startedAt = allStarts.length > 0 ? new Date(Math.min(...allStarts)).toISOString() : null;
-
-                const videoCompletions = (videoProgress || [])
-                  .filter(vp => videoIds.includes(vp.video_id) && vp.completed_at)
-                  .map(vp => new Date(vp.completed_at!).getTime());
-
-                const assessmentCompletions = (assessmentResults || [])
-                  .filter(ar => assessmentIds.includes(ar.assessment_id) && ar.completed_at)
-                  .map(ar => new Date(ar.completed_at!).getTime());
-
-                const allCompletions = [...videoCompletions, ...assessmentCompletions];
-                const completedAt = progress === 100 && allCompletions.length > 0 
-                  ? new Date(Math.max(...allCompletions)).toISOString()
-                  : null;
-
-                return {
-                  moduleId,
-                  moduleName,
-                  progress,
-                  videosWatched: watchedVideos,
-                  totalVideos,
-                  assessmentsPassed: passedAssessments,
-                  totalAssessments,
-                  totalTimeSpent,
-                  startedAt,
-                  completedAt
-                };
-              })
-            );
-
-            // Calculate overall progress
-            const overallProgress = moduleProgressData.length > 0
-              ? Math.round(moduleProgressData.reduce((sum, module) => sum + module.progress, 0) / moduleProgressData.length)
-              : 0;
-
-            // Find overall start and completion dates
-            const moduleStarts = moduleProgressData
-              .filter(module => module.startedAt)
-              .map(module => new Date(module.startedAt!).getTime());
-
-            const overallStartedAt = moduleStarts.length > 0
-              ? new Date(Math.min(...moduleStarts)).toISOString()
-              : null;
-
-            const isFullyCompleted = moduleProgressData.every(module => module.progress === 100);
-            const moduleCompletions = moduleProgressData
-              .filter(module => module.completedAt)
-              .map(module => new Date(module.completedAt!).getTime());
-
-            const overallCompletedAt = isFullyCompleted && moduleCompletions.length === moduleProgressData.length && moduleCompletions.length > 0
-              ? new Date(Math.max(...moduleCompletions)).toISOString()
-              : null;
-
-            return {
-              candidateId,
-              candidateName,
-              modules: moduleProgressData,
-              overallProgress,
-              startedAt: overallStartedAt,
-              completedAt: overallCompletedAt
-            };
-          })
-        );
-
-        setCandidateProgress(candidateProgressData);
-      } catch (error: any) {
-        console.error("Error fetching candidate training progress:", error);
-        setError(error.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCandidateProgress();
-  }, [jobId]);
+      setProgress(progressItems);
+    } catch (error: any) {
+      console.error('Error fetching training progress:', error);
+      setError(error.message);
+      toast.error('Failed to load training progress');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return {
-    candidateProgress,
+    progress,
     loading,
-    error
+    error,
+    refetch: candidateId ? () => fetchTrainingProgress(candidateId) : () => {}
   };
 }

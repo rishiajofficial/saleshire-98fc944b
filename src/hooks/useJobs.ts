@@ -1,230 +1,245 @@
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Job } from "@/types/job";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
-export function useJobs() {
-  const queryClient = useQueryClient();
+export interface Job {
+  id: string;
+  title: string;
+  description: string;
+  department?: string;
+  location?: string;
+  employment_type?: string;
+  status: string;
+  salary_range?: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  archived: boolean;
+  selectedAssessment?: string | null;
+  selectedModules?: string[];
+}
 
-  const { data: jobs, isLoading, refetch } = useQuery({
-    queryKey: ['jobs'],
-    queryFn: async () => {
+export const useJobs = () => {
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
+
+  const fetchJobs = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const { data, error: jobsError } = await supabase
+        .from("jobs")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (jobsError) throw jobsError;
+
+      // Get assessments for each job
+      const jobIds = data?.map((job) => job.id) || [];
+      let jobAssessments: Record<string, string> = {};
+      let jobModules: Record<string, string[]> = {};
+
+      if (jobIds.length > 0) {
+        // Fetch job assessments
+        const { data: assessmentsData, error: assessmentsError } = await supabase
+          .from("job_assessments")
+          .select("job_id, assessment_id")
+          .in("job_id", jobIds);
+
+        if (assessmentsError) throw assessmentsError;
+
+        // Map assessments to jobs
+        assessmentsData?.forEach((ja) => {
+          jobAssessments[ja.job_id] = ja.assessment_id;
+        });
+
+        // Fetch job training modules
+        const { data: modulesData, error: modulesError } = await supabase
+          .from("job_training")  // Fix: changed from job_modules to job_training
+          .select("job_id, training_module_id")
+          .in("job_id", jobIds);
+
+        if (modulesError) throw modulesError;
+
+        // Map modules to jobs
+        modulesData?.forEach((jm) => {
+          if (!jobModules[jm.job_id]) {
+            jobModules[jm.job_id] = [];
+          }
+          jobModules[jm.job_id].push(jm.training_module_id);
+        });
+      }
+
+      // Enhance jobs with assessments and modules
+      const enhancedJobs: Job[] = data!.map((job) => ({
+        ...job,
+        selectedAssessment: jobAssessments[job.id] || null,
+        selectedModules: jobModules[job.id] || [],
+      }));
+
+      setJobs(enhancedJobs);
+    } catch (error: any) {
+      console.error("Error fetching jobs:", error);
+      setError(`Failed to fetch jobs: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createJob = async (jobData: any) => {
+    try {
+      if (!user) {
+        toast.error("You must be logged in to create a job");
+        return null;
+      }
+
+      // Extract modules and assessment from job data
+      const { selectedModules, selectedAssessment, ...jobDetails } = jobData;
+
+      // Create job record
       const { data, error } = await supabase
-        .from('jobs')
-        .select(`
-          *,
-          job_modules (
-            module_id,
-            training_modules (
-              id,
-              name,
-              description,
-              status
-            )
-          )
-        `)
-        .order('created_at', { ascending: false });
+        .from("jobs")
+        .insert([{ ...jobDetails, created_by: user.id }])
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Create associated assessment if any
+      if (selectedAssessment) {
+        const { error: assessmentError } = await supabase
+          .from("job_assessments")
+          .insert([
+            { job_id: data.id, assessment_id: selectedAssessment },
+          ]);
+
+        if (assessmentError) throw assessmentError;
+      }
+
+      // Create associated modules if any
+      if (selectedModules && selectedModules.length > 0) {
+        const moduleInserts = selectedModules.map((moduleId) => ({
+          job_id: data.id,
+          training_module_id: moduleId,  // Fix: changed from module_id to training_module_id
+        }));
+
+        const { error: modulesError } = await supabase
+          .from("job_training")  // Fix: changed from job_modules to job_training
+          .insert(moduleInserts);
+
+        if (modulesError) throw modulesError;
+      }
+
+      toast.success("Job created successfully");
+      fetchJobs();
       return data;
+    } catch (error: any) {
+      console.error("Error creating job:", error);
+      toast.error(`Failed to create job: ${error.message}`);
+      return null;
     }
-  });
+  };
 
-  const createJob = useMutation({
-    mutationFn: async (newJob: any) => {
-      try {
-        const { data: userData, error: userError } = await supabase.auth.getUser();
-        if (userError) throw userError;
-        
-        if (!userData.user) {
-          throw new Error('User not authenticated');
-        }
-        
-        const userId = userData.user.id;
-        
-        // Create job
-        const { data: jobData, error: jobError } = await supabase
-          .from('jobs')
-          .insert({
-            title: newJob.title,
-            description: newJob.description,
-            department: newJob.department,
-            location: newJob.location,
-            employment_type: newJob.employment_type,
-            salary_range: newJob.salary_range,
-            created_by: userId,
-            status: 'active'
-          })
-          .select()
-          .single();
-
-        if (jobError) throw jobError;
-
-        // Add training modules
-        if (newJob.selectedModules && newJob.selectedModules.length > 0) {
-          const moduleInserts = newJob.selectedModules.map((moduleId: string) => ({
-            job_id: jobData.id,
-            module_id: moduleId
-          }));
-
-          const { error: modulesError } = await supabase
-            .from('job_modules')
-            .insert(moduleInserts);
-
-          if (modulesError) throw modulesError;
-        }
-
-        // Handle assessment association if selected
-        if (newJob.selectedAssessment && newJob.selectedAssessment !== "none") {
-          const { error: assessmentError } = await supabase
-            .from('job_assessments')
-            .insert({
-              job_id: jobData.id,
-              assessment_id: newJob.selectedAssessment
-            });
-          
-          if (assessmentError) throw assessmentError;
-        }
-
-        return jobData;
-      } catch (error: any) {
-        console.error("Job creation error:", error);
-        throw error;
+  const updateJob = async (jobData: any) => {
+    try {
+      if (!user) {
+        toast.error("You must be logged in to update a job");
+        return null;
       }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['jobs'] });
-      toast.success('Job created successfully');
-    },
-    onError: (error: any) => {
-      console.error('Error creating job:', error);
-      toast.error(`Failed to create job: ${error.message || 'Unknown error'}`);
-    }
-  });
 
-  const updateJob = useMutation({
-    mutationFn: async (updateJobData: any) => {
-      try {
-        const { id, selectedAssessment, selectedModules, ...jobFields } = updateJobData;
-        
-        // 1. Update job basic fields
-        const { error: jobUpdateError } = await supabase
-          .from('jobs')
-          .update(jobFields)
-          .eq('id', id);
+      // Extract modules and assessment from job data
+      const { id, selectedModules, selectedAssessment, ...jobDetails } = jobData;
 
-        if (jobUpdateError) throw jobUpdateError;
+      // Update job record
+      const { error } = await supabase
+        .from("jobs")
+        .update(jobDetails)
+        .eq("id", id);
 
-        // 2. Update training modules
-        if (selectedModules) {
-          // First delete existing module associations
-          const { error: deleteModulesError } = await supabase
-            .from('job_modules')
-            .delete()
-            .eq('job_id', id);
-            
-          if (deleteModulesError) throw deleteModulesError;
-          
-          // Then insert new modules if any are selected
-          if (selectedModules.length > 0) {
-            const moduleInserts = selectedModules.map((moduleId: string) => ({
-              job_id: id,
-              module_id: moduleId
-            }));
-
-            const { error: modulesError } = await supabase
-              .from('job_modules')
-              .insert(moduleInserts);
-            
-            if (modulesError) throw modulesError;
-          }
-        }
-        
-        // 3. Handle assessment association
-        if (selectedAssessment !== undefined) {
-          const { error: deleteAssessmentError } = await supabase
-            .from('job_assessments')
-            .delete()
-            .eq('job_id', id);
-            
-          if (deleteAssessmentError) throw deleteAssessmentError;
-          
-          if (selectedAssessment !== "none" && selectedAssessment !== null) {
-            const { error: assessmentError } = await supabase
-              .from('job_assessments')
-              .insert({
-                job_id: id,
-                assessment_id: selectedAssessment
-              });
-            
-            if (assessmentError) throw assessmentError;
-          }
-        }
-        
-        return { id, ...jobFields };
-      } catch (error: any) {
-        console.error("Job update error:", error);
-        throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['jobs'] });
-      toast.success('Job updated successfully');
-    },
-    onError: (error: any) => {
-      console.error('Error updating job:', error);
-      toast.error(`Failed to update job: ${error.message || 'Unknown error'}`);
-    }
-  });
-
-  const deleteJob = useMutation({
-    mutationFn: async (jobId: string) => {
-      // Delete job modules
-      const { error: moduleError } = await supabase
-        .from('job_modules')
-        .delete()
-        .eq('job_id', jobId);
-      
-      if (moduleError) throw moduleError;
-      
-      // Delete job assessments
-      const { error: assessmentError } = await supabase
-        .from('job_assessments')
-        .delete()
-        .eq('job_id', jobId);
-      
-      if (assessmentError) throw assessmentError;
-
-      // Delete job applications
-      const { error } = await supabase.rpc('delete_job_applications', { job_id: jobId });
       if (error) throw error;
 
-      // Delete the job
-      const { error: deleteError } = await supabase
-        .from('jobs')
-        .delete()
-        .eq('id', jobId);
+      // Handle assessment - first delete existing
+      await supabase.from("job_assessments").delete().eq("job_id", id);
 
-      if (deleteError) throw deleteError;
-      return jobId;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['jobs'] });
-      toast.success('Job and related applications deleted successfully');
-    },
-    onError: (error: any) => {
-      console.error('Error deleting job:', error);
-      toast.error(`Failed to delete job: ${error.message}`);
+      // Create associated assessment if any
+      if (selectedAssessment) {
+        const { error: assessmentError } = await supabase
+          .from("job_assessments")
+          .insert([{ job_id: id, assessment_id: selectedAssessment }]);
+
+        if (assessmentError) throw assessmentError;
+      }
+
+      // Handle modules - first delete existing
+      await supabase.from("job_training").delete().eq("job_id", id);  // Fix: changed from job_modules to job_training
+
+      // Create associated modules if any
+      if (selectedModules && selectedModules.length > 0) {
+        const moduleInserts = selectedModules.map((moduleId) => ({
+          job_id: id,
+          training_module_id: moduleId,  // Fix: changed from module_id to training_module_id
+        }));
+
+        const { error: modulesError } = await supabase
+          .from("job_training")  // Fix: changed from job_modules to job_training
+          .insert(moduleInserts);
+
+        if (modulesError) throw modulesError;
+      }
+
+      toast.success("Job updated successfully");
+      fetchJobs();
+      return true;
+    } catch (error: any) {
+      console.error("Error updating job:", error);
+      toast.error(`Failed to update job: ${error.message}`);
+      return false;
     }
-  });
+  };
+
+  const deleteJob = async (jobId: string) => {
+    try {
+      // Delete related job applications and other dependencies via database function
+      const { error: deleteError } = await supabase.rpc('delete_job_applications', {
+        job_id: jobId
+      });
+      
+      if (deleteError) throw deleteError;
+      
+      // Delete the job itself
+      const { error } = await supabase
+        .from("jobs")
+        .delete()
+        .eq("id", jobId);
+
+      if (error) throw error;
+
+      toast.success("Job deleted successfully");
+      fetchJobs();
+      return true;
+    } catch (error: any) {
+      console.error("Error deleting job:", error);
+      toast.error(`Failed to delete job: ${error.message}`);
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    fetchJobs();
+  }, []);
 
   return {
     jobs,
-    isLoading,
+    loading,
+    error,
+    fetchJobs,
     createJob,
     updateJob,
     deleteJob,
-    refetch
   };
-}
+};

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,8 +23,8 @@ interface Module {
   tags: string[] | null;
   status: 'active' | 'inactive';
   thumbnail: string | null;
-  created_at: string;
-  created_by: string;
+  created_at?: string;
+  created_by?: string;
 }
 
 const ModuleManagement = () => {
@@ -60,7 +61,7 @@ const ModuleManagement = () => {
       // Fetch modules
       const { data: modulesData, error: modulesError } = await supabase
         .from("training_modules")
-        .select("id, title, description")
+        .select("id, title, description, created_at, created_by")
         .order("title");
         
       if (modulesError) {
@@ -139,7 +140,7 @@ const ModuleManagement = () => {
           id: relation.id || '',
           module_id: relation.module_id || '',
           video_id: relation.video_id || '',
-          order: relation.order_number || 0, // Map order_number to order for compatibility
+          order_number: relation.order_number || 0,
           created_at: relation.created_at
         }));
         
@@ -164,7 +165,7 @@ const ModuleManagement = () => {
           id: relation.id || '',
           module_id: relation.module_id || '',
           assessment_id: relation.assessment_id || '',
-          order: relation.order_number || 0, // Map order_number to order for compatibility
+          order_number: relation.order_number || 0,
           created_at: relation.created_at
         }));
         
@@ -435,7 +436,7 @@ const ModuleManagement = () => {
       if (!selectedModule) return;
       
       // Check if the module is used in any jobs
-      // Use direct query instead of RPC to avoid type issues
+      // Fix: Use job_training table instead of job_modules
       const { count, error: jobCheckError } = await supabase
         .from("job_training")
         .select('*', { count: 'exact', head: true })
@@ -501,6 +502,7 @@ const ModuleManagement = () => {
         </div>
       )}
       
+      {/* Create Module Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
@@ -690,6 +692,7 @@ const ModuleManagement = () => {
         </DialogContent>
       </Dialog>
       
+      {/* Edit Module Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
@@ -871,6 +874,7 @@ const ModuleManagement = () => {
         </DialogContent>
       </Dialog>
       
+      {/* Delete Module Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
