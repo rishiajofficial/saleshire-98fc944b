@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,23 +51,34 @@ const AssessmentManagement = () => {
 
   const fetchAssessmentModules = async (assessmentId: string) => {
     try {
+      // Instead of directly querying module_assessments, use a join approach
       const { data, error } = await supabase
-        .from("module_assessments")
+        .from("assessments")
         .select(`
-          id,
-          module_id,
-          training_modules!module_id(
+          id, 
+          title,
+          description,
+          module_assessments!assessment_id(
             id,
-            title,
-            name,
-            description
+            module_id,
+            training_modules:module_id(
+              id,
+              title,
+              description
+            )
           )
         `)
-        .eq("assessment_id", assessmentId)
-        .order("order");
+        .eq("id", assessmentId)
+        .single();
 
       if (error) throw error;
-      return data;
+      
+      // Extract the training modules data from the nested structure
+      const modules = data?.module_assessments?.map(item => 
+        item.training_modules
+      ).filter(Boolean) || [];
+      
+      return modules;
     } catch (error: any) {
       console.error('Error fetching assessment modules:', error);
       toast.error('Failed to fetch assessment modules');
@@ -91,14 +103,21 @@ const AssessmentManagement = () => {
     try {
       if (!selectedAssessment) return;
 
-      const { data: moduleAssessments, error: checkError } = await supabase
-        .from("module_assessments")
-        .select("*")
-        .eq("assessment_id", selectedAssessment.id);
+      // Check if assessment is used in any modules by querying assessments with a join
+      const { data: moduleCheck, error: checkError } = await supabase
+        .from("assessments")
+        .select(`
+          id,
+          module_assessments!assessment_id(count)
+        `)
+        .eq("id", selectedAssessment.id)
+        .single();
 
       if (checkError) throw checkError;
 
-      if (moduleAssessments && moduleAssessments.length > 0) {
+      const moduleCount = moduleCheck?.module_assessments?.length || 0;
+      
+      if (moduleCount > 0) {
         toast.error("Cannot delete assessment as it is used in one or more training modules");
         setShowDeleteDialog(false);
         return;

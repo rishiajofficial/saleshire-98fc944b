@@ -232,12 +232,18 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
       setLoading(true);
       const { data, error } = await supabase
         .from("training_modules")
-        .select("id, title as name")
+        .select("id, title")
         .eq("status", "active")
         .order("title");
 
       if (error) throw error;
-      setModules(data || []);
+      
+      const formattedModules = data?.map(module => ({
+        id: module.id,
+        name: module.title || 'Untitled Module'
+      })) || [];
+      
+      setModules(formattedModules);
     } catch (error: any) {
       toast.error(`Failed to fetch training modules: ${error.message}`);
     } finally {

@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 
 interface Module {
   id: string;
+  title: string;
   name: string;
   description: string | null;
   tags: string[] | null;
@@ -27,12 +28,14 @@ interface Module {
 
 interface ModuleVideo {
   id: string;
+  module_id: string;
   video_id: string;
   order: number;
 }
 
 interface ModuleAssessment {
   id: string;
+  module_id: string;
   assessment_id: string;
   order: number;
 }
@@ -68,7 +71,7 @@ const ModuleManagement = () => {
     try {
       setLoading(true);
       
-      // Fetch modules
+      // Fetch modules - update the query to match the database structure
       const { data: modulesData, error: modulesError } = await supabase
         .from("training_modules")
         .select(`
@@ -82,9 +85,15 @@ const ModuleManagement = () => {
           created_at,
           created_by
         `)
-        .order("name");
+        .order("title");
         
       if (modulesError) throw modulesError;
+      
+      // If name doesn't exist in the response, use title as name
+      const formattedModules = (modulesData || []).map(module => ({
+        ...module,
+        name: module.name || module.title // Fallback to title if name isn't available
+      }));
       
       // Fetch videos
       const { data: videosData, error: videosError } = await supabase
@@ -102,7 +111,7 @@ const ModuleManagement = () => {
         
       if (assessmentsError) throw assessmentsError;
       
-      setModules(modulesData || []);
+      setModules(formattedModules);
       setVideos(videosData || []);
       setAssessments(assessmentsData || []);
       
@@ -116,31 +125,18 @@ const ModuleManagement = () => {
 
   const fetchModuleRelations = async (moduleId: string) => {
     try {
-      // Get module videos with their videos
+      // Fetch module videos and assessments separately
       const { data: moduleVideosData, error: moduleVideosError } = await supabase
         .from("module_videos")
-        .select(`
-          id,
-          module_id,
-          video_id,
-          order,
-          videos:video_id(*)
-        `)
+        .select("id, module_id, video_id, order")
         .eq("module_id", moduleId)
         .order("order");
         
       if (moduleVideosError) throw moduleVideosError;
       
-      // Get module assessments with their assessments
       const { data: moduleAssessmentsData, error: moduleAssessmentsError } = await supabase
         .from("module_assessments")
-        .select(`
-          id,
-          module_id,
-          assessment_id,
-          order,
-          assessments:assessment_id(*)
-        `)
+        .select("id, module_id, assessment_id, order")
         .eq("module_id", moduleId)
         .order("order");
         
@@ -258,11 +254,12 @@ const ModuleManagement = () => {
         return;
       }
 
-      // Create the module
+      // Create the module with both name and title fields
       const { data: moduleData, error: moduleError } = await supabase
         .from("training_modules")
         .insert({
           name: formData.name,
+          title: formData.name, // Set title same as name for consistency
           description: formData.description || null,
           tags: formData.tags ? formData.tags.split(",").map(tag => tag.trim()) : null,
           status: formData.status,
@@ -321,11 +318,12 @@ const ModuleManagement = () => {
         return;
       }
 
-      // Update the module
+      // Update both name and title fields
       const { error: moduleError } = await supabase
         .from("training_modules")
         .update({
           name: formData.name,
+          title: formData.name, // Update title to match name
           description: formData.description || null,
           tags: formData.tags ? formData.tags.split(",").map(tag => tag.trim()) : null,
           status: formData.status,
