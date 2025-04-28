@@ -191,6 +191,44 @@ const VideoPlayer = () => {
     setVideoLoaded(true);
   };
 
+  const navigateToModule = () => {
+    // Check if we have videoDetails with module information
+    if (videoDetails?.module) {
+      // First check if moduleId from params exists and use that
+      if (moduleId) {
+        navigate(`/training/module/${moduleId}`);
+        return;
+      }
+      
+      // If no moduleId in params, try to find the moduleId from module_categories
+      const checkModuleCategory = async () => {
+        try {
+          const { data } = await supabase
+            .from('module_categories')
+            .select('id')
+            .eq('name', videoDetails.module)
+            .maybeSingle();
+            
+          if (data?.id) {
+            navigate(`/training/module/${data.id}`);
+          } else {
+            // Fallback to training page if we can't find the module
+            toast.error("Couldn't find the original module. Returning to training page.");
+            navigate('/training');
+          }
+        } catch (error) {
+          console.error("Error finding module category:", error);
+          navigate('/training');
+        }
+      };
+      
+      checkModuleCategory();
+    } else {
+      // If we don't have video details, just go back to the training page
+      navigate('/training');
+    }
+  };
+
   if (isLoading) {
     return (
       <MainLayout>
@@ -209,7 +247,7 @@ const VideoPlayer = () => {
           <p className="text-gray-500 mb-4">
             {error ? error.message : "Video not found"}
           </p>
-          <Button onClick={() => navigate(`/training/module/${moduleId}`)}>
+          <Button onClick={navigateToModule}>
             Return to Module
           </Button>
         </div>
@@ -224,7 +262,7 @@ const VideoPlayer = () => {
           <Button
             variant="outline"
             className="mb-6"
-            onClick={() => navigate(`/training/module/${moduleId}`)}
+            onClick={navigateToModule}
           >
             <ArrowLeft className="h-4 w-4 mr-2" /> Back to Module
           </Button>
@@ -289,7 +327,7 @@ const VideoPlayer = () => {
                 ></div>
               </div>
             </div>
-            <Button onClick={() => navigate(`/training/module/${moduleId}`)}>
+            <Button onClick={navigateToModule}>
               Return to Module
             </Button>
           </div>

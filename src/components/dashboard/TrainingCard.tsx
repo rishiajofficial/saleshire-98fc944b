@@ -43,6 +43,18 @@ export const TrainingCard = ({ canAccessTraining, trainingModules, isLoadingTrai
     }
   };
 
+  // Function to handle module clicks and ensure valid navigation
+  const handleModuleClick = (module: TrainingModuleProgress, event: React.MouseEvent) => {
+    if (module.locked) {
+      event.preventDefault();
+      return;
+    }
+    
+    // No need to do anything here since the Link component will handle navigation
+    // But this could be useful for analytics or additional functionality
+    console.log("Navigating to module:", module.id);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -71,6 +83,7 @@ export const TrainingCard = ({ canAccessTraining, trainingModules, isLoadingTrai
                   to={`/training/module/${module.id}`}
                   key={module.id} 
                   className={`block p-4 border rounded-lg hover:bg-muted/50 transition-all ${module.locked ? 'opacity-60 pointer-events-none' : ''}`}
+                  onClick={(e) => handleModuleClick(module, e)}
                 >
                   <div className="flex justify-between items-center mb-2">
                     <span className="font-medium">{module.title}</span>

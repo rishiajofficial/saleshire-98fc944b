@@ -1,6 +1,6 @@
 
 import React, { useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
 import { Loader2 } from "lucide-react";
 import ModuleHeader from "@/components/training/ModuleHeader";
@@ -8,9 +8,12 @@ import VideoList from "@/components/training/VideoList";
 import ModuleQuiz from "@/components/training/ModuleQuiz";
 import { useModuleData } from "@/hooks/useModuleData";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import ErrorMessage from "@/components/ui/error-message";
 
 const ModuleView = () => {
   const { moduleId } = useParams<{ moduleId: string }>();
+  const navigate = useNavigate();
   const { 
     moduleVideos, 
     moduleDetails, 
@@ -54,12 +57,29 @@ const ModuleView = () => {
     );
   }
 
+  if (error) {
+    return (
+      <MainLayout>
+        <ErrorMessage 
+          title="Error Loading Module" 
+          message={error}
+          backUrl="/training"
+          backLabel="Return to Training"
+          icon={<Loader2 className="h-6 w-6 text-red-600" />}
+        />
+      </MainLayout>
+    );
+  }
+
   if (!moduleDetails) {
     return (
       <MainLayout>
         <div className="container mx-auto py-8 text-center">
-          <h2 className="text-2xl font-semibold">Module Not Found</h2>
-          <p className="text-gray-500 mt-2">The requested training module could not be found.</p>
+          <h2 className="text-2xl font-semibold mb-4">Module Not Found</h2>
+          <p className="text-gray-500 mt-2 mb-6">The requested training module could not be found.</p>
+          <Button onClick={() => navigate('/training')}>
+            Return to Training
+          </Button>
         </div>
       </MainLayout>
     );
