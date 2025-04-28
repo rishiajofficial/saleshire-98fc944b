@@ -10,6 +10,7 @@ import { useModuleData } from "@/hooks/useModuleData";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import ErrorMessage from "@/components/ui/error-message";
+import Loading from "@/components/ui/loading";
 
 const ModuleView = () => {
   const { moduleId } = useParams<{ moduleId: string }>();
@@ -50,9 +51,7 @@ const ModuleView = () => {
   if (isLoading) {
     return (
       <MainLayout>
-        <div className="flex justify-center items-center h-screen">
-          <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
+        <Loading message="Loading training module..." />
       </MainLayout>
     );
   }
@@ -71,7 +70,10 @@ const ModuleView = () => {
     );
   }
 
-  if (!moduleDetails) {
+  // Check if we have any data to display - either module details or videos
+  const hasContent = moduleDetails || (moduleVideos && moduleVideos.length > 0);
+  
+  if (!hasContent) {
     return (
       <MainLayout>
         <div className="container mx-auto py-8 text-center">
@@ -84,6 +86,10 @@ const ModuleView = () => {
       </MainLayout>
     );
   }
+
+  // Even if moduleDetails is null, we can derive a name from the first video
+  const moduleName = moduleDetails?.name || 
+    (moduleVideos && moduleVideos.length > 0 ? moduleVideos[0].module : "Unknown");
 
   const formatModuleName = (name?: string) => {
     if (!name) return '';
@@ -104,7 +110,7 @@ const ModuleView = () => {
     <MainLayout title="Training Module">
       <div className="container mx-auto py-8">
         <ModuleHeader
-          title={formatModuleName(moduleDetails?.name)}
+          title={formatModuleName(moduleName)}
           description={moduleDetails?.description}
           watchedCount={watchedCount}
           totalVideos={totalVideos}
