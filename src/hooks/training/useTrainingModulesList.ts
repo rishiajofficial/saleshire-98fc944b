@@ -27,26 +27,34 @@ export const useTrainingModulesList = () => {
         const { data: jobApplicationData, error: jobAppError } = await supabase
           .from('job_applications')
           .select('job_id')
-          .eq('candidate_id', user?.id)
-          .single();
+          .eq('candidate_id', user?.id);
           
         if (jobAppError) throw jobAppError;
         
-        if (!jobApplicationData?.job_id) {
+        if (!jobApplicationData || jobApplicationData.length === 0) {
           setModules([]);
           return;
         }
 
-        // Get the job's training modules
+        // Extract job IDs from all applications
+        const jobIds = jobApplicationData.map(app => app.job_id);
+
+        // Get the job's training modules for all jobs the candidate has applied to
         const { data: jobTrainingData, error: jobTrainingError } = await supabase
           .from('job_training')
           .select('training_module_id')
-          .eq('job_id', jobApplicationData.job_id);
+          .in('job_id', jobIds);
           
         if (jobTrainingError) throw jobTrainingError;
 
         // Extract module IDs
         const moduleIds = jobTrainingData?.map(jt => jt.training_module_id) || [];
+        
+        if (moduleIds.length === 0) {
+          setModules([]);
+          setLoading(false);
+          return;
+        }
         
         // Fetch training modules
         const { data: modulesData, error: modulesError } = await supabase

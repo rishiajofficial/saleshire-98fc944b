@@ -14,6 +14,7 @@ import { ApplicationPrompt } from '@/components/dashboard/ApplicationPrompt';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { toast } from 'sonner';
 
 const CandidateDashboard = () => {
   const { profile, user } = useAuth();
@@ -34,7 +35,14 @@ const CandidateDashboard = () => {
   } = useTrainingModulesList();
 
   const isLoading = dashboardLoading || isLoadingTraining;
-  const error = trainingError || dashboardError;
+  const error = dashboardError || trainingError;
+
+  React.useEffect(() => {
+    if (trainingError) {
+      console.error("Training modules error:", trainingError);
+      toast.error("Failed to load training modules");
+    }
+  }, [trainingError]);
 
   const showApplicationPrompt = 
     !applicationSubmitted && 

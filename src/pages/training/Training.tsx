@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Loader2, Lock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -34,30 +35,42 @@ const Training = () => {
           .eq('id', user.id)
           .single();
           
-        if (candidateError) throw candidateError;
+        if (candidateError) {
+          console.error("Error fetching candidate data:", candidateError);
+          if (candidateError.code !== 'PGRST116') {
+            toast.error("Failed to check training access");
+          }
+          return;
+        }
         
         const hasTrainingAccess = candidateData.status === 'hr_approved' || 
                                 candidateData.current_step >= 3;
         setHasAccess(hasTrainingAccess);
         
+        // Get the most recent job application
         const { data: jobApplicationData, error: jobAppError } = await supabase
           .from('job_applications')
           .select('job_id')
           .eq('candidate_id', user.id)
-          .single();
+          .order('created_at', { ascending: false })
+          .limit(1);
           
-        if (!jobAppError && jobApplicationData?.job_id) {
-          const { data: jobData } = await supabase
-            .from('jobs')
-            .select('*')
-            .eq('id', jobApplicationData.job_id)
-            .single();
-            
-          if (jobData) {
-            setSelectedJob(jobData);
+        if (!jobAppError && jobApplicationData && jobApplicationData.length > 0) {
+          const jobId = jobApplicationData[0]?.job_id;
+          
+          if (jobId) {
+            const { data: jobData, error: jobError } = await supabase
+              .from('jobs')
+              .select('*')
+              .eq('id', jobId)
+              .single();
+              
+            if (!jobError && jobData) {
+              setSelectedJob(jobData);
+            }
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error in checkAccessAndFetchData:", error);
         toast.error("Failed to load training data");
       } finally {
@@ -70,7 +83,13 @@ const Training = () => {
 
   useEffect(() => {
     if (trainingModules.length > 0 && !selectedModuleId) {
-      setSelectedModuleId(trainingModules[0].id);
+      // Find the first unlocked module
+      const firstUnlockedModule = trainingModules.find(m => !m.locked);
+      if (firstUnlockedModule) {
+        setSelectedModuleId(firstUnlockedModule.id);
+      } else {
+        setSelectedModuleId(trainingModules[0].id);
+      }
     }
   }, [trainingModules, selectedModuleId]);
 
@@ -78,7 +97,9 @@ const Training = () => {
     setSelectedModuleId(moduleId);
   };
 
-  if (isLoading || isLoadingModules) {
+  const isPageLoading = isLoading || isLoadingModules;
+
+  if (isPageLoading) {
     return (
       <MainLayout>
         <div className="flex justify-center items-center py-12">
