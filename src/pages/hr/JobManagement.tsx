@@ -1,111 +1,77 @@
+import React, { useEffect } from 'react';
+import useJobs from '@/hooks/useJobs';
+import JobCreationDialog from '@/components/jobs/JobCreationDialog';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
-import React, { useState, useEffect } from "react";
-import MainLayout from '@/components/layout/MainLayout';
-import { Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import JobCreationDialog from "@/components/jobs/JobCreationDialog";
-import JobList from "@/components/jobs/JobList";
-import { useJobs } from "@/hooks/useJobs";
-import { toast } from "sonner";
-
-const JobManagement = () => {
-  const { jobs, isLoading, createJob, deleteJob, updateJob, refetch } = useJobs();
-  const [assessments, setAssessments] = useState<{ id: string; title: string; }[]>([]);
-  const [categories, setCategories] = useState<{ id: string; name: string; }[]>([]);
-
-  const fetchAssessmentsAndCategories = async () => {
-    try {
-      const [assessmentsResult, categoriesResult] = await Promise.all([
-        supabase
-          .from('assessments')
-          .select('id, title'),
-        supabase
-          .from('module_categories')
-          .select('id, name')
-      ]);
-
-      if (assessmentsResult.error) throw assessmentsResult.error;
-      if (categoriesResult.error) throw categoriesResult.error;
-
-      setAssessments(assessmentsResult.data || []);
-      setCategories(categoriesResult.data || []);
-    } catch (error: any) {
-      console.error('Error fetching data:', error);
-      toast.error(`Failed to load data: ${error.message || 'Unknown error'}`);
-    }
-  };
-
+const JobManagementPage = () => {
+  const { jobs, loading, error, fetchJobs, createJob, updateJob, deleteJob } = useJobs();
+  
   useEffect(() => {
-    fetchAssessmentsAndCategories();
-  }, []);
-
-  const handleCreateJob = async (jobData: any) => {
-    try {
-      await createJob.mutateAsync(jobData);
-    } catch (error: any) {
-      console.error("Failed to create job:", error);
-      // Error is already handled in the mutation's onError
-    }
-  };
-
-  const handleUpdateJob = async (jobData: any) => {
-    try {
-      await updateJob.mutateAsync(jobData);
-    } catch (error: any) {
-      console.error("Failed to update job:", error);
-      // Error is already handled in the mutation's onError
-    }
-  };
-
-  const handleArchiveJob = async (jobId: string, archived: boolean) => {
-    try {
-      const { error } = await supabase
-        .from('jobs')
-        .update({ archived })
-        .eq('id', jobId);
-
-      if (error) throw error;
-      
-      await refetch();
-      toast.success(archived ? 'Job archived successfully' : 'Job unarchived successfully');
-    } catch (error: any) {
-      console.error("Failed to archive job:", error);
-      toast.error(`Failed to archive job: ${error.message}`);
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <MainLayout>
-        <div className="flex justify-center items-center h-screen">
-          <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-      </MainLayout>
-    );
+    fetchJobs();
+  }, [fetchJobs]);
+  
+  if (loading) {
+    return <div>Loading...</div>;
   }
 
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
+
+  const handleJobCreated = async (jobData: any) => {
+    try {
+      await createJob(jobData);
+      toast.success("Job created successfully!");
+    } catch (err: any) {
+      toast.error(`Failed to create job: ${err.message}`);
+    } finally {
+      fetchJobs();
+    }
+  };
+
+  const handleJobUpdated = async (jobData: any) => {
+    try {
+      await updateJob(jobData);
+      toast.success("Job updated successfully!");
+    } catch (err: any) {
+      toast.error(`Failed to update job: ${err.message}`);
+    } finally {
+      fetchJobs();
+    }
+  };
+
+  const handleJobDeleted = async (jobId: string) => {
+    try {
+      await deleteJob(jobId);
+      toast.success("Job deleted successfully!");
+    } catch (err: any) {
+      toast.error(`Failed to delete job: ${err.message}`);
+    } finally {
+      fetchJobs();
+    }
+  };
+
   return (
-    <MainLayout>
-      <div className="container mx-auto py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Job Management</h1>
-          <JobCreationDialog
-            onJobCreated={handleCreateJob}
-            assessments={assessments}
-            categories={categories}
-          />
-        </div>
-        <JobList
-          jobs={jobs || []}
-          onJobDeleted={deleteJob.mutate}
-          onJobUpdated={handleUpdateJob}
-          onJobArchived={handleArchiveJob}
-          assessments={assessments}
-          categories={categories}
-        />
+    <div>
+      <h1>Job Management</h1>
+      <JobCreationDialog onJobCreated={handleJobCreated} />
+      <div>
+        {jobs.map(job => (
+          <div key={job.id}>
+            <h2>{job.title}</h2>
+            <p>{job.description}</p>
+            <p>Department: {job.department}</p>
+            <p>Location: {job.location}</p>
+            <p>Employment Type: {job.employment_type}</p>
+            <p>Salary Range: {job.salary_range}</p>
+            <JobCreationDialog mode="edit" editingJob={job} onJobUpdated={handleJobUpdated} />
+            <Button onClick={() => handleJobDeleted(job.id)}>Delete</Button>
+          </div>
+        ))}
       </div>
-    </MainLayout>
+    </div>
   );
 };
 
-export default JobManagement;
+export default JobManagementPage;

@@ -1,6 +1,8 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { TrainingModule, Video, Assessment } from "@/types/training";
+import { toast } from "sonner";
 
 interface TrainingModuleProgress {
   moduleId: string;
@@ -29,11 +31,12 @@ export function useTrainingProgress(userId?: string) {
     setError("");
 
     try {
-      // Fetch all video progress for the user
+      // Fetch all video progress for the user from training_progress table
       const { data: videoProgressData, error: videoProgressError } = await supabase
-        .from('user_video_progress')
+        .from('training_progress')
         .select('*')
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .eq('completed', true);
 
       if (videoProgressError) throw videoProgressError;
 
@@ -44,9 +47,9 @@ export function useTrainingProgress(userId?: string) {
       });
       setVideoProgress(initialVideoProgress);
 
-      // Fetch all assessment scores for the user
+      // Fetch all assessment scores for the user from quiz_results table
       const { data: assessmentScoresData, error: assessmentScoresError } = await supabase
-        .from('user_assessment_scores')
+        .from('quiz_results')
         .select('*')
         .eq('user_id', userId);
 
@@ -56,9 +59,9 @@ export function useTrainingProgress(userId?: string) {
       const initialAssessmentScores: Record<string, number> = {};
       const initialCompletedAssessments: string[] = [];
       assessmentScoresData?.forEach(item => {
-        initialAssessmentScores[item.assessment_id] = item.score;
+        initialAssessmentScores[item.module] = item.score;
         if (item.passed) {
-          initialCompletedAssessments.push(item.assessment_id);
+          initialCompletedAssessments.push(item.module);
         }
       });
       setAssessmentScores(initialAssessmentScores);
@@ -85,9 +88,9 @@ export function useTrainingProgress(userId?: string) {
     setVideoProgress(prev => ({ ...prev, [videoId]: true }));
 
     const { error } = await supabase
-      .from('user_video_progress')
+      .from('training_progress')
       .upsert(
-        { user_id: userId, video_id: videoId, completed: true },
+        { user_id: userId, video_id: videoId, completed: true, module: 'default' }, // module is required field
         { onConflict: 'user_id, video_id', ignoreDuplicates: false }
       );
 
@@ -111,10 +114,16 @@ export function useTrainingProgress(userId?: string) {
     }
 
     const { error } = await supabase
-      .from('user_assessment_scores')
+      .from('quiz_results')
       .upsert(
-        { user_id: userId, assessment_id: assessmentId, score: score, passed: passed },
-        { onConflict: 'user_id, assessment_id', ignoreDuplicates: false }
+        { 
+          user_id: userId, 
+          module: assessmentId, 
+          score: score, 
+          passed: passed,
+          total_questions: 10 // Default value required by schema
+        },
+        { onConflict: 'user_id, module', ignoreDuplicates: false }
       );
 
     if (error) {

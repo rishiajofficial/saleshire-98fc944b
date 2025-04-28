@@ -154,7 +154,7 @@ export interface TrainingModuleProgress {
   description: string | null;
   module: string;
   progress: number;
-  status: 'completed' | 'in_progress' | 'locked';
+  status: 'completed' | 'in_progress' | 'locked' | 'active' | 'inactive';
   locked: boolean;
   videos: Video[];
   quizIds: string[] | null;
@@ -179,4 +179,16 @@ export interface UserAssessmentScore {
   score: number;
   passed: boolean;
   completed_at?: string | null;
+}
+
+export interface QuizResult {
+  id: string;
+  user_id: string;
+  module: string; // This stores assessment_id
+  score: number;
+  passed: boolean;
+  completed_at?: string | null;
+  created_at?: string;
+  total_questions: number;
+  answers?: any;
 }
