@@ -3,6 +3,7 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { AssessmentProgressData } from '@/types/training-progress';
+import { Json } from '@/integrations/supabase/types';
 
 export const useAssessmentProgress = (userId?: string) => {
   const [isUpdating, setIsUpdating] = useState(false);
@@ -58,10 +59,12 @@ export const useAssessmentProgress = (userId?: string) => {
       const scores: Record<string, number> = {};
       const completed: string[] = [];
 
-      data?.forEach((item: AssessmentProgressData) => {
-        scores[item.module] = item.score;
-        if (item.passed) {
-          completed.push(item.module);
+      // Type assertion to ensure compatibility
+      (data || []).forEach((item: any) => {
+        const progressItem = item as AssessmentProgressData;
+        scores[progressItem.module] = progressItem.score;
+        if (progressItem.passed) {
+          completed.push(progressItem.module);
         }
       });
 
