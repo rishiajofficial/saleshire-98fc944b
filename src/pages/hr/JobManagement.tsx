@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import JobList from '@/components/jobs/JobList';
 import { Job } from '@/types/job';
+import MainLayout from '@/components/layout/MainLayout';
 
 const JobManagementPage = () => {
   const { jobs, loading, error, fetchJobs, createJob, updateJob, deleteJob } = useJobs();
@@ -117,25 +118,27 @@ const JobManagementPage = () => {
   };
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Job Management</h1>
-        <JobCreationDialog 
-          onJobCreated={handleJobCreated}
+    <MainLayout>
+      <div className="container mx-auto p-6">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold">Job Management</h1>
+          <JobCreationDialog 
+            onJobCreated={handleJobCreated}
+            assessments={assessments}
+            categories={categories}
+          />
+        </div>
+        
+        <JobList 
+          jobs={jobs}
+          onJobDeleted={handleJobDeleted}
+          onJobUpdated={handleJobUpdated}
+          onJobArchived={handleJobArchived}
           assessments={assessments}
           categories={categories}
         />
       </div>
-      
-      <JobList 
-        jobs={jobs}
-        onJobDeleted={handleJobDeleted}
-        onJobUpdated={handleJobUpdated}
-        onJobArchived={handleJobArchived}
-        assessments={assessments}
-        categories={categories}
-      />
-    </div>
+    </MainLayout>
   );
 };
 
