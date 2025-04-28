@@ -1,4 +1,3 @@
-
 export interface TrainingModule {
   id: string;
   title: string;
@@ -21,6 +20,7 @@ export interface TrainingModule {
   totalVideos?: number;
   watchedVideos?: number;
   quizCompleted?: boolean;
+  is_quiz?: boolean;
 }
 
 export interface Video {
@@ -34,7 +34,7 @@ export interface Video {
   file_size?: number | null;
   created_at?: string;
   updated_at?: string;
-  created_by?: string;
+  created_by: string;
   module: string;
   upload_status?: string;
 }
@@ -125,7 +125,6 @@ export interface TrainingProgressItem {
   timeSpent: number;
 }
 
-// Interface for database table structure
 export interface TrainingProgressRecord {
   id: string;
   user_id: string;
@@ -139,7 +138,6 @@ export interface TrainingProgressRecord {
   updated_at?: string;
 }
 
-// Interface for assessment scores
 export interface AssessmentScoreRecord {
   id?: string;
   user_id: string;
@@ -163,4 +161,22 @@ export interface TrainingModuleProgress {
   totalVideos: number;
   watchedVideos: number;
   quizCompleted: boolean;
+}
+
+export interface UserVideoProgress {
+  id: string;
+  user_id: string;
+  video_id: string;
+  completed: boolean;
+  completed_at?: string | null;
+  watched_seconds?: number;
+}
+
+export interface UserAssessmentScore {
+  id: string;
+  user_id: string;
+  assessment_id: string;
+  score: number;
+  passed: boolean;
+  completed_at?: string | null;
 }

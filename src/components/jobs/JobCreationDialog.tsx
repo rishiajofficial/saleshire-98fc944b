@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -265,10 +266,10 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
   const fetchTrainingModules = async () => {
     try {
       setLoading(true);
+      // Fixed query: Removed the non-existent status filter
       const { data, error } = await supabase
         .from("training_modules")
         .select("id, title")
-        .eq("status", "active")
         .order("title");
 
       if (error) throw error;

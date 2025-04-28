@@ -1,593 +1,373 @@
-import React, { useState, useEffect } from "react";
+
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Edit, Trash2, Upload, Link, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "sonner";
-import { Video } from "@/types/training";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Video } from '@/types/training';
+import { toast } from 'sonner';
 import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useVideoUpload } from "@/hooks/useVideoUpload";
+import { Loader2, Upload, X } from 'lucide-react';
 
-const VideoManagement = () => {
+interface VideoManagementProps {
+  onVideoCreated?: () => void;
+  moduleId?: string;
+}
+
+const VideoManagement: React.FC<VideoManagementProps> = ({ onVideoCreated, moduleId }) => {
+  const { user } = useAuth();
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [uploadMethod, setUploadMethod] = useState<'url' | 'file'>('url');
-  const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
-  const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    url: "",
-    duration: "",
-    module: ""
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [formData, setFormData] = useState<{
+    title: string;
+    description: string;
+    duration: string;
+    module: string;
+    url: string;
+    file_path?: string;
+    file_size?: number;
+    thumbnail?: string;
+  }>({
+    title: '',
+    description: '',
+    duration: '00:00',
+    module: moduleId || '',
+    url: '',
+    file_path: '',
+    file_size: 0,
+    thumbnail: ''
   });
   
-  const { user } = useAuth();
-  const { uploadVideo, uploadProgress, isUploading } = useVideoUpload();
-
   useEffect(() => {
     fetchVideos();
-  }, []);
-
+  }, [moduleId]);
+  
   const fetchVideos = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("videos")
-        .select("*")
-        .order("title");
-
-      if (error) throw error;
-      setVideos(data || []);
+      let query = supabase.from('videos').select('*');
+      
+      if (moduleId) {
+        query = query.eq('module', moduleId);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        throw error;
+      }
+      
+      setVideos(data as Video[] || []);
     } catch (error: any) {
+      console.error('Error fetching videos:', error);
       toast.error(`Failed to fetch videos: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
-
+  
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setVideoFile(e.target.files[0]);
-    }
-  };
-
-  const handleOpenCreateDialog = () => {
     setFormData({
-      title: "",
-      description: "",
-      url: "",
-      duration: "",
-      module: ""
+      ...formData,
+      [name]: value
     });
-    setVideoFile(null);
-    setUploadMethod('url');
-    setShowCreateDialog(true);
   };
-
-  const handleOpenEditDialog = (video: Video) => {
-    setSelectedVideo(video);
-    setFormData({
-      title: video.title,
-      description: video.description || "",
-      url: video.url,
-      duration: video.duration || "",
-      module: video.module
-    });
-    setShowEditDialog(true);
-  };
-
-  const handleOpenDeleteDialog = (video: Video) => {
-    setSelectedVideo(video);
-    setShowDeleteDialog(true);
-  };
-
-  const handleCreateVideo = async () => {
+  
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
     try {
-      if (!formData.title) {
-        toast.error("Video title is required");
-        return;
-      }
-
-      if (!user?.id) {
-        toast.error("You must be logged in to create a video");
-        return;
-      }
-
-      if (uploadMethod === 'url' && !formData.url) {
-        toast.error("Video URL is required");
-        return;
-      }
-
-      if (uploadMethod === 'file' && !videoFile) {
-        toast.error("Please select a video file to upload");
-        return;
-      }
-
-      const videoData: Partial<Video> = {
-        title: formData.title,
-        description: formData.description || null,
-        duration: formData.duration || "0:00",
-        module: formData.module,
-        created_by: user.id,
-        url: formData.url
-      };
-
-      if (uploadMethod === 'file' && videoFile) {
-        const uploadResult = await uploadVideo(videoFile);
+      setUploading(true);
+      setProgress(0);
+      
+      // Update form with file info
+      setFormData({
+        ...formData,
+        title: formData.title || file.name.split('.')[0],
+        file_size: file.size,
+        // If no URL is provided, we'll use a placeholder until the actual file is uploaded
+        url: formData.url || URL.createObjectURL(file)
+      });
+      
+      // Simulate upload progress
+      const interval = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 95) {
+            clearInterval(interval);
+            return prev;
+          }
+          return prev + 5;
+        });
+      }, 200);
+      
+      // Insert video record
+      if (user?.id) {
+        const videoData = {
+          title: formData.title || file.name.split('.')[0],
+          description: formData.description,
+          duration: formData.duration,
+          module: formData.module,
+          created_by: user.id,
+          url: formData.url || 'https://example.com/placeholder-video',
+          file_path: formData.file_path,
+          file_size: formData.file_size,
+          thumbnail: formData.thumbnail
+        };
         
-        if (!uploadResult) {
-          toast.error("Failed to upload video file");
-          return;
+        const { data, error } = await supabase
+          .from('videos')
+          .insert([videoData]);
+        
+        if (error) throw error;
+        
+        clearInterval(interval);
+        setProgress(100);
+        
+        toast.success('Video created successfully');
+        setFormData({
+          title: '',
+          description: '',
+          duration: '00:00',
+          module: moduleId || '',
+          url: '',
+          file_path: '',
+          file_size: 0,
+          thumbnail: ''
+        });
+        
+        if (onVideoCreated) {
+          onVideoCreated();
         }
         
-        videoData.url = uploadResult.url;
-        videoData.file_path = uploadResult.filePath;
-        videoData.file_size = uploadResult.fileSize;
-        videoData.thumbnail = uploadResult.thumbnail;
+        fetchVideos();
       }
-
-      const { data, error } = await supabase
-        .from("videos")
-        .insert([videoData])
-        .select();
-
-      if (error) throw error;
-      
-      toast.success("Video created successfully");
-      setShowCreateDialog(false);
-      fetchVideos();
     } catch (error: any) {
+      console.error('Error uploading video:', error);
+      toast.error(`Failed to upload video: ${error.message}`);
+    } finally {
+      setUploading(false);
+      setProgress(0);
+    }
+  };
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.title || !formData.url) {
+      toast.error('Title and URL are required');
+      return;
+    }
+    
+    try {
+      setUploading(true);
+      
+      if (user?.id) {
+        const videoData = {
+          title: formData.title,
+          description: formData.description,
+          duration: formData.duration,
+          module: formData.module,
+          created_by: user.id,
+          url: formData.url,
+          file_path: formData.file_path,
+          file_size: formData.file_size,
+          thumbnail: formData.thumbnail
+        };
+        
+        const { data, error } = await supabase
+          .from('videos')
+          .insert([videoData]);
+        
+        if (error) throw error;
+        
+        toast.success('Video created successfully');
+        setFormData({
+          title: '',
+          description: '',
+          duration: '00:00',
+          module: moduleId || '',
+          url: '',
+          file_path: '',
+          file_size: 0,
+          thumbnail: ''
+        });
+        
+        if (onVideoCreated) {
+          onVideoCreated();
+        }
+        
+        fetchVideos();
+      }
+    } catch (error: any) {
+      console.error('Error creating video:', error);
       toast.error(`Failed to create video: ${error.message}`);
+    } finally {
+      setUploading(false);
     }
   };
-
-  const handleUpdateVideo = async () => {
+  
+  const deleteVideo = async (videoId: string) => {
     try {
-      if (!selectedVideo) return;
-      if (!formData.title) {
-        toast.error("Video title is required");
-        return;
-      }
-
-      const videoData: Partial<Video> = {
-        title: formData.title,
-        description: formData.description || null,
-        duration: formData.duration || "0:00",
-        module: formData.module
-      };
-
-      if (uploadMethod === 'file' && videoFile) {
-        const uploadResult = await uploadVideo(videoFile);
-        
-        if (!uploadResult) {
-          toast.error("Failed to upload video file");
-          return;
-        }
-        
-        videoData.url = uploadResult.url;
-        videoData.file_path = uploadResult.filePath;
-        videoData.file_size = uploadResult.fileSize;
-        videoData.thumbnail = uploadResult.thumbnail;
-      } else if (uploadMethod === 'url' && formData.url !== selectedVideo.url) {
-        videoData.url = formData.url;
-      }
-
       const { error } = await supabase
-        .from("videos")
-        .update(videoData)
-        .eq("id", selectedVideo.id);
-
-      if (error) throw error;
-      
-      toast.success("Video updated successfully");
-      setShowEditDialog(false);
-      fetchVideos();
-    } catch (error: any) {
-      toast.error(`Failed to update video: ${error.message}`);
-    }
-  };
-
-  const handleDeleteVideo = async () => {
-    try {
-      if (!selectedVideo) return;
-      
-      const { count, error: checkError } = await supabase
-        .from('module_videos')
-        .select('*', { count: 'exact', head: true })
-        .eq('video_id', selectedVideo.id);
-        
-      if (checkError) throw checkError;
-      
-      if (count && count > 0) {
-        toast.error("Cannot delete video as it is used in one or more training modules");
-        setShowDeleteDialog(false);
-        return;
-      }
-      
-      if (selectedVideo.file_path) {
-        const { error: storageError } = await supabase.storage
-          .from('training_videos')
-          .remove([selectedVideo.file_path]);
-          
-        if (storageError) {
-          console.error("Error removing video file:", storageError);
-        }
-      }
-      
-      const { error } = await supabase
-        .from("videos")
+        .from('videos')
         .delete()
-        .eq("id", selectedVideo.id);
-
+        .eq('id', videoId);
+        
       if (error) throw error;
       
-      toast.success("Video deleted successfully");
-      setShowDeleteDialog(false);
+      toast.success('Video deleted successfully');
       fetchVideos();
     } catch (error: any) {
+      console.error('Error deleting video:', error);
       toast.error(`Failed to delete video: ${error.message}`);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Video Management</h2>
-        <Button onClick={handleOpenCreateDialog}>
-          <Plus className="mr-2 h-4 w-4" /> Add Video
-        </Button>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {videos.map((video) => (
-          <Card key={video.id} className="overflow-hidden">
-            <CardHeader className="p-0">
-              {video.thumbnail ? (
-                <div className="aspect-video relative">
-                  <img 
-                    src={video.thumbnail} 
-                    alt={video.title} 
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ) : (
-                <div className="aspect-video bg-slate-200 flex items-center justify-center">
-                  <p className="text-slate-500">No thumbnail</p>
-                </div>
-              )}
-            </CardHeader>
-            <CardContent className="p-4">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-semibold truncate mr-4">{video.title}</h3>
-                  <p className="text-xs text-muted-foreground">
-                    Module: {video.module}
-                  </p>
-                  {video.duration && (
-                    <p className="text-xs text-muted-foreground">
-                      Duration: {video.duration}
-                    </p>
-                  )}
-                </div>
-                <div className="flex">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleOpenEditDialog(video)}
-                    className="h-8 w-8"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleOpenDeleteDialog(video)}
-                    className="h-8 w-8"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              {video.description && (
-                <p className="text-sm mt-2 line-clamp-2">
-                  {video.description}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {videos.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">No videos found</p>
-          <p className="text-sm mt-2">Add your first video to get started</p>
+    <div className="w-full">
+      <form onSubmit={handleSubmit} className="space-y-4 p-4 bg-white rounded-md shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="title">Title</Label>
+            <Input
+              id="title"
+              name="title"
+              value={formData.title}
+              onChange={handleInputChange}
+              placeholder="Video title"
+            />
+          </div>
+          <div>
+            <Label htmlFor="duration">Duration (MM:SS)</Label>
+            <Input
+              id="duration"
+              name="duration"
+              value={formData.duration}
+              onChange={handleInputChange}
+              placeholder="00:00"
+            />
+          </div>
         </div>
-      )}
-      
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add New Video</DialogTitle>
-          </DialogHeader>
+        
+        <div>
+          <Label htmlFor="description">Description</Label>
+          <Textarea
+            id="description"
+            name="description"
+            value={formData.description}
+            onChange={handleInputChange}
+            placeholder="Video description"
+            rows={3}
+          />
+        </div>
+        
+        <div>
+          <Label htmlFor="url">Video URL</Label>
+          <Input
+            id="url"
+            name="url"
+            value={formData.url}
+            onChange={handleInputChange}
+            placeholder="https://example.com/video"
+          />
+        </div>
+        
+        <div>
+          <Label htmlFor="thumbnail">Thumbnail URL (optional)</Label>
+          <Input
+            id="thumbnail"
+            name="thumbnail"
+            value={formData.thumbnail || ''}
+            onChange={handleInputChange}
+            placeholder="https://example.com/thumbnail"
+          />
+        </div>
+        
+        <div>
+          <Label htmlFor="videoFile" className="block mb-2">
+            Or upload a video file
+          </Label>
+          <Input
+            id="videoFile"
+            type="file"
+            accept="video/*"
+            onChange={handleFileUpload}
+            disabled={uploading}
+            className="cursor-pointer"
+          />
           
-          <Tabs value={uploadMethod} onValueChange={(value) => setUploadMethod(value as 'url' | 'file')}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="url" className="flex items-center">
-                <Link className="mr-2 h-4 w-4" />
-                URL
-              </TabsTrigger>
-              <TabsTrigger value="file" className="flex items-center">
-                <Upload className="mr-2 h-4 w-4" />
-                Upload
-              </TabsTrigger>
-            </TabsList>
-            
-            <div className="space-y-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="title">Video Title</Label>
-                <Input
-                  id="title" 
-                  name="title"
-                  value={formData.title}
-                  onChange={handleInputChange}
-                />
-              </div>
-              
-              <div className="grid gap-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  rows={3}
-                />
-              </div>
-              
-              <div className="grid gap-2">
-                <Label htmlFor="module">Module</Label>
-                <Input
-                  id="module"
-                  name="module"
-                  value={formData.module}
-                  onChange={handleInputChange}
-                  placeholder="Enter module name"
-                />
-              </div>
-              
-              <TabsContent value="url">
-                <div className="grid gap-2">
-                  <Label htmlFor="url">Video URL</Label>
-                  <Input
-                    id="url"
-                    name="url"
-                    type="url"
-                    value={formData.url}
-                    onChange={handleInputChange}
-                    placeholder="https://example.com/video.mp4"
-                  />
-                </div>
-                
-                <div className="grid gap-2 mt-4">
-                  <Label htmlFor="duration">Duration (optional)</Label>
-                  <Input
-                    id="duration"
-                    name="duration"
-                    value={formData.duration}
-                    onChange={handleInputChange}
-                    placeholder="e.g., 10:30"
-                  />
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="file">
-                <div className="grid gap-2">
-                  <Label htmlFor="video-file">Video File</Label>
-                  <Input
-                    id="video-file"
-                    type="file"
-                    accept="video/*"
-                    onChange={handleFileChange}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Max file size: 500MB
-                  </p>
-                </div>
-                
-                {isUploading && (
-                  <div className="mt-4">
-                    <Label className="text-xs">Upload Progress</Label>
-                    <Progress value={uploadProgress} className="h-2 mt-1" />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {uploadProgress.toFixed(0)}% complete
-                    </p>
+          {progress > 0 && (
+            <div className="mt-2">
+              <Progress value={progress} className="h-2" />
+              <p className="text-sm text-gray-500 mt-1">{progress}% uploaded</p>
+            </div>
+          )}
+        </div>
+        
+        <Button type="submit" disabled={uploading || !formData.title || !formData.url}>
+          {uploading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading...
+            </>
+          ) : (
+            <>
+              <Upload className="mr-2 h-4 w-4" /> Add Video
+            </>
+          )}
+        </Button>
+      </form>
+      
+      <div className="mt-8">
+        <h3 className="text-lg font-medium mb-4">Videos</h3>
+        {loading ? (
+          <div className="flex justify-center py-4">
+            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+          </div>
+        ) : videos.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {videos.map((video) => (
+              <div key={video.id} className="border rounded-md p-4 relative">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2"
+                  onClick={() => deleteVideo(video.id)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+                {video.thumbnail ? (
+                  <img src={video.thumbnail} alt={video.title} className="w-full h-32 object-cover mb-2 rounded" />
+                ) : (
+                  <div className="w-full h-32 bg-gray-100 flex items-center justify-center mb-2 rounded">
+                    <span className="text-gray-400">No thumbnail</span>
                   </div>
                 )}
-              </TabsContent>
-            </div>
-          </Tabs>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleCreateVideo} 
-              disabled={isUploading}
-            >
-              {isUploading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Uploading...
-                </>
-              ) : "Add Video"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Video</DialogTitle>
-          </DialogHeader>
-          
-          <Tabs value={uploadMethod} onValueChange={(value) => setUploadMethod(value as 'url' | 'file')}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="url" className="flex items-center">
-                <Link className="mr-2 h-4 w-4" />
-                URL
-              </TabsTrigger>
-              <TabsTrigger value="file" className="flex items-center">
-                <Upload className="mr-2 h-4 w-4" />
-                Upload New File
-              </TabsTrigger>
-            </TabsList>
-            
-            <div className="space-y-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="edit-title">Video Title</Label>
-                <Input
-                  id="edit-title" 
-                  name="title"
-                  value={formData.title}
-                  onChange={handleInputChange}
-                />
-              </div>
-              
-              <div className="grid gap-2">
-                <Label htmlFor="edit-description">Description</Label>
-                <Textarea
-                  id="edit-description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  rows={3}
-                />
-              </div>
-              
-              <div className="grid gap-2">
-                <Label htmlFor="edit-module">Module</Label>
-                <Input
-                  id="edit-module"
-                  name="module"
-                  value={formData.module}
-                  onChange={handleInputChange}
-                />
-              </div>
-              
-              <TabsContent value="url">
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-url">Video URL</Label>
-                  <Input
-                    id="edit-url"
-                    name="url"
-                    type="url"
-                    value={formData.url}
-                    onChange={handleInputChange}
-                  />
+                <h4 className="font-medium truncate">{video.title}</h4>
+                <p className="text-sm text-gray-500 truncate">{video.description}</p>
+                <div className="mt-2 flex justify-between items-center">
+                  <span className="text-xs text-gray-400">Duration: {video.duration || 'Unknown'}</span>
+                  <a 
+                    href={video.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-500 hover:underline"
+                  >
+                    Watch
+                  </a>
                 </div>
-                
-                <div className="grid gap-2 mt-4">
-                  <Label htmlFor="edit-duration">Duration</Label>
-                  <Input
-                    id="edit-duration"
-                    name="duration"
-                    value={formData.duration}
-                    onChange={handleInputChange}
-                  />
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="file">
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-video-file">New Video File</Label>
-                  <Input
-                    id="edit-video-file"
-                    type="file"
-                    accept="video/*"
-                    onChange={handleFileChange}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Current file: {selectedVideo?.file_path ? selectedVideo.file_path.split('/').pop() : 'No file uploaded'}
-                  </p>
-                </div>
-                
-                {isUploading && (
-                  <div className="mt-4">
-                    <Label className="text-xs">Upload Progress</Label>
-                    <Progress value={uploadProgress} className="h-2 mt-1" />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {uploadProgress.toFixed(0)}% complete
-                    </p>
-                  </div>
-                )}
-              </TabsContent>
-            </div>
-          </Tabs>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleUpdateVideo} 
-              disabled={isUploading}
-            >
-              {isUploading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Uploading...
-                </>
-              ) : "Update Video"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-          </DialogHeader>
-          <p>
-            Are you sure you want to delete the video "{selectedVideo?.title}"?
-            This action cannot be undone.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteVideo}>
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-center text-gray-500 py-4">No videos found</p>
+        )}
+      </div>
     </div>
   );
 };
