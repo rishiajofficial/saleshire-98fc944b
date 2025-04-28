@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Plus, Edit, Trash2, Check, ArrowUp, ArrowDown } from "lucide-react";
 import { Loader2 } from "lucide-react";
-import { Video, Assessment } from "@/types/training";
+import { ModuleVideo, ModuleAssessment } from "@/types/training";
 import { Badge } from "@/components/ui/badge";
 
 interface Module {
@@ -26,24 +26,10 @@ interface Module {
   created_by: string;
 }
 
-interface ModuleVideo {
-  id: string;
-  module_id: string;
-  video_id: string;
-  order: number;
-}
-
-interface ModuleAssessment {
-  id: string;
-  module_id: string;
-  assessment_id: string;
-  order: number;
-}
-
 const ModuleManagement = () => {
   const [modules, setModules] = useState<Module[]>([]);
-  const [videos, setVideos] = useState<Video[]>([]);
-  const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [videos, setVideos] = useState<any[]>([]);
+  const [assessments, setAssessments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -71,13 +57,12 @@ const ModuleManagement = () => {
     try {
       setLoading(true);
       
-      // Fetch modules - update the query to match the database structure
+      // Fetch modules with the correct fields
       const { data: modulesData, error: modulesError } = await supabase
         .from("training_modules")
         .select(`
           id,
           title,
-          name,
           description,
           tags,
           status,
@@ -89,10 +74,13 @@ const ModuleManagement = () => {
         
       if (modulesError) throw modulesError;
       
-      // If name doesn't exist in the response, use title as name
+      // Format modules to match our Module interface
       const formattedModules = (modulesData || []).map(module => ({
         ...module,
-        name: module.name || module.title // Fallback to title if name isn't available
+        name: module.title, // Use title as name
+        tags: module.tags || [],
+        status: module.status || 'active',
+        thumbnail: module.thumbnail || null
       }));
       
       // Fetch videos
@@ -125,7 +113,7 @@ const ModuleManagement = () => {
 
   const fetchModuleRelations = async (moduleId: string) => {
     try {
-      // Fetch module videos and assessments separately
+      // Use RPC or direct SQL query instead of trying to join
       const { data: moduleVideosData, error: moduleVideosError } = await supabase
         .from("module_videos")
         .select("id, module_id, video_id, order")
@@ -145,8 +133,9 @@ const ModuleManagement = () => {
       setModuleVideos(moduleVideosData || []);
       setModuleAssessments(moduleAssessmentsData || []);
       
-      setSelectedVideos(moduleVideosData?.map(mv => mv.video_id) || []);
-      setSelectedAssessments(moduleAssessmentsData?.map(ma => ma.assessment_id) || []);
+      // Set selected IDs for the form
+      setSelectedVideos((moduleVideosData || []).map(mv => mv.video_id));
+      setSelectedAssessments((moduleAssessmentsData || []).map(ma => ma.assessment_id));
     } catch (error: any) {
       toast.error(`Failed to fetch module relations: ${error.message}`);
       console.error("Error fetching module relations:", error);
@@ -258,8 +247,7 @@ const ModuleManagement = () => {
       const { data: moduleData, error: moduleError } = await supabase
         .from("training_modules")
         .insert({
-          name: formData.name,
-          title: formData.name, // Set title same as name for consistency
+          title: formData.name, // Set title from name
           description: formData.description || null,
           tags: formData.tags ? formData.tags.split(",").map(tag => tag.trim()) : null,
           status: formData.status,
@@ -318,12 +306,11 @@ const ModuleManagement = () => {
         return;
       }
 
-      // Update both name and title fields
+      // Update the title field (and NOT name since it doesn't exist in the schema)
       const { error: moduleError } = await supabase
         .from("training_modules")
         .update({
-          name: formData.name,
-          title: formData.name, // Update title to match name
+          title: formData.name, // Update title, not name
           description: formData.description || null,
           tags: formData.tags ? formData.tags.split(",").map(tag => tag.trim()) : null,
           status: formData.status,
@@ -335,12 +322,10 @@ const ModuleManagement = () => {
       
       // Update module-video relations
       // First delete existing relations
-      const { error: deleteVideoError } = await supabase
+      await supabase
         .from("module_videos")
         .delete()
         .eq("module_id", selectedModule.id);
-        
-      if (deleteVideoError) throw deleteVideoError;
       
       // Then create new relations
       if (selectedVideos.length > 0) {
@@ -359,12 +344,10 @@ const ModuleManagement = () => {
       
       // Update module-assessment relations
       // First delete existing relations
-      const { error: deleteAssessmentError } = await supabase
+      await supabase
         .from("module_assessments")
         .delete()
         .eq("module_id", selectedModule.id);
-        
-      if (deleteAssessmentError) throw deleteAssessmentError;
       
       // Then create new relations
       if (selectedAssessments.length > 0) {
@@ -393,22 +376,6 @@ const ModuleManagement = () => {
     try {
       if (!selectedModule) return;
       
-      // Delete module-video relations
-      const { error: deleteVideoError } = await supabase
-        .from("module_videos")
-        .delete()
-        .eq("module_id", selectedModule.id);
-        
-      if (deleteVideoError) throw deleteVideoError;
-      
-      // Delete module-assessment relations
-      const { error: deleteAssessmentError } = await supabase
-        .from("module_assessments")
-        .delete()
-        .eq("module_id", selectedModule.id);
-        
-      if (deleteAssessmentError) throw deleteAssessmentError;
-      
       // Check if the module is used in any jobs
       const { data: jobModules, error: jobCheckError } = await supabase
         .from("job_modules")
@@ -422,6 +389,12 @@ const ModuleManagement = () => {
         setShowDeleteDialog(false);
         return;
       }
+      
+      // Delete module relations first (cascading should handle this, but we'll do it explicitly)
+      await Promise.all([
+        supabase.from("module_videos").delete().eq("module_id", selectedModule.id),
+        supabase.from("module_assessments").delete().eq("module_id", selectedModule.id)
+      ]);
       
       // Delete the module
       const { error: deleteError } = await supabase

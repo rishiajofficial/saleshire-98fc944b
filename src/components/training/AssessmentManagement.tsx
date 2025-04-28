@@ -51,38 +51,20 @@ const AssessmentManagement = () => {
 
   const fetchAssessmentModules = async (assessmentId: string) => {
     try {
-      // Instead of directly querying module_assessments, use a join approach
+      // Use a standard join to check if an assessment is used in modules
       const { data, error } = await supabase
-        .from("assessments")
-        .select(`
-          id, 
-          title,
-          description,
-          module_assessments!assessment_id(
-            id,
-            module_id,
-            training_modules:module_id(
-              id,
-              title,
-              description
-            )
-          )
-        `)
-        .eq("id", assessmentId)
-        .single();
+        .from("module_assessments")
+        .select("module_id")
+        .eq("assessment_id", assessmentId);
 
       if (error) throw error;
       
-      // Extract the training modules data from the nested structure
-      const modules = data?.module_assessments?.map(item => 
-        item.training_modules
-      ).filter(Boolean) || [];
-      
-      return modules;
+      // Return the count of related modules
+      return data ? data.length : 0;
     } catch (error: any) {
       console.error('Error fetching assessment modules:', error);
       toast.error('Failed to fetch assessment modules');
-      return [];
+      return 0; // Return 0 if there's an error
     }
   };
 
@@ -103,19 +85,8 @@ const AssessmentManagement = () => {
     try {
       if (!selectedAssessment) return;
 
-      // Check if assessment is used in any modules by querying assessments with a join
-      const { data: moduleCheck, error: checkError } = await supabase
-        .from("assessments")
-        .select(`
-          id,
-          module_assessments!assessment_id(count)
-        `)
-        .eq("id", selectedAssessment.id)
-        .single();
-
-      if (checkError) throw checkError;
-
-      const moduleCount = moduleCheck?.module_assessments?.length || 0;
+      // Check if assessment is used in any modules 
+      const moduleCount = await fetchAssessmentModules(selectedAssessment.id);
       
       if (moduleCount > 0) {
         toast.error("Cannot delete assessment as it is used in one or more training modules");

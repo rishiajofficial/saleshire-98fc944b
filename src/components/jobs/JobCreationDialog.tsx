@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -238,10 +239,11 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
 
       if (error) throw error;
       
-      const formattedModules = data?.map(module => ({
+      // Format modules properly with id and name
+      const formattedModules = (data || []).map(module => ({
         id: module.id,
         name: module.title || 'Untitled Module'
-      })) || [];
+      }));
       
       setModules(formattedModules);
     } catch (error: any) {

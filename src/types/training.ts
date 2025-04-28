@@ -1,3 +1,4 @@
+
 export interface TrainingModule {
   id: string;
   title: string;
@@ -82,6 +83,7 @@ export interface JobModule {
   module_id: string;
   created_at?: string;
 }
+
 export interface ModuleVideoRelation {
   moduleId: string;
   videoId: string;
