@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Plus, Edit, Trash2, Check, ArrowUp, ArrowDown } from "lucide-react";
 import { Loader2 } from "lucide-react";
-import { ModuleVideo, ModuleAssessment } from "@/types/training";
+import { TrainingModule, ModuleVideo, ModuleAssessment } from "@/types/training";
 import { Badge } from "@/components/ui/badge";
 
 interface Module {
@@ -56,19 +56,10 @@ const ModuleManagement = () => {
     try {
       setLoading(true);
       
-      // Fetch modules with the correct fields
+      // Fetch modules
       const { data: modulesData, error: modulesError } = await supabase
         .from("training_modules")
-        .select(`
-          id,
-          title,
-          description,
-          tags,
-          status,
-          thumbnail,
-          created_at,
-          created_by
-        `)
+        .select("*")
         .order("title");
         
       if (modulesError) {
@@ -76,16 +67,16 @@ const ModuleManagement = () => {
         toast.error(`Failed to fetch modules: ${modulesError.message}`);
         setModules([]);
       } else {
-        // Format modules to match our Module interface
-        const formattedModules = (modulesData || []).map(module => ({
-          id: module.id,
+        // Format modules safely
+        const formattedModules: Module[] = (modulesData || []).map(module => ({
+          id: module.id || '',
           title: module.title || '',
           description: module.description || null,
-          tags: module.tags || [],
-          status: module.status || 'active',
-          thumbnail: module.thumbnail || null,
-          created_at: module.created_at,
-          created_by: module.created_by
+          tags: [], // Default to empty array since tags column doesn't exist yet
+          status: 'active', // Default to active since status column doesn't exist yet
+          thumbnail: null,
+          created_at: module.created_at || '',
+          created_by: module.created_by || ''
         }));
         
         setModules(formattedModules);
@@ -129,22 +120,23 @@ const ModuleManagement = () => {
 
   const fetchModuleRelations = async (moduleId: string) => {
     try {
-      // Use direct SQL queries instead of trying to use module_videos/module_assessments
+      // Use direct query approach instead of RPC since the types aren't defined
       const { data: videoRelations, error: videoError } = await supabase
-        .rpc('get_module_videos', { module_id_param: moduleId });
+        .from("module_videos")
+        .select("*")
+        .eq("module_id", moduleId)
+        .order("order");
         
       if (videoError) {
         console.error("Error fetching module videos:", videoError);
         toast.error(`Failed to fetch module videos: ${videoError.message}`);
-        
-        // Fallback to empty arrays if rpc fails
         setModuleVideos([]);
         setSelectedVideos([]);
       } else {
-        // Format video relations
+        // Safely format video relations
         const formattedVideoRelations: ModuleVideo[] = (videoRelations || []).map(relation => ({
           id: relation.id || '',
-          module_id: moduleId,
+          module_id: relation.module_id || '',
           video_id: relation.video_id || '',
           order: relation.order || 0,
           created_at: relation.created_at
@@ -155,20 +147,21 @@ const ModuleManagement = () => {
       }
       
       const { data: assessmentRelations, error: assessmentError } = await supabase
-        .rpc('get_module_assessments', { module_id_param: moduleId });
+        .from("module_assessments")
+        .select("*")
+        .eq("module_id", moduleId)
+        .order("order");
         
       if (assessmentError) {
         console.error("Error fetching module assessments:", assessmentError);
         toast.error(`Failed to fetch module assessments: ${assessmentError.message}`);
-        
-        // Fallback to empty arrays if rpc fails
         setModuleAssessments([]);
         setSelectedAssessments([]);
       } else {
-        // Format assessment relations
+        // Safely format assessment relations
         const formattedAssessmentRelations: ModuleAssessment[] = (assessmentRelations || []).map(relation => ({
           id: relation.id || '',
-          module_id: moduleId,
+          module_id: relation.module_id || '',
           assessment_id: relation.assessment_id || '',
           order: relation.order || 0,
           created_at: relation.created_at
@@ -290,15 +283,13 @@ const ModuleManagement = () => {
         return;
       }
 
-      // Create the module with title field
+      // Create the module
       const { data: moduleData, error: moduleError } = await supabase
         .from("training_modules")
         .insert({
           title: formData.title,
           description: formData.description || null,
-          tags: formData.tags ? formData.tags.split(",").map(tag => tag.trim()) : null,
-          status: formData.status,
-          thumbnail: formData.thumbnail || null,
+          module: formData.title.replace(/\s+/g, '_').toLowerCase(), // Create a module code based on the title
           created_by: user.id
         })
         .select();
@@ -307,53 +298,39 @@ const ModuleManagement = () => {
       
       const moduleId = moduleData[0].id;
       
-      // Create module-video relations using a custom function
+      // Create module-video relations directly
       if (selectedVideos.length > 0) {
-        const { error: videoRelationError } = await supabase
-          .rpc('create_module_videos', { 
-            module_id_param: moduleId,
-            video_ids_param: selectedVideos,
-            // Convert selectedVideos array index to the order
-            orders_param: selectedVideos.map((_, index) => index)
-          });
+        const videoRelations = selectedVideos.map((videoId, index) => ({
+          module_id: moduleId,
+          video_id: videoId,
+          order: index
+        }));
           
-        if (videoRelationError) {
-          console.error("Error creating module videos:", videoRelationError);
-          // Fallback to direct insert if RPC fails
-          const videoRelations = selectedVideos.map((videoId, index) => ({
-            module_id: moduleId,
-            video_id: videoId,
-            order: index
-          }));
-          
-          for (const relation of videoRelations) {
-            await supabase.from("module_videos").insert(relation);
-          }
+        const { error: videoInsertError } = await supabase
+          .from("module_videos")
+          .insert(videoRelations);
+            
+        if (videoInsertError) {
+          console.error("Error creating module videos:", videoInsertError);
+          toast.error(`Failed to link videos: ${videoInsertError.message}`);
         }
       }
       
-      // Create module-assessment relations using a custom function
+      // Create module-assessment relations directly
       if (selectedAssessments.length > 0) {
-        const { error: assessmentRelationError } = await supabase
-          .rpc('create_module_assessments', { 
-            module_id_param: moduleId,
-            assessment_ids_param: selectedAssessments,
-            // Convert selectedAssessments array index to the order
-            orders_param: selectedAssessments.map((_, index) => index)
-          });
-          
-        if (assessmentRelationError) {
-          console.error("Error creating module assessments:", assessmentRelationError);
-          // Fallback to direct insert if RPC fails
-          const assessmentRelations = selectedAssessments.map((assessmentId, index) => ({
-            module_id: moduleId,
-            assessment_id: assessmentId,
-            order: index
-          }));
-          
-          for (const relation of assessmentRelations) {
-            await supabase.from("module_assessments").insert(relation);
-          }
+        const assessmentRelations = selectedAssessments.map((assessmentId, index) => ({
+          module_id: moduleId,
+          assessment_id: assessmentId,
+          order: index
+        }));
+        
+        const { error: assessmentInsertError } = await supabase
+          .from("module_assessments")
+          .insert(assessmentRelations);
+            
+        if (assessmentInsertError) {
+          console.error("Error creating module assessments:", assessmentInsertError);
+          toast.error(`Failed to link assessments: ${assessmentInsertError.message}`);
         }
       }
       
@@ -378,88 +355,69 @@ const ModuleManagement = () => {
         .from("training_modules")
         .update({
           title: formData.title,
-          description: formData.description || null,
-          tags: formData.tags ? formData.tags.split(",").map(tag => tag.trim()) : null,
-          status: formData.status,
-          thumbnail: formData.thumbnail || null
+          description: formData.description || null
         })
         .eq("id", selectedModule.id);
 
       if (moduleError) throw moduleError;
       
       // Update module-video relations
-      // First delete existing relations using RPC
+      // First delete existing relations
       const { error: deleteVideosError } = await supabase
-        .rpc('delete_module_videos', { module_id_param: selectedModule.id });
-        
+        .from("module_videos")
+        .delete()
+        .eq("module_id", selectedModule.id);
+      
       if (deleteVideosError) {
         console.error("Error deleting module videos:", deleteVideosError);
-        // Fallback to direct delete
-        await supabase
-          .from("module_videos")
-          .delete()
-          .eq("module_id", selectedModule.id);
+        toast.error(`Failed to update video relations: ${deleteVideosError.message}`);
       }
       
       // Then create new video relations
       if (selectedVideos.length > 0) {
+        const videoRelations = selectedVideos.map((videoId, index) => ({
+          module_id: selectedModule.id,
+          video_id: videoId,
+          order: index
+        }));
+        
         const { error: createVideosError } = await supabase
-          .rpc('create_module_videos', { 
-            module_id_param: selectedModule.id,
-            video_ids_param: selectedVideos,
-            orders_param: selectedVideos.map((_, index) => index)
-          });
-          
+          .from("module_videos")
+          .insert(videoRelations);
+            
         if (createVideosError) {
           console.error("Error creating module videos:", createVideosError);
-          // Fallback to direct insert
-          const videoRelations = selectedVideos.map((videoId, index) => ({
-            module_id: selectedModule.id,
-            video_id: videoId,
-            order: index
-          }));
-          
-          for (const relation of videoRelations) {
-            await supabase.from("module_videos").insert(relation);
-          }
+          toast.error(`Failed to link videos: ${createVideosError.message}`);
         }
       }
       
       // Update module-assessment relations
-      // First delete existing relations using RPC
+      // First delete existing relations
       const { error: deleteAssessmentsError } = await supabase
-        .rpc('delete_module_assessments', { module_id_param: selectedModule.id });
+        .from("module_assessments")
+        .delete()
+        .eq("module_id", selectedModule.id);
         
       if (deleteAssessmentsError) {
         console.error("Error deleting module assessments:", deleteAssessmentsError);
-        // Fallback to direct delete
-        await supabase
-          .from("module_assessments")
-          .delete()
-          .eq("module_id", selectedModule.id);
+        toast.error(`Failed to update assessment relations: ${deleteAssessmentsError.message}`);
       }
       
       // Then create new assessment relations
       if (selectedAssessments.length > 0) {
+        const assessmentRelations = selectedAssessments.map((assessmentId, index) => ({
+          module_id: selectedModule.id,
+          assessment_id: assessmentId,
+          order: index
+        }));
+        
         const { error: createAssessmentsError } = await supabase
-          .rpc('create_module_assessments', { 
-            module_id_param: selectedModule.id,
-            assessment_ids_param: selectedAssessments,
-            orders_param: selectedAssessments.map((_, index) => index)
-          });
-          
+          .from("module_assessments")
+          .insert(assessmentRelations);
+            
         if (createAssessmentsError) {
           console.error("Error creating module assessments:", createAssessmentsError);
-          // Fallback to direct insert
-          const assessmentRelations = selectedAssessments.map((assessmentId, index) => ({
-            module_id: selectedModule.id,
-            assessment_id: assessmentId,
-            order: index
-          }));
-          
-          for (const relation of assessmentRelations) {
-            await supabase.from("module_assessments").insert(relation);
-          }
+          toast.error(`Failed to link assessments: ${createAssessmentsError.message}`);
         }
       }
       
@@ -491,10 +449,8 @@ const ModuleManagement = () => {
       
       // Delete module relations first
       await Promise.all([
-        supabase.rpc('delete_module_videos', { module_id_param: selectedModule.id })
-          .catch(() => supabase.from("module_videos").delete().eq("module_id", selectedModule.id)),
-        supabase.rpc('delete_module_assessments', { module_id_param: selectedModule.id })
-          .catch(() => supabase.from("module_assessments").delete().eq("module_id", selectedModule.id))
+        supabase.from("module_videos").delete().eq("module_id", selectedModule.id),
+        supabase.from("module_assessments").delete().eq("module_id", selectedModule.id)
       ]);
       
       // Delete the module
@@ -587,7 +543,6 @@ const ModuleManagement = () => {
         </div>
       )}
       
-      {/* Create Module Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
@@ -777,7 +732,6 @@ const ModuleManagement = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Edit Module Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
@@ -959,7 +913,6 @@ const ModuleManagement = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>

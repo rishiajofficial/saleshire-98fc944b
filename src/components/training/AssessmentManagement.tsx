@@ -51,23 +51,14 @@ const AssessmentManagement = () => {
 
   const fetchAssessmentModules = async (assessmentId: string) => {
     try {
-      // Use SQL query to check if an assessment is used in modules
-      const { count, error } = await supabase
-        .rpc('count_module_assessments', { assessment_id_param: assessmentId });
+      // Use direct query instead of RPC since it's not in the types
+      const { data, count, error } = await supabase
+        .from("module_assessments")
+        .select('id', { count: 'exact', head: true })
+        .eq("assessment_id", assessmentId);
       
-      if (error) {
-        console.error('Error counting module assessments:', error);
-        // Fallback to direct count
-        const { data, error: countError } = await supabase
-          .from("module_assessments")
-          .select('id', { count: 'exact', head: true })
-          .eq("assessment_id", assessmentId);
-          
-        if (countError) throw countError;
-        return data?.length || 0;
-      }
+      if (error) throw error;
       
-      // Return the count from RPC
       return count || 0;
     } catch (error: any) {
       console.error('Error fetching assessment modules:', error);

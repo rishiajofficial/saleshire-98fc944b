@@ -9,6 +9,10 @@ export interface TrainingModule {
   created_at?: string;
   updated_at?: string;
   created_by?: string;
+  module?: string;
+  content?: string | null;
+  video_url?: string | null;
+  quiz_id?: string | null;
 }
 
 export interface Video {
