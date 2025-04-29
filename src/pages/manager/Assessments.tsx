@@ -69,6 +69,7 @@ const Assessments = () => {
   const [newAssessmentTitle, setNewAssessmentTitle] = useState("");
   const [newAssessmentDescription, setNewAssessmentDescription] = useState("");
   const [newAssessmentDifficulty, setNewAssessmentDifficulty] = useState("Intermediate");
+  const [newAssessmentTopic, setNewAssessmentTopic] = useState(""); // Add new state for topic
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -121,6 +122,7 @@ const Assessments = () => {
       setNewAssessmentTitle("");
       setNewAssessmentDescription("");
       setNewAssessmentDifficulty("Intermediate"); // Reset difficulty state to a valid value
+      setNewAssessmentTopic(""); // Reset topic state
     },
     onError: (error) => {
       toast.error("Failed to create assessment: " + error.message);
@@ -166,6 +168,7 @@ const Assessments = () => {
       title: newAssessmentTitle,
       description: newAssessmentDescription || null,
       difficulty: newAssessmentDifficulty, // Use difficulty state
+      topic: newAssessmentTopic || null, // Include topic field
       created_by: user.id, 
       prevent_backtracking: false, 
       randomize_questions: false,
@@ -228,6 +231,15 @@ const Assessments = () => {
                     placeholder="Enter assessment description"
                     value={newAssessmentDescription}
                     onChange={(e) => setNewAssessmentDescription(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="topic">Topic / Concept</Label>
+                  <Input
+                    id="topic"
+                    placeholder="Enter the main topic or concept for question generation"
+                    value={newAssessmentTopic}
+                    onChange={(e) => setNewAssessmentTopic(e.target.value)}
                   />
                 </div>
                 <div className="grid gap-2">
