@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, PencilLine, Eye, Check } from "lucide-react";
+import { Plus, PencilLine, Eye, Check, Sparkles } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -83,6 +83,7 @@ const JobForm: React.FC<JobFormProps> = ({
     selectedAssessment: job?.selectedAssessment || "none",
     selectedModules: job?.selectedModules || []
   });
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
 
   useEffect(() => {
     if (job) {
@@ -100,6 +101,36 @@ const JobForm: React.FC<JobFormProps> = ({
   }, [job]);
 
   const isView = mode === "view";
+
+  const handleGenerateDescription = async () => {
+    if (!form.title.trim()) {
+      toast.error("Please enter a job title first");
+      return;
+    }
+
+    try {
+      setIsGeneratingDescription(true);
+      const response = await supabase.functions.invoke("generate-job-description", {
+        body: { title: form.title },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || "Failed to generate job description");
+      }
+
+      if (!response.data?.description) {
+        throw new Error("No description was generated");
+      }
+
+      setForm({ ...form, description: response.data.description });
+      toast.success("Job description generated successfully!");
+    } catch (error: any) {
+      console.error("Error generating description:", error);
+      toast.error(`Failed to generate description: ${error.message}`);
+    } finally {
+      setIsGeneratingDescription(false);
+    }
+  };
 
   return (
     <form
@@ -119,12 +150,37 @@ const JobForm: React.FC<JobFormProps> = ({
         />
       </div>
       <div>
-        <Label htmlFor="description">Description</Label>
+        <Label htmlFor="description" className="flex items-center justify-between">
+          Description
+          {!isView && (
+            <Button 
+              type="button" 
+              size="sm" 
+              variant="outline" 
+              onClick={handleGenerateDescription}
+              disabled={isGeneratingDescription || !form.title.trim()}
+              className="flex items-center gap-1 text-xs"
+            >
+              {isGeneratingDescription ? (
+                <>
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-3 w-3" />
+                  Generate with AI
+                </>
+              )}
+            </Button>
+          )}
+        </Label>
         <Textarea
           id="description"
           value={form.description}
-          disabled={isView}
+          disabled={isView || isGeneratingDescription}
           onChange={(e) => setForm({ ...form, description: e.target.value })}
+          className="min-h-[150px]"
         />
       </div>
       <div>
