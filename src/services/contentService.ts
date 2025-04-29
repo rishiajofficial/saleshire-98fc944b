@@ -8,6 +8,7 @@ export type ContentData = {
   description?: string;
   content?: string;
   difficulty?: string;
+  topic?: string;
   module?: string; // Category of the training module
   [key: string]: any;
 };
@@ -30,6 +31,7 @@ export const ContentService = {
             title: data.title,
             description: data.description,
             difficulty: data.difficulty,
+            topic: data.topic,
             created_by: data.createdBy
           })
           .select()
@@ -89,6 +91,7 @@ export const ContentService = {
             title: data.title,
             description: data.description,
             difficulty: data.difficulty,
+            topic: data.topic,
             updated_at: new Date().toISOString() // Convert Date to string
           })
           .eq('id', id)

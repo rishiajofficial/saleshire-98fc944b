@@ -166,6 +166,7 @@ export type Database = {
           randomize_questions: boolean | null
           time_limit: number | null
           title: string
+          topic: string | null
           updated_at: string
         }
         Insert: {
@@ -178,6 +179,7 @@ export type Database = {
           randomize_questions?: boolean | null
           time_limit?: number | null
           title: string
+          topic?: string | null
           updated_at?: string
         }
         Update: {
@@ -190,6 +192,7 @@ export type Database = {
           randomize_questions?: boolean | null
           time_limit?: number | null
           title?: string
+          topic?: string | null
           updated_at?: string
         }
         Relationships: [

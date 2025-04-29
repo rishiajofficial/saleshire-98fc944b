@@ -1,10 +1,12 @@
+
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Edit, Trash2, Check, X } from "lucide-react";
+import { Plus, Edit, Trash2, Check, X, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import QuestionGenerator from "./QuestionGenerator";
 
 interface Question {
   id: string;
@@ -13,6 +15,13 @@ interface Question {
   scores: number[];
   correct_answer: number;
   time_limit: number | null;
+}
+
+interface GeneratedQuestion {
+  text: string;
+  options: string[];
+  correct_answer: number;
+  explanation?: string;
 }
 
 type Props = {
@@ -27,6 +36,30 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
   const [adding, setAdding] = useState(false);
   const [addState, setAddState] = useState<Omit<Question, "id"> | null>(null);
   const [sectionId, setSectionId] = useState<string | null>(null);
+  const [assessmentTopic, setAssessmentTopic] = useState<string>("");
+
+  useEffect(() => {
+    const fetchAssessment = async () => {
+      if (assessmentId) {
+        try {
+          const { data, error } = await supabase
+            .from("assessments")
+            .select("topic")
+            .eq("id", assessmentId)
+            .single();
+          
+          if (error) throw error;
+          if (data && data.topic) {
+            setAssessmentTopic(data.topic);
+          }
+        } catch (error) {
+          console.error("Error fetching assessment topic:", error);
+        }
+      }
+    };
+    
+    fetchAssessment();
+  }, [assessmentId]);
 
   useEffect(() => {
     const fetchOrCreateSection = async () => {
@@ -294,16 +327,75 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
     }
   };
 
+  const handleQuestionsGenerated = async (generatedQuestions: GeneratedQuestion[]) => {
+    if (!sectionId) {
+      toast.error("Cannot add questions: No section available");
+      return;
+    }
+
+    try {
+      // Prepare questions for batch insert
+      const questionsToInsert = generatedQuestions.map(q => ({
+        section_id: sectionId,
+        text: q.text,
+        options: q.options,
+        scores: q.options.map(() => 1), // Default score of 1 for all options
+        correct_answer: q.correct_answer,
+        time_limit: null
+      }));
+
+      // Insert all questions in a batch
+      const { data, error } = await supabase
+        .from("questions")
+        .insert(questionsToInsert)
+        .select();
+
+      if (error) throw error;
+      
+      toast.success(`Successfully added ${questionsToInsert.length} new questions`);
+      
+      // Refresh questions list
+      const { data: updatedQuestions, error: fetchError } = await supabase
+        .from("questions")
+        .select("*")
+        .eq("section_id", sectionId)
+        .order("created_at", { ascending: true });
+
+      if (fetchError) throw fetchError;
+
+      if (updatedQuestions) {
+        const mapped: Question[] = updatedQuestions.map((q: any) => ({
+          ...q,
+          options: Array.isArray(q.options) ? q.options : [],
+          scores: Array.isArray(q.scores) ? q.scores : (q.options ? q.options.map(() => 1) : []),
+        }));
+        setQuestions(mapped);
+      }
+    } catch (error: any) {
+      console.error("Error adding generated questions:", error);
+      toast.error(`Failed to add questions: ${error.message}`);
+    }
+  };
+
   if (!sectionId && !loading) {
     return <div className="text-center p-4">Unable to load or create section for questions</div>;
   }
 
   return (
     <div className="p-6">
-      <h2 className="font-bold text-lg mb-4">Questions</h2>
-      <Button variant="outline" onClick={startAdd} className="mb-6">
-        <Plus className="h-4 w-4 mr-2" /> Add Question
-      </Button>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="font-bold text-lg">Questions</h2>
+        <div className="flex gap-2">
+          <QuestionGenerator 
+            assessmentId={assessmentId}
+            topic={assessmentTopic}
+            onQuestionsGenerated={handleQuestionsGenerated}
+          />
+          <Button variant="outline" onClick={startAdd}>
+            <Plus className="h-4 w-4 mr-2" /> Add Question
+          </Button>
+        </div>
+      </div>
       
       {adding && addState && (
         <div className="border rounded p-4 mb-6 bg-gray-50">

@@ -18,6 +18,7 @@ const formSchema = z.object({
   }),
   description: z.string().optional(),
   difficulty: z.string().optional(),
+  topic: z.string().optional(),
 });
 
 export type AssessmentFormValues = z.infer<typeof formSchema>;
@@ -51,6 +52,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({
         title: data.title, // This is now guaranteed to be a string
         description: data.description || null,
         difficulty: data.difficulty || null,
+        topic: data.topic || null,
       };
       
       const response = await ContentService.updateContent('assessment', assessmentId, updateData);
@@ -96,6 +98,24 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({
               <FormControl>
                 <Textarea
                   placeholder="Description of what this assessment covers"
+                  {...field}
+                  value={field.value || ""}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="topic"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Topic / Concept</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="Enter the main topic or concept for question generation" 
                   {...field}
                   value={field.value || ""}
                 />
