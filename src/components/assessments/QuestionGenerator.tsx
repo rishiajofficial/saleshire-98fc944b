@@ -91,9 +91,21 @@ const QuestionGenerator: React.FC<QuestionGeneratorProps> = ({
       }
 
       const generatedQuestions = response.data.questions;
-      onQuestionsGenerated(generatedQuestions);
       
-      toast.success(`Successfully generated ${generatedQuestions.length} questions`);
+      // Make sure each question has the correct properties
+      const validatedQuestions = generatedQuestions.map(question => {
+        // Ensure the question object has all necessary properties
+        return {
+          text: question.text,
+          options: question.options || [],
+          correct_answer: typeof question.correct_answer === 'number' ? question.correct_answer : 0,
+          explanation: question.explanation || ""
+        };
+      });
+
+      onQuestionsGenerated(validatedQuestions);
+      
+      toast.success(`Successfully generated ${validatedQuestions.length} questions`);
       setIsOpen(false);
     } catch (error: any) {
       console.error("Error generating questions:", error);

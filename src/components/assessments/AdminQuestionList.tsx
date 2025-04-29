@@ -7,6 +7,8 @@ import { Plus, Edit, Trash2, Check, X, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import QuestionGenerator from "./QuestionGenerator";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 interface Question {
   id: string;
@@ -127,7 +129,7 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
         const mapped: Question[] = data.map((q: any) => ({
           ...q,
           options: Array.isArray(q.options) ? q.options : [],
-          scores: Array.isArray(q.scores) ? q.scores : (q.options ? q.options.map(() => 1) : []),
+          scores: Array.isArray(q.scores) ? q.scores : (q.options ? q.options.map((_, i) => i === q.correct_answer ? 1 : 0) : []),
         }));
         setQuestions(mapped);
       }
@@ -140,7 +142,7 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
   const blankQuestion = (): Omit<Question, "id"> => ({
     text: "",
     options: ["", ""],
-    scores: [1, 1],
+    scores: [1, 0],
     correct_answer: 0,
     time_limit: null,
   });
@@ -174,13 +176,26 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
     });
   };
 
+  const handleEditCorrectAnswer = (index: number) => {
+    setEditState((prev) => {
+      if (!prev) return prev;
+      // Update scores to reflect the correct answer
+      const scores = prev.options.map((_, i) => i === index ? 1 : 0);
+      return {
+        ...prev,
+        correct_answer: index,
+        scores
+      };
+    });
+  };
+
   const handleEditOptionAdd = () => {
     setEditState((prev) => {
       if (!prev || !prev.options || !prev.scores) return prev;
       return {
         ...prev,
         options: [...prev.options, ""],
-        scores: [...prev.scores, 1],
+        scores: [...prev.scores, 0], // Default new option to not correct
       };
     });
   };
@@ -188,10 +203,28 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
   const handleEditOptionRemove = (i: number) => {
     setEditState((prev) => {
       if (!prev || !prev.options || !prev.scores) return prev;
+      
+      // Create new arrays without the removed option
+      const newOptions = prev.options.filter((_, idx) => idx !== i);
+      const newScores = prev.scores.filter((_, idx) => idx !== i);
+      
+      // Adjust correct_answer if needed
+      let newCorrectAnswer = prev.correct_answer;
+      if (i === prev.correct_answer) {
+        // If removed option was the correct one, default to first option
+        newCorrectAnswer = 0;
+        // Update scores to reflect this
+        newScores[0] = 1;
+      } else if (i < prev.correct_answer) {
+        // If removed option was before the correct one, adjust index
+        newCorrectAnswer = prev.correct_answer - 1;
+      }
+      
       return {
         ...prev,
-        options: prev.options.filter((_, idx) => idx !== i),
-        scores: prev.scores.filter((_, idx) => idx !== i),
+        options: newOptions,
+        scores: newScores,
+        correct_answer: newCorrectAnswer
       };
     });
   };
@@ -206,7 +239,7 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
         .update({
           text,
           options,
-          scores: scores || options.map(() => 1),
+          scores,
           correct_answer,
           section_id: sectionId
         })
@@ -277,13 +310,26 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
     });
   };
   
+  const handleAddCorrectAnswer = (index: number) => {
+    setAddState((prev) => {
+      if (!prev) return prev;
+      // Update scores based on correct answer
+      const scores = prev.options.map((_, i) => i === index ? 1 : 0);
+      return {
+        ...prev,
+        correct_answer: index,
+        scores
+      };
+    });
+  };
+  
   const handleAddOptionAdd = () => {
     setAddState((prev) => {
       if (!prev) return prev;
       return {
         ...prev,
         options: [...prev.options, ""],
-        scores: [...prev.scores, 1],
+        scores: [...prev.scores, 0], // Default score of 0 for new options
       };
     });
   };
@@ -291,10 +337,30 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
   const handleAddOptionRemove = (i: number) => {
     setAddState((prev) => {
       if (!prev) return prev;
+      
+      // Create new arrays without the removed option
+      const newOptions = prev.options.filter((_, idx) => idx !== i);
+      const newScores = prev.scores.filter((_, idx) => idx !== i);
+      
+      // Adjust correct_answer if needed
+      let newCorrectAnswer = prev.correct_answer;
+      if (i === prev.correct_answer) {
+        // If removed option was the correct one, default to first option
+        newCorrectAnswer = 0;
+        // Update scores to reflect this
+        if (newScores.length > 0) {
+          newScores[0] = 1;
+        }
+      } else if (i < prev.correct_answer) {
+        // If removed option was before the correct one, adjust index
+        newCorrectAnswer = prev.correct_answer - 1;
+      }
+      
       return {
         ...prev,
-        options: prev.options.filter((_, idx) => idx !== i),
-        scores: prev.scores.filter((_, idx) => idx !== i),
+        options: newOptions,
+        scores: newScores,
+        correct_answer: newCorrectAnswer
       };
     });
   };
@@ -312,7 +378,7 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
         section_id: sectionId,
         text,
         options,
-        scores: scores || options.map(() => 1),
+        scores,
         correct_answer,
         time_limit: null
       });
@@ -339,7 +405,7 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
         section_id: sectionId,
         text: q.text,
         options: q.options,
-        scores: q.options.map(() => 1), // Default score of 1 for all options
+        scores: q.options.map((_, i) => i === q.correct_answer ? 1 : 0), // Set 1 for correct answer, 0 for all others
         correct_answer: q.correct_answer,
         time_limit: null
       }));
@@ -367,7 +433,7 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
         const mapped: Question[] = updatedQuestions.map((q: any) => ({
           ...q,
           options: Array.isArray(q.options) ? q.options : [],
-          scores: Array.isArray(q.scores) ? q.scores : (q.options ? q.options.map(() => 1) : []),
+          scores: Array.isArray(q.scores) ? q.scores : (q.options ? q.options.map((_, i) => i === q.correct_answer ? 1 : 0) : []),
         }));
         setQuestions(mapped);
       }
@@ -408,36 +474,35 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
               required
             />
           </div>
-          <div>
-            {addState.options.map((option, i) => (
-              <div key={i} className="flex items-center mb-2 gap-2">
-                <Input
-                  value={option}
-                  onChange={(e) => handleAddOption(i, e.target.value)}
-                  className="flex-grow"
-                  placeholder={`Option ${i + 1}`}
-                  required
-                />
-                <Input
-                  type="number"
-                  value={addState.scores[i] ?? 1}
-                  min={0}
-                  onChange={(e) => handleAddScore(i, Number(e.target.value))}
-                  className="w-20"
-                  placeholder="Score"
-                />
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  type="button"
-                  onClick={() => handleAddOptionRemove(i)}
-                  disabled={addState.options.length <= 2}
-                  title="Remove Option"
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </div>
-            ))}
+          <div className="mb-4">
+            <div className="text-sm font-medium mb-2">Select the correct answer:</div>
+            <RadioGroup 
+              value={addState.correct_answer.toString()} 
+              onValueChange={(value) => handleAddCorrectAnswer(parseInt(value))}
+            >
+              {addState.options.map((option, i) => (
+                <div key={i} className="flex items-center mb-2 gap-2">
+                  <RadioGroupItem value={i.toString()} id={`add-option-${i}`} />
+                  <Input
+                    value={option}
+                    onChange={(e) => handleAddOption(i, e.target.value)}
+                    className="flex-grow"
+                    placeholder={`Option ${i + 1}`}
+                    required
+                  />
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    type="button"
+                    onClick={() => handleAddOptionRemove(i)}
+                    disabled={addState.options.length <= 2}
+                    title="Remove Option"
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+            </RadioGroup>
             <Button
               variant="outline"
               size="sm"
@@ -483,41 +548,38 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
                     className="w-full mb-2"
                   />
                 </div>
-                <div>
-                  {editState.options?.map((opt, idx) => (
-                    <div key={idx} className="flex items-center mb-2 gap-2">
-                      <Input
-                        value={opt}
-                        onChange={(e) =>
-                          handleEditOption(idx, e.target.value)
-                        }
-                        className="flex-grow"
-                        placeholder={`Option ${idx + 1}`}
-                      />
-                      <Input
-                        type="number"
-                        value={editState.scores?.[idx] ?? 1}
-                        min={0}
-                        onChange={(e) =>
-                          handleEditScore(idx, Number(e.target.value))
-                        }
-                        className="w-20"
-                        placeholder="Score"
-                      />
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        type="button"
-                        onClick={() => handleEditOptionRemove(idx)}
-                        disabled={
-                          (editState.options?.length ?? 0) <= 2
-                        }
-                        title="Remove Option"
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  ))}
+                <div className="mb-4">
+                  <div className="text-sm font-medium mb-2">Select the correct answer:</div>
+                  <RadioGroup 
+                    value={editState.correct_answer.toString()} 
+                    onValueChange={(value) => handleEditCorrectAnswer(parseInt(value))}
+                  >
+                    {editState.options?.map((opt, idx) => (
+                      <div key={idx} className="flex items-center mb-2 gap-2">
+                        <RadioGroupItem value={idx.toString()} id={`edit-option-${idx}`} />
+                        <Input
+                          value={opt}
+                          onChange={(e) =>
+                            handleEditOption(idx, e.target.value)
+                          }
+                          className="flex-grow"
+                          placeholder={`Option ${idx + 1}`}
+                        />
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          type="button"
+                          onClick={() => handleEditOptionRemove(idx)}
+                          disabled={
+                            (editState.options?.length ?? 0) <= 2
+                          }
+                          title="Remove Option"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                  </RadioGroup>
                   <Button
                     variant="outline"
                     size="sm"
@@ -558,7 +620,6 @@ const AdminQuestionList: React.FC<Props> = ({ assessmentId }) => {
                             </span>
                           )}
                         </span>
-                        <span className="text-xs ml-3">Score: <span className="font-mono">{q.scores?.[i] ?? 1}</span></span>
                       </li>
                     ))}
                   </ul>
