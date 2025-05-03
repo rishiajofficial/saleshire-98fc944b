@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Video } from '@/types/training';
 import { toast } from 'sonner';
 import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2, Upload, X } from 'lucide-react';
 
 interface VideoManagementProps {
@@ -22,6 +22,8 @@ const VideoManagement: React.FC<VideoManagementProps> = ({ onVideoCreated, modul
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [videoToDelete, setVideoToDelete] = useState<string | null>(null);
   const [formData, setFormData] = useState<{
     title: string;
     description: string;
@@ -212,8 +214,50 @@ const VideoManagement: React.FC<VideoManagementProps> = ({ onVideoCreated, modul
     }
   };
   
+  const confirmDeleteVideo = (videoId: string) => {
+    setVideoToDelete(videoId);
+    setShowDeleteDialog(true);
+  };
+  
   const deleteVideo = async (videoId: string) => {
     try {
+      // First, delete any related progress entries
+      const { error: progressError } = await supabase
+        .from('training_progress')
+        .delete()
+        .eq('video_id', videoId);
+        
+      if (progressError) {
+        console.error('Error deleting related progress entries:', progressError);
+        toast.error(`Failed to delete related progress: ${progressError.message}`);
+        return;
+      }
+      
+      // Then delete any category_videos relationships
+      const { error: categoryVideosError } = await supabase
+        .from('category_videos')
+        .delete()
+        .eq('video_id', videoId);
+        
+      if (categoryVideosError) {
+        console.error('Error deleting category video relationships:', categoryVideosError);
+        toast.error(`Failed to delete category relationships: ${categoryVideosError.message}`);
+        return;
+      }
+      
+      // Then delete any module_videos relationships
+      const { error: moduleVideosError } = await supabase
+        .from('module_videos')
+        .delete()
+        .eq('video_id', videoId);
+        
+      if (moduleVideosError) {
+        console.error('Error deleting module video relationships:', moduleVideosError);
+        toast.error(`Failed to delete module relationships: ${moduleVideosError.message}`);
+        return;
+      }
+      
+      // Finally delete the video itself
       const { error } = await supabase
         .from('videos')
         .delete()
@@ -223,6 +267,7 @@ const VideoManagement: React.FC<VideoManagementProps> = ({ onVideoCreated, modul
       
       toast.success('Video deleted successfully');
       fetchVideos();
+      setShowDeleteDialog(false);
     } catch (error: any) {
       console.error('Error deleting video:', error);
       toast.error(`Failed to delete video: ${error.message}`);
@@ -337,7 +382,7 @@ const VideoManagement: React.FC<VideoManagementProps> = ({ onVideoCreated, modul
                   variant="ghost"
                   size="icon"
                   className="absolute top-2 right-2"
-                  onClick={() => deleteVideo(video.id)}
+                  onClick={() => confirmDeleteVideo(video.id)}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -368,6 +413,24 @@ const VideoManagement: React.FC<VideoManagementProps> = ({ onVideoCreated, modul
           <p className="text-center text-gray-500 py-4">No videos found</p>
         )}
       </div>
+      
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+          </DialogHeader>
+          <p>Are you sure you want to delete this video? This will also remove all training progress related to this video.</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={() => videoToDelete && deleteVideo(videoToDelete)}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

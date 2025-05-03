@@ -58,12 +58,12 @@ const AssessmentManagement = () => {
   };
 
   const handleCreateAssessment = () => {
-    // Updated route path
+    // Just navigate to create page - no need to pass assessmentId for a new assessment
     navigate("/training-management/assessments/create");
   };
 
   const handleEditAssessment = (assessment: Assessment) => {
-    // Updated route path
+    // Updated route path with assessment ID
     navigate(`/training-management/assessments/${assessment.id}/edit`);
   };
 
@@ -101,7 +101,7 @@ const AssessmentManagement = () => {
   };
 
   const handleViewAssessment = (assessment: Assessment) => {
-    // Updated route path
+    // Updated route path with assessment ID
     navigate(`/training-management/assessments/${assessment.id}`);
   };
 
