@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -221,16 +222,30 @@ const VideoManagement: React.FC<VideoManagementProps> = ({ onVideoCreated, modul
   
   const deleteVideo = async (videoId: string) => {
     try {
-      // First, delete any related progress entries
-      const { error: progressError } = await supabase
+      // First check if there's any related progress entries
+      const { count, error: checkError } = await supabase
         .from('training_progress')
-        .delete()
+        .select('*', { count: 'exact', head: true })
         .eq('video_id', videoId);
-        
-      if (progressError) {
-        console.error('Error deleting related progress entries:', progressError);
-        toast.error(`Failed to delete related progress: ${progressError.message}`);
+      
+      if (checkError) {
+        console.error('Error checking related training progress:', checkError);
+        toast.error(`Failed to check related progress: ${checkError.message}`);
         return;
+      }
+      
+      if (count && count > 0) {
+        // If there are related progress entries, we need to delete them first
+        const { error: progressError } = await supabase
+          .from('training_progress')
+          .delete()
+          .eq('video_id', videoId);
+          
+        if (progressError) {
+          console.error('Error deleting related progress entries:', progressError);
+          toast.error(`Failed to delete related progress: ${progressError.message}`);
+          return;
+        }
       }
       
       // Then delete any category_videos relationships
@@ -239,7 +254,7 @@ const VideoManagement: React.FC<VideoManagementProps> = ({ onVideoCreated, modul
         .delete()
         .eq('video_id', videoId);
         
-      if (categoryVideosError) {
+      if (categoryVideosError && categoryVideosError.code !== 'PGRST116') {
         console.error('Error deleting category video relationships:', categoryVideosError);
         toast.error(`Failed to delete category relationships: ${categoryVideosError.message}`);
         return;
@@ -251,7 +266,7 @@ const VideoManagement: React.FC<VideoManagementProps> = ({ onVideoCreated, modul
         .delete()
         .eq('video_id', videoId);
         
-      if (moduleVideosError) {
+      if (moduleVideosError && moduleVideosError.code !== 'PGRST116') {
         console.error('Error deleting module video relationships:', moduleVideosError);
         toast.error(`Failed to delete module relationships: ${moduleVideosError.message}`);
         return;

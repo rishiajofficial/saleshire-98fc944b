@@ -58,7 +58,7 @@ const AssessmentManagement = () => {
   };
 
   const handleCreateAssessment = () => {
-    // Just navigate to create page - no need to pass assessmentId for a new assessment
+    // Navigate to create page with explicit path, no assessment ID needed for a new assessment
     navigate("/training-management/assessments/create");
   };
 
