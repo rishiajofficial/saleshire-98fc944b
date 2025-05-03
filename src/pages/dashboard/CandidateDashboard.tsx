@@ -3,8 +3,6 @@ import React from 'react';
 import { Loader2 } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
 import { useAuth } from '@/contexts/AuthContext';
-import { useTrainingModulesList } from '@/hooks/training/useTrainingModulesList';
-import { useCandidateDashboardData } from '@/hooks/useCandidateDashboardData';
 import ErrorMessage from '@/components/ui/error-message';
 import { StatusCard } from '@/components/dashboard/StatusCard';
 import { NotificationsCard } from '@/components/dashboard/NotificationsCard';
@@ -14,47 +12,25 @@ import { ApplicationPrompt } from '@/components/dashboard/ApplicationPrompt';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { toast } from 'sonner';
+import { useCandidateDashboardState } from '@/hooks/useCandidateDashboardState';
 
 const CandidateDashboard = () => {
   const { profile, user } = useAuth();
   
-  const { 
-    loading: dashboardLoading,
-    error: dashboardError,
+  const {
+    loading,
+    error,
     candidateData,
     notifications,
     applicationSubmitted,
     currentStep,
-  } = useCandidateDashboardData(user?.id);
+    trainingModules,
+    isLoadingTraining,
+    showApplicationPrompt,
+    canAccessTraining,
+  } = useCandidateDashboardState(user?.id);
 
-  const { 
-    modules: trainingModules, 
-    loading: isLoadingTraining, 
-    error: trainingError,
-  } = useTrainingModulesList();
-
-  const isLoading = dashboardLoading || isLoadingTraining;
-  const error = dashboardError || trainingError;
-
-  React.useEffect(() => {
-    if (trainingError) {
-      console.error("Training modules error:", trainingError);
-      toast.error("Failed to load training modules");
-    }
-  }, [trainingError]);
-
-  const showApplicationPrompt = 
-    !applicationSubmitted && 
-    (candidateData?.status?.toLowerCase() === 'applied' || 
-     candidateData?.status?.toLowerCase() === 'screening');
-
-  const canAccessTraining = 
-    candidateData?.status === 'hr_approved' || 
-    candidateData?.status === 'training' ||
-    currentStep >= 3;
-
-  if (isLoading) {
+  if (loading) {
     return (
       <MainLayout>
         <div className="flex justify-center items-center h-screen">
@@ -75,6 +51,7 @@ const CandidateDashboard = () => {
     );
   }
 
+  // Main content components
   const mainContent = (
     <>
       <HiringJourneyCard 
@@ -89,6 +66,7 @@ const CandidateDashboard = () => {
     </>
   );
 
+  // Sidebar content components
   const sideContent = (
     <>
       <StatusCard 
