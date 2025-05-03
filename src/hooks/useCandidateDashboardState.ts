@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCandidateDashboardData } from './useCandidateDashboardData';
 import { useTrainingModules } from './useTrainingModules';
+import { TrainingModuleProgress } from '@/types/training';
 
 export function useCandidateDashboardState(userId?: string) {
   const { user } = useAuth();

@@ -2,14 +2,10 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
-interface TrainingModule {
-  id: string;
-  name: string;
-}
+import { TrainingModuleProgress } from "@/types/training";
 
 export const useTrainingModules = () => {
-  const [modules, setModules] = useState<Array<{ id: string; name: string }>>([]);
+  const [modules, setModules] = useState<TrainingModuleProgress[]>([]);
   const [loading, setLoading] = useState(false);
 
   const fetchTrainingModules = async () => {
@@ -17,14 +13,24 @@ export const useTrainingModules = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from("training_modules")
-        .select("id, title")
+        .select("id, title, description, module")
         .order("title");
 
       if (error) throw error;
       
-      const formattedModules = data ? data.map(module => ({
+      const formattedModules: TrainingModuleProgress[] = data ? data.map(module => ({
         id: module.id,
-        name: module.title || 'Untitled Module'
+        title: module.title || 'Untitled Module',
+        description: module.description,
+        module: module.module || 'general',
+        progress: 0,
+        status: 'active' as const,
+        locked: false,
+        videos: [],
+        quizIds: null,
+        totalVideos: 0,
+        watchedVideos: 0,
+        quizCompleted: false
       })) : [];
       
       setModules(formattedModules);
