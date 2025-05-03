@@ -58,7 +58,8 @@ const AssessmentManagement = () => {
   };
 
   const handleCreateAssessment = () => {
-    // Navigate to create page with explicit path, no assessment ID needed for a new assessment
+    console.log("Navigating to assessment creation page");
+    // Make sure we're using the correct route - check the router configuration
     navigate("/training-management/assessments/create");
   };
 

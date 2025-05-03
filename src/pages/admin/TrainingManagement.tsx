@@ -1,14 +1,25 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import MainLayout from '@/components/layout/MainLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ModuleManagement from "@/components/training/ModuleManagement";
 import VideoManagement from "@/components/training/VideoManagement";
 import AssessmentManagement from "@/components/training/AssessmentManagement";
 import { Book, Video, FileText } from "lucide-react";
+import { useLocation } from "react-router-dom";
 
 const TrainingManagement = () => {
   const [activeTab, setActiveTab] = useState("modules");
+  const location = useLocation();
+  
+  // Set active tab based on query parameters or URL path if applicable
+  useEffect(() => {
+    if (location.pathname.includes("assessments")) {
+      setActiveTab("assessments");
+    } else if (location.pathname.includes("videos")) {
+      setActiveTab("videos");
+    }
+  }, [location.pathname]);
   
   return (
     <MainLayout>

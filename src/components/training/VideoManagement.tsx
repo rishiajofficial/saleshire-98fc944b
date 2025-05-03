@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -222,33 +221,40 @@ const VideoManagement: React.FC<VideoManagementProps> = ({ onVideoCreated, modul
   
   const deleteVideo = async (videoId: string) => {
     try {
-      // First check if there's any related progress entries
-      const { count, error: checkError } = await supabase
-        .from('training_progress')
-        .select('*', { count: 'exact', head: true })
-        .eq('video_id', videoId);
+      console.log(`Starting video deletion process for video ID: ${videoId}`);
       
-      if (checkError) {
-        console.error('Error checking related training progress:', checkError);
-        toast.error(`Failed to check related progress: ${checkError.message}`);
+      // Step 1: Delete training_progress entries first
+      console.log("Checking for training_progress entries");
+      const { data: progressData, error: progressCheckError } = await supabase
+        .from('training_progress')
+        .select('id')
+        .eq('video_id', videoId);
+        
+      if (progressCheckError) {
+        console.error('Error checking related progress entries:', progressCheckError);
+        toast.error(`Failed to check related progress: ${progressCheckError.message}`);
         return;
       }
       
-      if (count && count > 0) {
-        // If there are related progress entries, we need to delete them first
-        const { error: progressError } = await supabase
+      if (progressData && progressData.length > 0) {
+        console.log(`Found ${progressData.length} training_progress entries to delete`);
+        const { error: deleteProgressError } = await supabase
           .from('training_progress')
           .delete()
           .eq('video_id', videoId);
           
-        if (progressError) {
-          console.error('Error deleting related progress entries:', progressError);
-          toast.error(`Failed to delete related progress: ${progressError.message}`);
+        if (deleteProgressError) {
+          console.error('Error deleting related progress entries:', deleteProgressError);
+          toast.error(`Failed to delete related progress: ${deleteProgressError.message}`);
           return;
         }
+        console.log("Successfully deleted training_progress entries");
+      } else {
+        console.log("No training_progress entries found");
       }
       
-      // Then delete any category_videos relationships
+      // Step 2: Delete category_videos relationships
+      console.log("Deleting category_videos entries");
       const { error: categoryVideosError } = await supabase
         .from('category_videos')
         .delete()
@@ -259,8 +265,10 @@ const VideoManagement: React.FC<VideoManagementProps> = ({ onVideoCreated, modul
         toast.error(`Failed to delete category relationships: ${categoryVideosError.message}`);
         return;
       }
+      console.log("Successfully deleted or no category_videos entries found");
       
-      // Then delete any module_videos relationships
+      // Step 3: Delete module_videos relationships
+      console.log("Deleting module_videos entries");
       const { error: moduleVideosError } = await supabase
         .from('module_videos')
         .delete()
@@ -271,20 +279,27 @@ const VideoManagement: React.FC<VideoManagementProps> = ({ onVideoCreated, modul
         toast.error(`Failed to delete module relationships: ${moduleVideosError.message}`);
         return;
       }
+      console.log("Successfully deleted or no module_videos entries found");
       
-      // Finally delete the video itself
+      // Step 4: Finally delete the video itself
+      console.log("Deleting video record");
       const { error } = await supabase
         .from('videos')
         .delete()
         .eq('id', videoId);
         
-      if (error) throw error;
+      if (error) {
+        console.error('Error deleting video:', error);
+        toast.error(`Failed to delete video: ${error.message}`);
+        return;
+      }
       
+      console.log("Video successfully deleted");
       toast.success('Video deleted successfully');
       fetchVideos();
       setShowDeleteDialog(false);
     } catch (error: any) {
-      console.error('Error deleting video:', error);
+      console.error('Error in deletion process:', error);
       toast.error(`Failed to delete video: ${error.message}`);
     }
   };
