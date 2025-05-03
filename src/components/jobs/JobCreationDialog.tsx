@@ -12,6 +12,7 @@ import { Loader2 } from "lucide-react";
 import JobForm from "./JobForm";
 import JobDialogTrigger from "./JobDialogTrigger";
 import { useTrainingModules } from "@/hooks/useTrainingModules";
+import { TrainingModuleProgress } from "@/types/training";
 
 interface EditingJob {
   id: string;

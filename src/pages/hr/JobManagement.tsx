@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import JobList from '@/components/jobs/JobList';
 import { Job } from '@/types/job';
 import MainLayout from '@/components/layout/MainLayout';
+import { TrainingModuleProgress } from '@/types/training';
 
 const JobManagementPage = () => {
   const { jobs, loading, error, fetchJobs, createJob, updateJob, deleteJob } = useJobs();

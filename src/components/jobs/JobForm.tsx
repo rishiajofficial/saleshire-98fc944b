@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { TrainingModuleProgress } from "@/types/training";
 
 interface JobFormValues {
   title: string;
@@ -36,7 +37,7 @@ interface JobFormProps {
   job?: any;
   onSubmit: (values: JobFormValues) => void;
   assessments: { id: string; title: string }[];
-  modules: Array<{ id: string; name: string }>;
+  modules: TrainingModuleProgress[];
   mode: 'create' | 'edit' | 'view';
 }
 
@@ -242,7 +243,7 @@ const JobForm: React.FC<JobFormProps> = ({
               }}
               disabled={isView}
             >
-              {module.name}
+              {module.title}
               {form.selectedModules.includes(module.id) && (
                 <Check className="ml-2 h-4 w-4" />
               )}
