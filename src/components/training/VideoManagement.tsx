@@ -51,92 +51,10 @@ const VideoManagement: React.FC<VideoManagementProps> = ({ onVideoCreated, modul
     setShowDeleteDialog(true);
   };
   
-  const deleteVideo = async () => {
-    if (!videoToDelete) return;
-    
-    try {
-      console.log(`Starting video deletion process for video ID: ${videoToDelete}`);
-      
-      // Step 1: Delete training_progress entries first
-      console.log("Checking for training_progress entries");
-      const { data: progressData, error: progressCheckError } = await supabase
-        .from('training_progress')
-        .select('id')
-        .eq('video_id', videoToDelete);
-        
-      if (progressCheckError) {
-        console.error('Error checking related progress entries:', progressCheckError);
-        toast.error(`Failed to check related progress: ${progressCheckError.message}`);
-        return;
-      }
-      
-      if (progressData && progressData.length > 0) {
-        console.log(`Found ${progressData.length} training_progress entries to delete`);
-        const { error: deleteProgressError } = await supabase
-          .from('training_progress')
-          .delete()
-          .eq('video_id', videoToDelete);
-          
-        if (deleteProgressError) {
-          console.error('Error deleting related progress entries:', deleteProgressError);
-          toast.error(`Failed to delete related progress: ${deleteProgressError.message}`);
-          return;
-        }
-        console.log("Successfully deleted training_progress entries");
-      } else {
-        console.log("No training_progress entries found");
-      }
-      
-      // Step 2: Delete category_videos relationships
-      console.log("Deleting category_videos entries");
-      const { error: categoryVideosError } = await supabase
-        .from('category_videos')
-        .delete()
-        .eq('video_id', videoToDelete);
-        
-      if (categoryVideosError && categoryVideosError.code !== 'PGRST116') {
-        console.error('Error deleting category video relationships:', categoryVideosError);
-        toast.error(`Failed to delete category relationships: ${categoryVideosError.message}`);
-        return;
-      }
-      console.log("Successfully deleted or no category_videos entries found");
-      
-      // Step 3: Delete module_videos relationships
-      console.log("Deleting module_videos entries");
-      const { error: moduleVideosError } = await supabase
-        .from('module_videos')
-        .delete()
-        .eq('video_id', videoToDelete);
-        
-      if (moduleVideosError && moduleVideosError.code !== 'PGRST116') {
-        console.error('Error deleting module video relationships:', moduleVideosError);
-        toast.error(`Failed to delete module relationships: ${moduleVideosError.message}`);
-        return;
-      }
-      console.log("Successfully deleted or no module_videos entries found");
-      
-      // Step 4: Finally delete the video itself
-      console.log("Deleting video record");
-      const { error } = await supabase
-        .from('videos')
-        .delete()
-        .eq('id', videoToDelete);
-        
-      if (error) {
-        console.error('Error deleting video:', error);
-        toast.error(`Failed to delete video: ${error.message}`);
-        return;
-      }
-      
-      console.log("Video successfully deleted");
-      toast.success('Video deleted successfully');
-      fetchVideos();
-      setShowDeleteDialog(false);
-      setVideoToDelete(null);
-    } catch (error: any) {
-      console.error('Error in deletion process:', error);
-      toast.error(`Failed to delete video: ${error.message}`);
-    }
+  const handleVideoDeleted = () => {
+    fetchVideos();
+    setShowDeleteDialog(false);
+    setVideoToDelete(null);
   };
 
   const handleVideoCreated = () => {
@@ -162,7 +80,8 @@ const VideoManagement: React.FC<VideoManagementProps> = ({ onVideoCreated, modul
       <DeleteVideoDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
-        onConfirmDelete={deleteVideo}
+        onConfirmDelete={handleVideoDeleted}
+        videoId={videoToDelete}
       />
     </div>
   );
