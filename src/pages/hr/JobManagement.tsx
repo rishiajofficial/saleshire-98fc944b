@@ -82,8 +82,10 @@ const JobManagementPage = () => {
 
   const handleJobDeleted = async (jobId: string) => {
     try {
-      await deleteJob(jobId);
-      toast.success("Job deleted successfully!");
+      const result = await deleteJob(jobId);
+      if (result) {
+        toast.success("Job deleted successfully!");
+      }
     } catch (err: any) {
       toast.error(`Failed to delete job: ${err.message}`);
     }

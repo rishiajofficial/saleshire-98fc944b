@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -192,7 +193,7 @@ export const useJobs = () => {
       }
 
       toast.success("Job updated successfully");
-      fetchJobs();
+      await fetchJobs();
       return true;
     } catch (error: any) {
       console.error("Error updating job:", error);
@@ -203,14 +204,44 @@ export const useJobs = () => {
 
   const deleteJob = async (jobId: string) => {
     try {
-      // Delete related job applications and other dependencies via database function
-      const { error: deleteError } = await supabase.rpc('delete_job_applications', {
-        job_id: jobId
-      });
+      // First, delete related records from join tables
+      const { error: jobAssessmentsError } = await supabase
+        .from("job_assessments")
+        .delete()
+        .eq("job_id", jobId);
       
-      if (deleteError) throw deleteError;
+      if (jobAssessmentsError) {
+        console.error("Error deleting job assessments:", jobAssessmentsError);
+      }
+
+      const { error: jobTrainingError } = await supabase
+        .from("job_training")
+        .delete()
+        .eq("job_id", jobId);
       
-      // Delete the job itself
+      if (jobTrainingError) {
+        console.error("Error deleting job training:", jobTrainingError);
+      }
+
+      const { error: jobCategoriesError } = await supabase
+        .from("job_categories")
+        .delete()
+        .eq("job_id", jobId);
+      
+      if (jobCategoriesError) {
+        console.error("Error deleting job categories:", jobCategoriesError);
+      }
+
+      const { error: jobAppsError } = await supabase
+        .from("job_applications")
+        .delete()
+        .eq("job_id", jobId);
+      
+      if (jobAppsError) {
+        console.error("Error deleting job applications:", jobAppsError);
+      }
+      
+      // Now delete the job itself
       const { error } = await supabase
         .from("jobs")
         .delete()
@@ -218,8 +249,10 @@ export const useJobs = () => {
 
       if (error) throw error;
 
+      // Update local state by removing the deleted job
+      setJobs(prevJobs => prevJobs.filter(job => job.id !== jobId));
+      
       toast.success("Job deleted successfully");
-      fetchJobs();
       return true;
     } catch (error: any) {
       console.error("Error deleting job:", error);

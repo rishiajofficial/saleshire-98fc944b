@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -48,47 +49,69 @@ const JobList: React.FC<JobListProps> = ({
   const [showApplications, setShowApplications] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState<string | null>(null);
   const [filter, setFilter] = useState<"active" | "archived">("active");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const filteredJobs = jobs.filter(job => job.archived === (filter === "archived"));
 
   const fetchJobRelatedData = async (job: Job): Promise<EditingJob> => {
-    const { data: assessmentData } = await supabase
-      .from('job_assessments')
-      .select('assessment_id')
-      .eq('job_id', job.id)
-      .maybeSingle();
-    
-    const { data: trainingData } = await supabase
-      .from('job_training')
-      .select('training_module_id')
-      .eq('job_id', job.id);
+    try {
+      setIsLoading(true);
       
-    const { data: categoriesData } = await supabase
-      .from('job_categories')
-      .select('category_id')
-      .eq('job_id', job.id);
+      const { data: assessmentData } = await supabase
+        .from('job_assessments')
+        .select('assessment_id')
+        .eq('job_id', job.id)
+        .maybeSingle();
       
-    const selectedModules = trainingData?.map(item => item.training_module_id) || [];
-    const selectedCategories = (categoriesData || []).map(item => item.category_id);
-    
-    return {
-      ...job,
-      selectedAssessment: assessmentData?.assessment_id || "none",
-      selectedModules: selectedModules,
-      department: job.department || "",
-      location: job.location || "",
-      employment_type: job.employment_type || "",
-      salary_range: job.salary_range || ""
-    };
+      const { data: trainingData } = await supabase
+        .from('job_training')
+        .select('training_module_id')
+        .eq('job_id', job.id);
+        
+      const { data: categoriesData } = await supabase
+        .from('job_categories')
+        .select('category_id')
+        .eq('job_id', job.id);
+        
+      const selectedModules = trainingData?.map(item => item.training_module_id) || [];
+      const selectedCategories = (categoriesData || []).map(item => item.category_id);
+      
+      return {
+        ...job,
+        selectedAssessment: assessmentData?.assessment_id || "none",
+        selectedModules: selectedModules,
+        department: job.department || "",
+        location: job.location || "",
+        employment_type: job.employment_type || "",
+        salary_range: job.salary_range || ""
+      };
+    } catch (error) {
+      console.error("Error fetching job related data:", error);
+      // Return default values if we can't fetch related data
+      return {
+        ...job,
+        selectedAssessment: "none",
+        selectedModules: [],
+        department: job.department || "",
+        location: job.location || "",
+        employment_type: job.employment_type || "",
+        salary_range: job.salary_range || ""
+      };
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleViewOrEdit = async (job: Job, mode: "view" | "edit") => {
     try {
+      setIsLoading(true);
       const enhancedJob = await fetchJobRelatedData(job);
       setSelectedJob(enhancedJob);
       setViewMode(mode);
     } catch (error) {
       console.error("Error fetching job related data:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -130,6 +153,7 @@ const JobList: React.FC<JobListProps> = ({
                     variant="ghost"
                     size="sm"
                     onClick={() => handleViewOrEdit(job, "view")}
+                    disabled={isLoading}
                   >
                     <Eye className="h-4 w-4 mr-1" /> View
                   </Button>
@@ -137,6 +161,7 @@ const JobList: React.FC<JobListProps> = ({
                     variant="outline"
                     size="sm"
                     onClick={() => handleViewOrEdit(job, "edit")}
+                    disabled={isLoading}
                   >
                     <PencilLine className="h-4 w-4 mr-1" /> Edit
                   </Button>
@@ -165,7 +190,7 @@ const JobList: React.FC<JobListProps> = ({
         ))}
       </div>
 
-      {selectedJob && viewMode && (
+      {selectedJob && viewMode && !isLoading && (
         <JobCreationDialog
           mode={viewMode}
           editingJob={selectedJob}
@@ -181,11 +206,13 @@ const JobList: React.FC<JobListProps> = ({
         />
       )}
 
-      <JobApplicationsDialog
-        jobId={showApplications || ''}
-        isOpen={!!showApplications}
-        onClose={() => setShowApplications(null)}
-      />
+      {showApplications && (
+        <JobApplicationsDialog
+          jobId={showApplications}
+          isOpen={!!showApplications}
+          onClose={() => setShowApplications(null)}
+        />
+      )}
 
       <DeleteJobDialog
         isOpen={!!showDeleteDialog}
