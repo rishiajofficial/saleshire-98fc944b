@@ -71,10 +71,8 @@ export const useTrainingProgress = (): UseTrainingProgressReturn => {
       setError(null);
 
       // --- Fetch all data concurrently ---
-      const [categoriesResult, videoResult, trainingProgressResult, quizResultsResult, categoryVideosResult] = await Promise.all([
-        supabase
-          .from('module_categories')
-          .select('id, name, description, quiz_ids'),
+      // Since module_categories table is removed, we'll infer module information from videos
+      const [videoResult, trainingProgressResult, quizResultsResult] = await Promise.all([
         supabase
           .from('videos')
           .select('*'),
@@ -87,59 +85,47 @@ export const useTrainingProgress = (): UseTrainingProgressReturn => {
           .from('quiz_results')
           .select('module, passed')
           .eq('user_id', user.id)
-          .eq('passed', true),
-        supabase
-          .from('category_videos')
-          .select('category_id, video_id')
+          .eq('passed', true)
       ]);
 
       // --- Check for errors after all promises settle ---
-      if (categoriesResult.error) throw new Error(`Module categories fetch failed: ${categoriesResult.error.message}`);
       if (videoResult.error) throw new Error(`Videos fetch failed: ${videoResult.error.message}`);
       if (trainingProgressResult.error) throw new Error(`Training progress fetch failed: ${trainingProgressResult.error.message}`);
       if (quizResultsResult.error) throw new Error(`Quiz results fetch failed: ${quizResultsResult.error.message}`);
-      if (categoryVideosResult.error) throw new Error(`Category videos fetch failed: ${categoryVideosResult.error.message}`);
 
-      const categories = categoriesResult.data || [];
       const videos = videoResult.data || [];
       const completedVideos = trainingProgressResult.data || [];
       const passedQuizzes = quizResultsResult.data || [];
-      const categoryVideos = categoryVideosResult.data || [];
 
       // Debug logs
-      console.log("Hook: Fetched Categories:", categories);
       console.log("Hook: Fetched Videos:", videos);
       console.log("Hook: Fetched Completed Videos:", completedVideos);
       console.log("Hook: Fetched Passed Quizzes:", passedQuizzes);
-      console.log("Hook: Fetched Category Videos:", categoryVideos);
 
       const watchedVideoIds = new Set(completedVideos.filter(item => item.completed).map(item => item.video_id));
       
       // Create set of passed quiz modules for quick lookup
       const passedQuizModules = new Set(passedQuizzes.map(quiz => quiz.module));
 
-      // Create map of videos by category
-      const videosByCategoryId: Record<string, Video[]> = {};
-      categoryVideos.forEach(cv => {
-        if (!videosByCategoryId[cv.category_id]) {
-          videosByCategoryId[cv.category_id] = [];
+      // Group videos by module
+      const modulesByName: Record<string, Video[]> = {};
+      videos.forEach(video => {
+        const moduleName = video.module;
+        if (!modulesByName[moduleName]) {
+          modulesByName[moduleName] = [];
         }
-        
-        const video = videos.find(v => v.id === cv.video_id);
-        if (video) {
-          videosByCategoryId[cv.category_id].push(video as Video);
-        }
+        modulesByName[moduleName].push(video as Video);
       });
 
       // --- Process modules with videos ---
       let previousModuleCompleted = true; // First module is always unlocked
-      const formattedModules: TrainingModuleProgress[] = categories.map((category, index) => {
-        const categoryId = category.id;
-        const categoryName = category.name;
-        const categoryVideos = videosByCategoryId[categoryId] || [];
-        const totalVideos = categoryVideos.length;
-        const watchedVideos = categoryVideos.filter(video => watchedVideoIds.has(video.id)).length;
-        const quizCompleted = passedQuizModules.has(categoryId);
+      const moduleNames = Object.keys(modulesByName);
+      
+      const formattedModules: TrainingModuleProgress[] = moduleNames.map((moduleName, index) => {
+        const moduleVideos = modulesByName[moduleName] || [];
+        const totalVideos = moduleVideos.length;
+        const watchedVideos = moduleVideos.filter(video => watchedVideoIds.has(video.id)).length;
+        const quizCompleted = passedQuizModules.has(moduleName);
         
         // Calculate module progress
         let moduleProgress = 0;
@@ -164,15 +150,15 @@ export const useTrainingProgress = (): UseTrainingProgressReturn => {
         previousModuleCompleted = !locked && isModuleComplete;
         
         return {
-          id: category.id,
-          title: category.name,
-          description: category.description,
-          module: category.name.toLowerCase(),
+          id: moduleName, // Using module name as ID since we don't have categories anymore
+          title: moduleName.charAt(0).toUpperCase() + moduleName.slice(1), // Capitalize module name
+          description: `Videos for ${moduleName}`,
+          module: moduleName.toLowerCase(),
           progress: moduleProgress,
           status: status,
           locked: locked,
-          videos: categoryVideos,
-          quizIds: category.quiz_ids,
+          videos: moduleVideos,
+          quizIds: null, // We don't have quiz_ids from module_categories anymore
           totalVideos,
           watchedVideos,
           quizCompleted

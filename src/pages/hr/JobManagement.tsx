@@ -8,7 +8,6 @@ import { supabase } from '@/integrations/supabase/client';
 import JobList from '@/components/jobs/JobList';
 import { Job } from '@/types/job';
 import MainLayout from '@/components/layout/MainLayout';
-import { TrainingModuleProgress } from '@/types/training';
 
 const JobManagementPage = () => {
   const { jobs, loading, error, fetchJobs, createJob, updateJob, deleteJob } = useJobs();
@@ -122,6 +121,7 @@ const JobManagementPage = () => {
           onJobUpdated={handleJobUpdated}
           onJobArchived={handleJobArchived}
           assessments={assessments}
+          categories={[]} // Add empty categories array to fix the TS error
         />
       </div>
     </MainLayout>

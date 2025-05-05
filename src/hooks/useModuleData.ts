@@ -8,9 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 export const useModuleData = (moduleId: string | undefined) => {
   const { user } = useAuth();
 
-  // We no longer need module details as module_categories table is removed
-  // Create a simpler module details object from the videos data
-
+  // We create a simpler module details object from the videos data since module_categories table is removed
   const { 
     data: moduleVideos, 
     isLoading: videosLoading, 

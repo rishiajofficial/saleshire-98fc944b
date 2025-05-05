@@ -199,29 +199,8 @@ const VideoPlayer = () => {
         return;
       }
       
-      // If no moduleId in params, try to find the moduleId from module_categories
-      const checkModuleCategory = async () => {
-        try {
-          const { data } = await supabase
-            .from('module_categories')
-            .select('id')
-            .eq('name', videoDetails.module)
-            .maybeSingle();
-            
-          if (data?.id) {
-            navigate(`/training/module/${data.id}`);
-          } else {
-            // Fallback to training page if we can't find the module
-            toast.error("Couldn't find the original module. Returning to training page.");
-            navigate('/training');
-          }
-        } catch (error) {
-          console.error("Error finding module category:", error);
-          navigate('/training');
-        }
-      };
-      
-      checkModuleCategory();
+      // If no moduleId in params, just go to training with the module name as identifier
+      navigate(`/training/module/${videoDetails.module}`);
     } else {
       // If we don't have video details, just go back to the training page
       navigate('/training');
