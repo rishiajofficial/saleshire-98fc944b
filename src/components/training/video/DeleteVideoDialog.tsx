@@ -44,21 +44,7 @@ const DeleteVideoDialog: React.FC<DeleteVideoDialogProps> = ({
       }
       console.log("Successfully deleted training_progress entries");
       
-      // Step 2: Delete category_videos relationships
-      console.log("Deleting category_videos entries");
-      const { error: categoryVideosError } = await supabase
-        .from('category_videos')
-        .delete()
-        .eq('video_id', videoId);
-        
-      if (categoryVideosError && categoryVideosError.code !== 'PGRST116') {
-        console.error('Error deleting category video relationships:', categoryVideosError);
-        toast.error(`Failed to delete category relationships: ${categoryVideosError.message}`);
-        return;
-      }
-      console.log("Successfully deleted or no category_videos entries found");
-      
-      // Step 3: Delete module_videos relationships
+      // Step 2: Delete module_videos relationships
       console.log("Deleting module_videos entries");
       const { error: moduleVideosError } = await supabase
         .from('module_videos')
@@ -72,7 +58,7 @@ const DeleteVideoDialog: React.FC<DeleteVideoDialogProps> = ({
       }
       console.log("Successfully deleted or no module_videos entries found");
       
-      // Step 4: Finally delete the video itself
+      // Step 3: Finally delete the video itself
       console.log("Deleting video record");
       const { error } = await supabase
         .from('videos')

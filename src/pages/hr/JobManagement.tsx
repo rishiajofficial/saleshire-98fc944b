@@ -13,12 +13,10 @@ import { TrainingModuleProgress } from '@/types/training';
 const JobManagementPage = () => {
   const { jobs, loading, error, fetchJobs, createJob, updateJob, deleteJob } = useJobs();
   const [assessments, setAssessments] = useState<{ id: string; title: string }[]>([]);
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   
   useEffect(() => {
     fetchJobs();
     fetchAssessments();
-    fetchCategories();
   }, []);
   
   const fetchAssessments = async () => {
@@ -31,19 +29,6 @@ const JobManagementPage = () => {
       setAssessments(data || []);
     } catch (err: any) {
       toast.error(`Failed to fetch assessments: ${err.message}`);
-    }
-  };
-  
-  const fetchCategories = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('training_categories')
-        .select('id, name');
-      
-      if (error) throw error;
-      setCategories(data || []);
-    } catch (err: any) {
-      toast.error(`Failed to fetch categories: ${err.message}`);
     }
   };
   
@@ -128,7 +113,6 @@ const JobManagementPage = () => {
           <JobCreationDialog 
             onJobCreated={handleJobCreated}
             assessments={assessments}
-            categories={categories}
           />
         </div>
         
@@ -138,7 +122,6 @@ const JobManagementPage = () => {
           onJobUpdated={handleJobUpdated}
           onJobArchived={handleJobArchived}
           assessments={assessments}
-          categories={categories}
         />
       </div>
     </MainLayout>

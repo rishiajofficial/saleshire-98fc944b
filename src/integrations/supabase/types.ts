@@ -283,13 +283,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "category_videos_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "module_categories"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "category_videos_video_id_fkey"
             columns: ["video_id"]
             isOneToOne: false
@@ -441,13 +434,6 @@ export type Database = {
           job_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "job_categories_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "module_categories"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "job_categories_job_id_fkey"
             columns: ["job_id"]
@@ -619,36 +605,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      module_categories: {
-        Row: {
-          created_at: string
-          created_by: string
-          description: string | null
-          id: string
-          name: string
-          quiz_ids: string[] | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          created_by: string
-          description?: string | null
-          id?: string
-          name: string
-          quiz_ids?: string[] | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string
-          description?: string | null
-          id?: string
-          name?: string
-          quiz_ids?: string[] | null
-          updated_at?: string
-        }
-        Relationships: []
       }
       module_videos: {
         Row: {
@@ -877,33 +833,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      training_categories: {
-        Row: {
-          created_at: string
-          created_by: string
-          description: string | null
-          id: string
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          created_by: string
-          description?: string | null
-          id?: string
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string
-          description?: string | null
-          id?: string
-          name?: string
-          updated_at?: string
-        }
-        Relationships: []
       }
       training_modules: {
         Row: {

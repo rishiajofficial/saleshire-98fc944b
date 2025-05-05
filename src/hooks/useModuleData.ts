@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { useModuleDetails } from './training/useModuleDetails';
 import { useModuleVideos } from './training/useModuleVideos';
 import { useVideoProgress } from './training/useVideoProgress';
 import { useQuizResults } from './training/useQuizResults';
@@ -9,33 +8,28 @@ import { useAuth } from "@/contexts/AuthContext";
 export const useModuleData = (moduleId: string | undefined) => {
   const { user } = useAuth();
 
-  const { 
-    data: moduleDetails, 
-    isLoading: detailsLoading, 
-    error: detailsError 
-  } = useModuleDetails(moduleId);
+  // We no longer need module details as module_categories table is removed
+  // Create a simpler module details object from the videos data
 
   const { 
     data: moduleVideos, 
     isLoading: videosLoading, 
     error: videosError 
-  } = useModuleVideos(moduleId, moduleDetails?.name);
+  } = useModuleVideos(moduleId);
 
   const { 
     data: videoProgressData, 
     isLoading: progressLoading 
-  } = useVideoProgress(moduleId, moduleDetails?.name);
+  } = useVideoProgress(moduleId);
 
   const { 
     data: quizResultData, 
     isLoading: quizLoading 
-  } = useQuizResults(moduleId, moduleDetails?.name);
+  } = useQuizResults(moduleId);
 
-  const error = videosError || detailsError;
+  const error = videosError;
   
   const finalModuleDetails = React.useMemo(() => {
-    if (moduleDetails) return moduleDetails;
-    
     if (moduleVideos && moduleVideos.length > 0) {
       const firstVideo = moduleVideos[0];
       return {
@@ -50,14 +44,14 @@ export const useModuleData = (moduleId: string | undefined) => {
     }
     
     return null;
-  }, [moduleDetails, moduleVideos, moduleId, user]);
+  }, [moduleVideos, moduleId, user]);
   
   return {
     moduleVideos,
     moduleDetails: finalModuleDetails,
     videoProgressData,
     quizResultData,
-    isLoading: videosLoading || detailsLoading || progressLoading || quizLoading,
+    isLoading: videosLoading || progressLoading || quizLoading,
     error: error ? error.message : null
   };
 };
