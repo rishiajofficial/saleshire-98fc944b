@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +7,7 @@ import { FileText, Upload, Video, X } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSupabaseStorage } from '@/hooks/useSupabaseStorage';
+import { supabase } from "@/integrations/supabase/client";
 
 interface ApplicationStepUploadsProps {
   onNext: () => void;
@@ -40,6 +40,41 @@ const ApplicationStepUploads = ({
     salesPitch: 0
   });
   
+  // Helper function to save URLs to the candidates table
+  const saveToCandidateProfile = async (fieldName: string, url: string) => {
+    if (!user) return false;
+    
+    try {
+      // Build the update object dynamically
+      const updateObj: {[key: string]: string} = {};
+      
+      // Map the field names to database column names
+      const fieldNameMapping: {[key: string]: string} = {
+        'resume': 'resume',
+        'aboutMeVideo': 'about_me_video',
+        'salesPitchVideo': 'sales_pitch_video'
+      };
+      
+      updateObj[fieldNameMapping[fieldName]] = url;
+      
+      // Update the candidate record in the database
+      const { error } = await supabase
+        .from('candidates')
+        .update(updateObj)
+        .eq('id', user.id);
+      
+      if (error) {
+        console.error('Error saving to candidate profile:', error);
+        throw error;
+      }
+      
+      return true;
+    } catch (err) {
+      console.error('Failed to save to candidate profile:', err);
+      return false;
+    }
+  };
+  
   const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0 || !user) {
       return;
@@ -53,18 +88,37 @@ const ApplicationStepUploads = ({
     const publicUrl = await uploadResume(file, filePath);
     
     if (publicUrl) {
+      // First update the local state
       setApplicationData({
         ...applicationData,
         resume: publicUrl
       });
+      
+      // Then save to the database
+      const saved = await saveToCandidateProfile('resume', publicUrl);
+      
       setUploadProgress(prev => ({ ...prev, resume: 100 }));
-      toast({
-        title: "Resume uploaded",
-        description: "Your resume has been uploaded successfully.",
-      });
+      
+      if (saved) {
+        toast({
+          title: "Resume uploaded",
+          description: "Your resume has been uploaded and saved successfully.",
+        });
+      } else {
+        toast({
+          title: "Partial success",
+          description: "Resume uploaded but there was an issue saving to your profile. Please try again or contact support.",
+          variant: "destructive"
+        });
+      }
     } else {
       setUploadProgress(prev => ({ ...prev, resume: 0 }));
       e.target.value = '';
+      toast({
+        title: "Upload failed",
+        description: "There was an error uploading your resume. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -85,32 +139,92 @@ const ApplicationStepUploads = ({
     setUploading(false);
     
     if (publicUrl) {
+      // First update the local state
       setApplicationData({
         ...applicationData,
         [fieldName]: publicUrl
       });
+      
+      // Then save to the database
+      const saved = await saveToCandidateProfile(fieldName, publicUrl);
+      
       setUploadProgress(prev => ({ ...prev, [type]: 100 }));
-      toast({
-        title: "Video uploaded",
-        description: `Your ${type === "aboutMe" ? "about me" : "sales pitch"} video has been uploaded successfully.`,
-      });
+      
+      if (saved) {
+        toast({
+          title: "Video uploaded",
+          description: `Your ${type === "aboutMe" ? "about me" : "sales pitch"} video has been uploaded and saved successfully.`,
+        });
+      } else {
+        toast({
+          title: "Partial success",
+          description: `Video uploaded but there was an issue saving to your profile. Please try again or contact support.`,
+          variant: "destructive"
+        });
+      }
     } else {
       setUploadProgress(prev => ({ ...prev, [type]: 0 }));
       e.target.value = '';
+      toast({
+        title: "Upload failed",
+        description: `There was an error uploading your ${type === "aboutMe" ? "about me" : "sales pitch"} video. Please try again.`,
+        variant: "destructive"
+      });
     }
   };
 
-  const handleRemoveFile = (type: "resume" | "aboutMeVideo" | "salesPitchVideo") => {
-    setApplicationData({
-      ...applicationData,
-      [type]: null
-    });
-    setUploadProgress(prev => ({ ...prev, [type === "resume" ? "resume" : type === "aboutMeVideo" ? "aboutMe" : "salesPitch"]: 0 }));
+  const handleRemoveFile = async (type: "resume" | "aboutMeVideo" | "salesPitchVideo") => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to manage your files.",
+        variant: "destructive"
+      });
+      return;
+    }
     
-    toast({
-      title: "File removed",
-      description: `Your ${type === "resume" ? "resume" : type === "aboutMeVideo" ? "about me video" : "sales pitch video"} has been removed.`,
-    });
+    try {
+      // Map the field names to database column names
+      const fieldNameMapping: {[key: string]: string} = {
+        'resume': 'resume',
+        'aboutMeVideo': 'about_me_video',
+        'salesPitchVideo': 'sales_pitch_video'
+      };
+      
+      // Update the database to remove the file reference
+      const updateObj: {[key: string]: null} = {};
+      updateObj[fieldNameMapping[type]] = null;
+      
+      const { error } = await supabase
+        .from('candidates')
+        .update(updateObj)
+        .eq('id', user.id);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setApplicationData({
+        ...applicationData,
+        [type]: null
+      });
+      
+      setUploadProgress(prev => ({ 
+        ...prev, 
+        [type === "resume" ? "resume" : type === "aboutMeVideo" ? "aboutMe" : "salesPitch"]: 0 
+      }));
+      
+      toast({
+        title: "File removed",
+        description: `Your ${type === "resume" ? "resume" : type === "aboutMeVideo" ? "about me video" : "sales pitch video"} has been removed.`,
+      });
+    } catch (error: any) {
+      console.error("Error removing file:", error);
+      toast({
+        title: "Error",
+        description: `Failed to remove file: ${error.message}`,
+        variant: "destructive"
+      });
+    }
   };
   
   const validateBeforeNext = () => {
@@ -199,7 +313,6 @@ const ApplicationStepUploads = ({
         </CardContent>
       </Card>
 
-      {/* About Me Video Card - Similar structure with progress */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center">
@@ -261,7 +374,6 @@ const ApplicationStepUploads = ({
         </CardContent>
       </Card>
 
-      {/* Sales Pitch Video Card - Similar structure with progress */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center">

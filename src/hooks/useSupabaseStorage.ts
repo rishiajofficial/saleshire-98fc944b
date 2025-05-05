@@ -18,9 +18,22 @@ export const useSupabaseStorage = (bucketName: 'resumes' | 'videos' | 'candidate
       setIsUploading(true);
       
       // Ensure the path includes the user ID for proper RLS
-      const filePath = `${user.id}/${path}`;
+      const filePath = path.startsWith(user.id) ? path : `${user.id}/${path}`;
       
-      const { error: uploadError } = await supabase.storage
+      console.log(`Uploading file to ${bucketName}/${filePath}`);
+      
+      // Check if file already exists and remove it
+      try {
+        await supabase.storage
+          .from(bucketName)
+          .remove([filePath]);
+      } catch (e) {
+        // Ignore errors if file doesn't exist
+        console.log("No previous file to remove or error removing:", e);
+      }
+      
+      // Upload the new file
+      const { error: uploadError, data } = await supabase.storage
         .from(bucketName)
         .upload(filePath, file, {
           cacheControl: '3600',
@@ -32,15 +45,17 @@ export const useSupabaseStorage = (bucketName: 'resumes' | 'videos' | 'candidate
         throw new Error(`Upload failed: ${uploadError.message}`);
       }
 
-      const { data } = supabase.storage
+      // Get the public URL
+      const { data: urlData } = supabase.storage
         .from(bucketName)
         .getPublicUrl(filePath);
 
-      if (!data?.publicUrl) {
+      if (!urlData?.publicUrl) {
         throw new Error('Could not get public URL');
       }
 
-      return data.publicUrl;
+      console.log(`File uploaded successfully: ${urlData.publicUrl}`);
+      return urlData.publicUrl;
     } catch (error: any) {
       console.error('Storage error:', error);
       toast.error(error.message);

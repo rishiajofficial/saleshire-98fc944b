@@ -169,14 +169,23 @@ const Application = () => {
     }
 
     try {
+      // First, fetch the latest candidate data including the uploaded files
+      const { data: candidateData, error: fetchError } = await supabase
+        .from("candidates")
+        .select("resume, about_me_video, sales_pitch_video")
+        .eq("id", user.id)
+        .single();
+        
+      if (fetchError) throw fetchError;
+      
+      // Use the data from the database (not the local state) to ensure we have the most up-to-date files
       const { error: candidateError } = await supabase
         .from("candidates")
         .update({
-          resume: applicationData.resume,
-          about_me_video: applicationData.aboutMeVideo,
-          sales_pitch_video: applicationData.salesPitchVideo,
           status: 'hr_review',
-          current_step: 2
+          current_step: 2,
+          // No need to update resume, about_me_video, or sales_pitch_video here 
+          // as they are already saved during the upload process
         })
         .eq("id", user.id);
 
