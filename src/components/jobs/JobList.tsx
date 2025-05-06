@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -67,14 +66,9 @@ const JobList: React.FC<JobListProps> = ({
         .from('job_training')
         .select('training_module_id')
         .eq('job_id', job.id);
-        
-      const { data: categoriesData } = await supabase
-        .from('job_categories')
-        .select('category_id')
-        .eq('job_id', job.id);
-        
+      
+      // Remove reference to job_categories table
       const selectedModules = trainingData?.map(item => item.training_module_id) || [];
-      const selectedCategories = (categoriesData || []).map(item => item.category_id);
       
       return {
         ...job,

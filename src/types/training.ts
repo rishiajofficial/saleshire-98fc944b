@@ -22,7 +22,7 @@ export interface TrainingModule {
   created_by?: string;
   content?: string;
   tags?: string[] | null;
-  status?: 'active' | 'inactive';
+  status?: 'active' | 'inactive' | 'locked' | 'completed' | 'in_progress';
   thumbnail?: string | null;
   archived?: boolean;
 }
@@ -61,11 +61,25 @@ export interface TrainingModuleProgress {
   description?: string;
   module: string;
   progress: number;
-  status: 'active' | 'inactive' | 'locked';
+  status: 'active' | 'inactive' | 'locked' | 'completed' | 'in_progress';
   locked: boolean;
   videos: Video[];
   quizIds: string[] | null;
   totalVideos: number;
   watchedVideos: number;
   quizCompleted: boolean;
+}
+
+export interface TrainingProgressItem {
+  moduleId: string;
+  moduleName: string;
+  moduleDescription: string | null;
+  progress: number;
+  completedVideos: number;
+  totalVideos: number;
+  completedAssessments: number;
+  totalAssessments: number;
+  startedAt: string | null;
+  completedAt: string | null;
+  timeSpent: number;
 }

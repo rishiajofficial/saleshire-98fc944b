@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -223,15 +222,8 @@ export const useJobs = () => {
         console.error("Error deleting job training:", jobTrainingError);
       }
 
-      const { error: jobCategoriesError } = await supabase
-        .from("job_categories")
-        .delete()
-        .eq("job_id", jobId);
+      // Remove reference to job_categories table which no longer exists
       
-      if (jobCategoriesError) {
-        console.error("Error deleting job categories:", jobCategoriesError);
-      }
-
       const { error: jobAppsError } = await supabase
         .from("job_applications")
         .delete()

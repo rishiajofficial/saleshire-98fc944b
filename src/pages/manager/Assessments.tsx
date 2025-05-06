@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -163,7 +162,7 @@ const Assessments = () => {
       return;
     }
 
-    // Prepare data for insertion using the correct state variable
+    // Prepare data for insertion using the correct state variable and include archived field
     const assessmentDataToInsert = {
       title: newAssessmentTitle,
       description: newAssessmentDescription || null,
@@ -173,6 +172,7 @@ const Assessments = () => {
       prevent_backtracking: false, 
       randomize_questions: false,
       time_limit: null,
+      archived: false // Add the required archived field
     };
 
     createAssessmentMutation.mutate(assessmentDataToInsert);

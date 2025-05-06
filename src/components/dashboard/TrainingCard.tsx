@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -19,27 +18,26 @@ export const TrainingCard = ({ canAccessTraining, trainingModules, isLoadingTrai
   const navigate = useNavigate();
 
   const getModuleStatusBadge = (module: TrainingModuleProgress) => {
-    switch (module.status) {
-      case "completed":
-        return (
-          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-            <CheckCircle2 className="mr-1 h-3 w-3" /> Completed
-          </Badge>
-        );
-      case "in_progress":
-        return (
-          <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-            <PlayCircle className="mr-1 h-3 w-3" /> In Progress
-          </Badge>
-        );
-      case "locked":
-        return (
-          <Badge variant="secondary">
-            <Lock className="mr-1 h-3 w-3" /> Locked
-          </Badge>
-        );
-      default:
-        return null;
+    if (module.status === "completed") {
+      return (
+        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+          <CheckCircle2 className="mr-1 h-3 w-3" /> Completed
+        </Badge>
+      );
+    } else if (module.status === "in_progress") {
+      return (
+        <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+          <PlayCircle className="mr-1 h-3 w-3" /> In Progress
+        </Badge>
+      );
+    } else if (module.status === "locked") {
+      return (
+        <Badge variant="secondary">
+          <Lock className="mr-1 h-3 w-3" /> Locked
+        </Badge>
+      );
+    } else {
+      return null;
     }
   };
 

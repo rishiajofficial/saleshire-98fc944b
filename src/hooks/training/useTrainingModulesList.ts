@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useTrainingProgress } from '@/hooks/training/useTrainingProgress';
 import { TrainingModuleProgress } from '@/types/training';
@@ -99,7 +98,7 @@ export const useTrainingModulesList = () => {
           
           // Determine lock status based on previous module completion
           const locked = !prevComplete;
-          let status: 'active' | 'inactive' | 'completed' | 'in_progress' | 'locked' = 'inactive';
+          let status: 'active' | 'inactive' | 'locked' | 'completed' | 'in_progress' = 'inactive';
           
           if (locked) {
             status = 'locked';
