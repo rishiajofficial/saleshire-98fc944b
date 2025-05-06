@@ -30,6 +30,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
   
   const [activeDropdowns, setActiveDropdowns] = useState<string[]>([]);
   const isCandidate = profile?.role === 'candidate';
+  const isPublicPage = location.pathname === '/careers';
 
   useEffect(() => {
     let pageTitle = "Workforce";
@@ -101,6 +102,57 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     item.role.includes(profile?.role || "")
   );
 
+  // Public page navigation (for careers page)
+  if (isPublicPage) {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="fixed top-0 left-0 right-0 z-30 flex h-16 items-center justify-between border-b bg-background/80 backdrop-blur-sm px-4">
+          <div className="container mx-auto flex justify-between items-center">
+            <Link to="/" className="flex items-center">
+              <div className="font-bold text-lg">WorkForce</div>
+            </Link>
+            <nav className="flex items-center gap-4">
+              <Link 
+                to="/" 
+                className="text-sm font-medium text-gray-600 hover:text-gray-900"
+              >
+                Home
+              </Link>
+              <Link 
+                to="/careers" 
+                className="text-sm font-medium text-primary"
+              >
+                Careers
+              </Link>
+              {user ? (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={handleSignOut}
+                >
+                  Sign Out
+                </Button>
+              ) : (
+                <>
+                  <Link to="/login">
+                    <Button variant="ghost" size="sm">Sign In</Button>
+                  </Link>
+                  <Link to="/register">
+                    <Button size="sm">Register</Button>
+                  </Link>
+                </>
+              )}
+            </nav>
+          </div>
+        </header>
+        <div className="pt-16">
+          {children}
+        </div>
+      </div>
+    );
+  }
+
+  // Normal authenticated layout
   return (
     <div className="flex min-h-screen bg-background">
       {!isCandidate && !isMobile ? (

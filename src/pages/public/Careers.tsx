@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -40,7 +39,7 @@ const Careers = () => {
     fetchJobs();
   }, []);
 
-  const handleApply = () => {
+  const handleApply = (jobId: string) => {
     navigate("/register");
     toast.info("Create an account to apply for this position");
   };
@@ -69,7 +68,7 @@ const Careers = () => {
   ];
 
   return (
-    <MainLayout>
+    <div className="min-h-screen bg-background">
       <div className="bg-gradient-to-b from-indigo-50 via-purple-50 to-white py-16">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-12">
@@ -199,7 +198,7 @@ const Careers = () => {
           </Button>
         </div>
       </div>
-    </MainLayout>
+    </div>
   );
 };
 
