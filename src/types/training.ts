@@ -64,7 +64,7 @@ export interface TrainingModuleProgress {
   status: 'active' | 'inactive' | 'locked' | 'completed' | 'in_progress';
   locked: boolean;
   videos: Video[];
-  quizIds: string[] | null;
+  quizIds: string[];
   totalVideos: number;
   watchedVideos: number;
   quizCompleted: boolean;

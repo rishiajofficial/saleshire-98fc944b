@@ -61,6 +61,7 @@ export const useTrainingModulesList = () => {
           .from('training_modules')
           .select('*')
           .in('id', moduleIds)
+          .eq('archived', false)
           .order('title', { ascending: true });
           
         if (modulesError) throw modulesError;
@@ -68,7 +69,8 @@ export const useTrainingModulesList = () => {
         // Fetch videos for the modules
         const { data: videosData, error: videosError } = await supabase
           .from('videos')
-          .select('*');
+          .select('*')
+          .eq('archived', false);
           
         if (videosError) throw videosError;
         

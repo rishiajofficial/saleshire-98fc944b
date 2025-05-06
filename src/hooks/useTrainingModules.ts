@@ -14,6 +14,7 @@ export const useTrainingModules = () => {
       const { data, error } = await supabase
         .from("training_modules")
         .select("id, title, description, module")
+        .eq("archived", false)
         .order("title");
 
       if (error) throw error;
@@ -27,7 +28,7 @@ export const useTrainingModules = () => {
         status: 'active' as const,
         locked: false,
         videos: [],
-        quizIds: null,
+        quizIds: [],
         totalVideos: 0,
         watchedVideos: 0,
         quizCompleted: false
