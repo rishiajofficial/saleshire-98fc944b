@@ -6,6 +6,9 @@ import { toast } from 'sonner';
 import VideoForm from './video/VideoForm';
 import VideoList from './video/VideoList';
 import DeleteVideoDialog from './video/DeleteVideoDialog';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface VideoManagementProps {
   onVideoCreated?: () => void;
@@ -17,6 +20,7 @@ const VideoManagement: React.FC<VideoManagementProps> = ({ onVideoCreated, modul
   const [loading, setLoading] = useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [videoToDelete, setVideoToDelete] = useState<string | null>(null);
+  const [showAddVideoDialog, setShowAddVideoDialog] = useState(false);
   
   useEffect(() => {
     fetchVideos();
@@ -59,6 +63,7 @@ const VideoManagement: React.FC<VideoManagementProps> = ({ onVideoCreated, modul
 
   const handleVideoCreated = () => {
     fetchVideos();
+    setShowAddVideoDialog(false);
     if (onVideoCreated) {
       onVideoCreated();
     }
@@ -66,16 +71,27 @@ const VideoManagement: React.FC<VideoManagementProps> = ({ onVideoCreated, modul
 
   return (
     <div className="w-full">
-      <VideoForm moduleId={moduleId} onVideoCreated={handleVideoCreated} />
-      
-      <div className="mt-8">
-        <h3 className="text-lg font-medium mb-4">Videos</h3>
-        <VideoList 
-          videos={videos} 
-          loading={loading} 
-          onDeleteClick={confirmDeleteVideo} 
-        />
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-xl font-medium">Videos</h3>
+        <Button onClick={() => setShowAddVideoDialog(true)}>
+          <Plus className="mr-2 h-4 w-4" /> Add Video
+        </Button>
       </div>
+      
+      <VideoList 
+        videos={videos} 
+        loading={loading} 
+        onDeleteClick={confirmDeleteVideo} 
+      />
+      
+      <Dialog open={showAddVideoDialog} onOpenChange={setShowAddVideoDialog}>
+        <DialogContent className="sm:max-w-[550px]">
+          <DialogHeader>
+            <DialogTitle>Add New Video</DialogTitle>
+          </DialogHeader>
+          <VideoForm moduleId={moduleId} onVideoCreated={handleVideoCreated} />
+        </DialogContent>
+      </Dialog>
       
       <DeleteVideoDialog
         open={showDeleteDialog}

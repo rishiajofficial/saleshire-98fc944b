@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -13,7 +12,6 @@ import { Switch } from "@/components/ui/switch";
 import { Plus, Edit, Trash2, Check, ArrowUp, ArrowDown } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { TrainingModule, ModuleVideo, ModuleAssessment } from "@/types/training";
-import { Badge } from "@/components/ui/badge";
 import { ModuleList } from "./ModuleList";
 
 interface Module {
@@ -25,6 +23,7 @@ interface Module {
   thumbnail: string | null;
   created_at?: string;
   created_by?: string;
+  archived?: boolean;
 }
 
 const ModuleManagement = () => {
@@ -61,7 +60,7 @@ const ModuleManagement = () => {
       // Fetch modules
       const { data: modulesData, error: modulesError } = await supabase
         .from("training_modules")
-        .select("id, title, description, created_at, created_by")
+        .select("*")
         .order("title");
         
       if (modulesError) {
@@ -78,7 +77,8 @@ const ModuleManagement = () => {
           status: 'active', // Default to active since status column doesn't exist yet
           thumbnail: null,
           created_at: module.created_at || '',
-          created_by: module.created_by || ''
+          created_by: module.created_by || '',
+          archived: module.archived || false
         }));
         
         setModules(formattedModules);

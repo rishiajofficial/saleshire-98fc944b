@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useTrainingProgress } from '@/hooks/training/useTrainingProgress';
 import { TrainingModuleProgress } from '@/types/training';

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -58,11 +59,11 @@ const AssessmentManagement = () => {
 
   const handleCreateAssessment = () => {
     console.log("Navigating to assessment creation page");
-    navigate("/training-management/assessments/create");
+    navigate("/assessments/create");
   };
 
   const handleEditAssessment = (assessment: Assessment) => {
-    navigate(`/training-management/assessments/${assessment.id}/edit`);
+    navigate(`/assessments/${assessment.id}/edit`);
   };
 
   const handleOpenDeleteDialog = (assessment: Assessment) => {
@@ -99,7 +100,7 @@ const AssessmentManagement = () => {
   };
 
   const handleViewAssessment = (assessment: Assessment) => {
-    navigate(`/training-management/assessments/${assessment.id}`);
+    navigate(`/assessments/${assessment.id}`);
   };
 
   if (loading) {
