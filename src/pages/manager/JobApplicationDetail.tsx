@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -240,9 +241,9 @@ const JobApplicationDetail = () => {
     status: application.candidates.status || applicationStatus,
     current_step: application.candidates.current_step || 1,
     assessment_results: assessmentResults,
-    // Use empty string as default for optional string fields
-    updated_at: application.candidates.updated_at || "",
-    assigned_manager: application.candidates.assigned_manager || null
+    // These properties might not exist in the returned data, so provide defaults
+    updated_at: "", // Default empty string since it's not needed for display
+    assigned_manager: null // Default to null since it's optional
   } : null;
 
   return (
