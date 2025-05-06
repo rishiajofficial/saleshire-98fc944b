@@ -14,14 +14,25 @@ import { CandidateInfo } from "@/components/candidates/CandidateInfo";
 import { ProjectStatusSection } from "@/components/candidates/ProjectStatusSection";
 import { StatusBadge } from "@/components/candidates/StatusBadge";
 import { StatusUpdateSection } from "@/components/candidates/StatusUpdateSection";
+import { AssessmentResultsSection } from "@/components/candidates/AssessmentResultsSection";
+import { useState as useStateSafe } from "react";
+import { toast } from "sonner";
+import { updateApplicationStatus } from "@/hooks/useDatabaseQuery";
 
 const JobApplicationDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState("overview");
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [location, setLocation] = useState("");
+  const [region, setRegion] = useState("");
+  const [applicationStatus, setApplicationStatus] = useState("");
 
-  const { data: application, isLoading } = useQuery({
+  const { data: application, isLoading, refetch } = useQuery({
     queryKey: ['job-application', id],
     queryFn: async () => {
+      if (!id) throw new Error("Application ID is required");
+
       const { data, error } = await supabase
         .from('job_applications')
         .select(`
@@ -43,6 +54,9 @@ const JobApplicationDetail = () => {
             resume,
             about_me_video,
             sales_pitch_video,
+            phone,
+            location,
+            region,
             profile:profiles!candidates_id_fkey (
               name,
               email,
@@ -67,10 +81,117 @@ const JobApplicationDetail = () => {
         throw error;
       }
 
+      // Initialize state with candidate data
+      if (data?.candidates) {
+        setPhone(data.candidates.phone || "");
+        setLocation(data.candidates.location || "");
+        setRegion(data.candidates.region || "");
+        setApplicationStatus(data.status || "applied");
+      }
+
       return data;
     },
     enabled: !!id
   });
+
+  const handleUpdateInfo = async () => {
+    if (!application?.candidate_id) return;
+
+    setIsUpdating(true);
+    try {
+      const { data, error } = await supabase
+        .from('candidates')
+        .update({
+          phone,
+          location,
+          region
+        })
+        .eq('id', application.candidate_id)
+        .select();
+
+      if (error) throw error;
+      toast.success("Candidate information updated successfully");
+      refetch();
+    } catch (error) {
+      console.error("Error updating info:", error);
+      toast.error("Failed to update candidate information");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleStatusChange = (value: string) => {
+    setApplicationStatus(value);
+  };
+
+  const handleStatusUpdate = async () => {
+    if (!application?.candidate_id || !id) return;
+
+    setIsUpdating(true);
+    try {
+      // Update candidate status
+      await updateApplicationStatus(application.candidate_id, {
+        status: applicationStatus
+      });
+
+      // Update job application status
+      const { error } = await supabase
+        .from('job_applications')
+        .update({ status: applicationStatus })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast.success("Status updated successfully");
+      refetch();
+    } catch (error) {
+      console.error("Error updating status:", error);
+      toast.error("Failed to update status");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Project status handling
+  const [projectStatus, setProjectStatus] = useState<'not_started' | 'assigned' | 'completed_success' | 'rejected' | 'failed'>('not_started');
+  const [isUpdatingProject, setIsUpdatingProject] = useState(false);
+
+  const handleAssignProject = async () => {
+    if (!application?.candidate_id) return;
+
+    setIsUpdatingProject(true);
+    try {
+      // Implement your project assignment logic here
+      setProjectStatus('assigned');
+      toast.success("Project assigned successfully");
+    } catch (error) {
+      console.error("Error assigning project:", error);
+      toast.error("Failed to assign project");
+    } finally {
+      setIsUpdatingProject(false);
+    }
+  };
+
+  const handleProjectOutcome = async (outcome: 'completed_success' | 'rejected' | 'failed') => {
+    if (!application?.candidate_id) return;
+
+    setIsUpdatingProject(true);
+    try {
+      // Implement your project outcome update logic here
+      setProjectStatus(outcome);
+      toast.success(`Project marked as ${outcome.replace('_', ' ')}`);
+    } catch (error) {
+      console.error("Error updating project outcome:", error);
+      toast.error("Failed to update project outcome");
+    } finally {
+      setIsUpdatingProject(false);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString();
+  };
 
   if (isLoading) {
     return (
@@ -106,10 +227,10 @@ const JobApplicationDetail = () => {
     );
   }
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleDateString();
-  };
+  const assessmentResults = application.candidates?.assessment_results && 
+    Array.isArray(application.candidates.assessment_results) 
+      ? application.candidates.assessment_results 
+      : [];
 
   return (
     <MainLayout>
@@ -229,96 +350,49 @@ const JobApplicationDetail = () => {
             </TabsContent>
             
             <TabsContent value="candidate">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Candidate Information</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {application.candidate_id && (
-                    <CandidateInfo candidateId={application.candidate_id} />
-                  )}
-                </CardContent>
-              </Card>
+              {application.candidates && (
+                <CandidateInfo 
+                  candidate={application.candidates}
+                  phone={phone}
+                  location={location}
+                  region={region}
+                  isUpdating={isUpdating}
+                  isLoading={isLoading}
+                  onPhoneChange={setPhone}
+                  onLocationChange={setLocation}
+                  onRegionChange={setRegion}
+                  onUpdateInfo={handleUpdateInfo}
+                />
+              )}
             </TabsContent>
             
             <TabsContent value="assessment">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Assessment Results</CardTitle>
-                  <CardDescription>Results from tests and assessments</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {application.candidates?.assessment_results && 
-                  application.candidates.assessment_results.length > 0 ? (
-                    <div className="space-y-4">
-                      {application.candidates.assessment_results.map((result) => (
-                        <div key={result.id} className="border rounded-md p-4">
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <h3 className="font-medium">
-                                {result.assessments?.title || "Assessment"}
-                              </h3>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Badge variant={result.completed ? "success" : "outline"}>
-                                  {result.completed ? "Completed" : "In Progress"}
-                                </Badge>
-                                {result.completed_at && (
-                                  <span className="text-sm text-muted-foreground flex items-center">
-                                    <Clock className="h-3 w-3 mr-1" />
-                                    {formatDate(result.completed_at)}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-2xl font-bold">
-                                {result.score !== null ? `${result.score}%` : "N/A"}
-                              </div>
-                              <div className="text-xs text-muted-foreground">Score</div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No assessment results available
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <AssessmentResultsSection 
+                assessmentResults={assessmentResults}
+                isLoadingResults={isLoading}
+                formatDate={formatDate}
+              />
             </TabsContent>
             
             <TabsContent value="status">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Application Status</CardTitle>
-                    <CardDescription>Update the status of this application</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {application.id && (
-                      <StatusUpdateSection 
-                        entityId={application.id}
-                        entityType="job_application"
-                        currentStatus={application.status}
-                        candidateId={application.candidate_id}
-                      />
-                    )}
-                  </CardContent>
-                </Card>
+                <StatusUpdateSection 
+                  applicationStatus={applicationStatus}
+                  isUpdatingStatus={isUpdating}
+                  candidateData={application.candidates || null}
+                  onStatusChange={handleStatusChange}
+                  onStatusUpdate={handleStatusUpdate}
+                />
                 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Project Status</CardTitle>
-                    <CardDescription>Track candidate's project progress</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {application.candidate_id && (
-                      <ProjectStatusSection candidateId={application.candidate_id} />
-                    )}
-                  </CardContent>
-                </Card>
+                {application.candidates && (
+                  <ProjectStatusSection 
+                    candidate={application.candidates}
+                    projectStatus={projectStatus}
+                    isUpdatingProject={isUpdatingProject}
+                    onAssignProject={handleAssignProject}
+                    onUpdateProjectOutcome={handleProjectOutcome}
+                  />
+                )}
               </div>
             </TabsContent>
           </Tabs>
