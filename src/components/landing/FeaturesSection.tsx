@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Rocket, Lightbulb, Target } from "lucide-react";
+import { Rocket, Lightbulb, Target, GraduationCap } from "lucide-react";
 
 const FeaturesSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | null, index: number) => void }) => {
   const features = [
@@ -21,6 +21,12 @@ const FeaturesSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | null, in
       description: "Assess real-world performance through practical sales tasks with outcome-based rewards.",
       icon: <Target className="h-12 w-12 text-primary" />,
       color: "bg-gradient-to-br from-emerald-100 to-emerald-50"
+    },
+    {
+      title: "Career Advancement",
+      description: "Candidates gain job-ready skills before interviews, increasing their hiring potential and starting salary.",
+      icon: <GraduationCap className="h-12 w-12 text-primary" />,
+      color: "bg-gradient-to-br from-amber-100 to-amber-50"
     }
   ];
 
@@ -42,7 +48,7 @@ const FeaturesSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | null, in
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {features.map((feature, index) => (
             <div 
               key={index} 

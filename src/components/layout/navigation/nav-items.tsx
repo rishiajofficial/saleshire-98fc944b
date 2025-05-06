@@ -96,4 +96,10 @@ export const getNavItems = (role?: string): NavItem[] => [
     icon: <FileText className="h-5 w-5" />,
     role: ["candidate"],
   },
+  {
+    label: "Careers",
+    href: "/careers",
+    icon: <Briefcase className="h-5 w-5" />,
+    role: [],
+  },
 ];

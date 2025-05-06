@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Zap, Users, BarChart3 } from "lucide-react";
+import { ArrowRight, Zap, Users, BarChart3, Briefcase } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
@@ -81,6 +81,16 @@ const HeroSection = () => {
           </p>
           <div className="mt-10">
             {renderAuthButtons()}
+          </div>
+          
+          <div className="mt-6">
+            <Button 
+              variant="ghost" 
+              className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50"
+              onClick={handleNavigation('/careers')}
+            >
+              <Briefcase className="mr-2 h-4 w-4" /> Looking for a job? Explore opportunities
+            </Button>
           </div>
         </div>
       </div>

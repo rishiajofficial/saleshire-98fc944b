@@ -40,6 +40,7 @@ import JobManagement from "./pages/hr/JobManagement";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import ModuleView from "./pages/training/ModuleView";
+import Careers from "./pages/public/Careers";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +56,7 @@ const App = () => {
               <Route path="/register" element={<Register />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/careers" element={<Careers />} />
               <Route path="/application" element={
                 <ProtectedRoute allowedRoles={['candidate']}>
                   <Application />
