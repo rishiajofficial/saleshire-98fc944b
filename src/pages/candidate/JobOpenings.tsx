@@ -92,6 +92,15 @@ const JobOpenings = () => {
     try {
       setIsDeleting(true);
       
+      // First, get the training modules associated with this job
+      const { data: jobTrainingData, error: jobTrainingError } = await supabase
+        .from('job_training')
+        .select('training_module_id')
+        .eq('job_id', jobToDelete);
+        
+      if (jobTrainingError) throw jobTrainingError;
+      
+      // Delete the job application
       const { error } = await supabase
         .from('job_applications')
         .delete()
@@ -99,6 +108,44 @@ const JobOpenings = () => {
         .eq('job_id', jobToDelete);
         
       if (error) throw error;
+      
+      // Clear training progress for modules associated with this job
+      if (jobTrainingData && jobTrainingData.length > 0) {
+        const moduleIds = jobTrainingData.map(jt => jt.training_module_id);
+        
+        // Get videos for these modules
+        const { data: modulesData, error: modulesError } = await supabase
+          .from('training_modules')
+          .select('id, module')
+          .in('id', moduleIds);
+          
+        if (modulesError) throw modulesError;
+        
+        if (modulesData && modulesData.length > 0) {
+          // Get list of module categories
+          const moduleCategories = modulesData.map(m => m.module);
+          
+          // Delete training progress for these modules
+          if (moduleCategories.length > 0) {
+            const { error: progressError } = await supabase
+              .from('training_progress')
+              .delete()
+              .eq('user_id', user.id)
+              .in('module', moduleCategories);
+              
+            if (progressError) throw progressError;
+          }
+          
+          // Delete quiz results for these modules
+          const { error: quizError } = await supabase
+            .from('quiz_results')
+            .delete()
+            .eq('user_id', user.id)
+            .in('module', moduleCategories);
+            
+          if (quizError) throw quizError;
+        }
+      }
       
       toast.success("Application successfully withdrawn");
       
@@ -110,9 +157,9 @@ const JobOpenings = () => {
       });
       
       setJobToDelete(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error deleting application:", err);
-      toast.error("Failed to withdraw application");
+      toast.error("Failed to withdraw application: " + err.message);
     } finally {
       setIsDeleting(false);
     }

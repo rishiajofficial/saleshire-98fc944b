@@ -5,15 +5,15 @@ import { useCandidateDashboardData } from './useCandidateDashboardData';
 import { useTrainingModules } from './useTrainingModules';
 import { TrainingModuleProgress } from '@/types/training';
 
-export function useCandidateDashboardState(userId?: string) {
+export function useCandidateDashboardState(userId?: string, selectedJobId?: string) {
   const { user } = useAuth();
   const effectiveUserId = userId || user?.id;
   
   // Get dashboard data
-  const dashboardState = useCandidateDashboardData(effectiveUserId);
+  const dashboardState = useCandidateDashboardData(effectiveUserId, selectedJobId);
   
   // Get training modules using the consistent useTrainingModules hook
-  const trainingState = useTrainingModules();
+  const trainingState = useTrainingModules(selectedJobId);
   
   const isLoading = dashboardState.loading || trainingState.loading;
   const error = dashboardState.error || null;

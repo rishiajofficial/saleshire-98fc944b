@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,9 +13,15 @@ import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useCandidateDashboardState } from '@/hooks/useCandidateDashboardState';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
 
 const CandidateDashboard = () => {
   const { profile, user } = useAuth();
+  const [selectedJobId, setSelectedJobId] = useState<string | undefined>(undefined);
+  const [userJobs, setUserJobs] = useState<{id: string, title: string}[]>([]);
+  const [loadingJobs, setLoadingJobs] = useState(true);
   
   const {
     loading,
@@ -28,9 +34,53 @@ const CandidateDashboard = () => {
     isLoadingTraining,
     showApplicationPrompt,
     canAccessTraining,
-  } = useCandidateDashboardState(user?.id);
+  } = useCandidateDashboardState(user?.id, selectedJobId);
 
-  if (loading) {
+  // Fetch user's job applications
+  useEffect(() => {
+    const fetchUserJobs = async () => {
+      if (!user?.id) return;
+      
+      try {
+        setLoadingJobs(true);
+        
+        // Get user's job applications with job details
+        const { data, error } = await supabase
+          .from('job_applications')
+          .select(`
+            job_id,
+            jobs:job_id (
+              id,
+              title
+            )
+          `)
+          .eq('candidate_id', user.id);
+          
+        if (error) throw error;
+        
+        const jobs = data?.map(item => ({
+          id: item.job_id,
+          title: item.jobs?.title || 'Untitled Job'
+        })) || [];
+        
+        setUserJobs(jobs);
+        
+        // Set default selected job if we have jobs and none is selected
+        if (jobs.length > 0 && !selectedJobId) {
+          setSelectedJobId(jobs[0].id);
+        }
+        
+      } catch (err) {
+        console.error("Error fetching user jobs:", err);
+      } finally {
+        setLoadingJobs(false);
+      }
+    };
+    
+    fetchUserJobs();
+  }, [user?.id]);
+
+  if (loading || loadingJobs) {
     return (
       <MainLayout>
         <div className="flex justify-center items-center h-screen">
@@ -54,6 +104,25 @@ const CandidateDashboard = () => {
   // Main content components
   const mainContent = (
     <>
+      {userJobs.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Select Job Application</CardTitle>
+            <Select value={selectedJobId} onValueChange={setSelectedJobId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a job application" />
+              </SelectTrigger>
+              <SelectContent>
+                {userJobs.map(job => (
+                  <SelectItem key={job.id} value={job.id}>
+                    {job.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardHeader>
+        </Card>
+      )}
       <HiringJourneyCard 
         currentStep={currentStep}
         applicationSubmitted={applicationSubmitted}

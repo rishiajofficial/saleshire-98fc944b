@@ -19,7 +19,7 @@ interface DashboardState {
   currentStep: number;
 }
 
-export const useCandidateDashboardData = (userId: string | undefined) => {
+export const useCandidateDashboardData = (userId: string | undefined, jobId?: string) => {
   const [state, setState] = useState<DashboardState>({
     loading: true,
     error: null,
@@ -44,7 +44,24 @@ export const useCandidateDashboardData = (userId: string | undefined) => {
       }
 
       try {
-        console.log("Dashboard: Fetching data for user:", userId);
+        console.log("Dashboard: Fetching data for user:", userId, "job:", jobId);
+
+        // First fetch user's job application details if a job ID is provided
+        let applicationData: any = null;
+        if (jobId) {
+          const { data: jobAppData, error: jobAppError } = await supabase
+            .from('job_applications')
+            .select('*')
+            .eq('candidate_id', userId)
+            .eq('job_id', jobId)
+            .single();
+
+          if (jobAppError && jobAppError.code !== 'PGRST116') {
+            console.error("Job application fetch error:", jobAppError.message);
+          } else {
+            applicationData = jobAppData;
+          }
+        }
 
         const [candidateResult, resultsResult, notificationResult] = await Promise.all([
           supabase
@@ -80,18 +97,28 @@ export const useCandidateDashboardData = (userId: string | undefined) => {
         const assessmentResults = resultsResult.data || [];
         const notifications = notificationResult.data || [];
         
+        // Use job application status if available, otherwise use candidate status
+        const effectiveStatus = applicationData?.status || fetchedCandidateData?.status;
+        
         const applicationSubmitted = 
           !!fetchedCandidateData?.resume && 
           !!fetchedCandidateData?.about_me_video && 
           !!fetchedCandidateData?.sales_pitch_video;
         
-        const currentStep = fetchedCandidateData?.current_step ?? state.currentStep ?? (applicationSubmitted ? 1 : 0);
+        // Use job application step if available, otherwise use candidate step
+        let currentStep = applicationData?.current_step ?? fetchedCandidateData?.current_step ?? 0;
+        if (applicationSubmitted && currentStep === 0) {
+          currentStep = 1;
+        }
         
         setState(prev => ({
           ...prev,
           loading: false,
           error: null,
-          candidateData: fetchedCandidateData ?? prev.candidateData,
+          candidateData: {
+            ...fetchedCandidateData,
+            status: effectiveStatus,
+          },
           assessmentResults,
           notifications,
           applicationSubmitted,
@@ -108,9 +135,7 @@ export const useCandidateDashboardData = (userId: string | undefined) => {
       }
     };
 
-    if (!state.candidateData) {
-      fetchDashboardData();
-    }
+    fetchDashboardData();
 
     if (userId) {
       console.log("Setting up realtime subscription for candidate:", userId);
@@ -152,6 +177,36 @@ export const useCandidateDashboardData = (userId: string | undefined) => {
             toast.error('Connection issue: Dashboard might not update instantly.');
           }
         });
+
+      // Also subscribe to job application updates if jobId is provided
+      if (jobId) {
+        const jobAppChannel = supabase
+          .channel(`job_app_updates_${userId}_${jobId}`)
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'job_applications',
+              filter: `candidate_id=eq.${userId} AND job_id=eq.${jobId}`
+            },
+            (payload) => {
+              console.log('Realtime job application update received:', payload.new);
+              fetchDashboardData(); // Refresh data when job application is updated
+              toast.info("Your job application status has been updated!");
+            }
+          )
+          .subscribe();
+
+        // Cleanup function will handle this channel too
+        const originalChannel = channel;
+        channel = {
+          unsubscribe: () => {
+            originalChannel.unsubscribe();
+            jobAppChannel.unsubscribe();
+          }
+        } as any;
+      }
     }
 
     return () => {
@@ -161,7 +216,7 @@ export const useCandidateDashboardData = (userId: string | undefined) => {
         channel = null;
       }
     };
-  }, [userId]);
+  }, [userId, jobId]);
 
   const refetch = () => {
     setState(prev => ({ ...prev, loading: true }));
