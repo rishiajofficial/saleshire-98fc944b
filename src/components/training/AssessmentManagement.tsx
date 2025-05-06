@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -59,12 +58,10 @@ const AssessmentManagement = () => {
 
   const handleCreateAssessment = () => {
     console.log("Navigating to assessment creation page");
-    // Make sure we're using the correct route - check the router configuration
     navigate("/training-management/assessments/create");
   };
 
   const handleEditAssessment = (assessment: Assessment) => {
-    // Updated route path with assessment ID
     navigate(`/training-management/assessments/${assessment.id}/edit`);
   };
 
@@ -102,7 +99,6 @@ const AssessmentManagement = () => {
   };
 
   const handleViewAssessment = (assessment: Assessment) => {
-    // Updated route path with assessment ID
     navigate(`/training-management/assessments/${assessment.id}`);
   };
 
@@ -129,13 +125,6 @@ const AssessmentManagement = () => {
         onDelete={handleOpenDeleteDialog}
         onView={handleViewAssessment}
       />
-
-      {assessments.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">No assessments found</p>
-          <p className="text-sm mt-2">Create your first assessment to get started</p>
-        </div>
-      )}
 
       {/* Delete Assessment Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

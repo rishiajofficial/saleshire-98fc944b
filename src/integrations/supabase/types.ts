@@ -157,6 +157,7 @@ export type Database = {
       }
       assessments: {
         Row: {
+          archived: boolean
           created_at: string
           created_by: string
           description: string | null
@@ -170,6 +171,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          archived?: boolean
           created_at?: string
           created_by: string
           description?: string | null
@@ -183,6 +185,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          archived?: boolean
           created_at?: string
           created_by?: string
           description?: string | null
@@ -258,35 +261,6 @@ export type Database = {
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      category_videos: {
-        Row: {
-          category_id: string | null
-          created_at: string | null
-          id: string
-          video_id: string | null
-        }
-        Insert: {
-          category_id?: string | null
-          created_at?: string | null
-          id?: string
-          video_id?: string | null
-        }
-        Update: {
-          category_id?: string | null
-          created_at?: string | null
-          id?: string
-          video_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "category_videos_video_id_fkey"
-            columns: ["video_id"]
-            isOneToOne: false
-            referencedRelation: "videos"
             referencedColumns: ["id"]
           },
         ]
@@ -410,32 +384,6 @@ export type Database = {
           },
           {
             foreignKeyName: "job_assessments_job_id_fkey"
-            columns: ["job_id"]
-            isOneToOne: false
-            referencedRelation: "jobs"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      job_categories: {
-        Row: {
-          category_id: string
-          created_at: string | null
-          job_id: string
-        }
-        Insert: {
-          category_id: string
-          created_at?: string | null
-          job_id: string
-        }
-        Update: {
-          category_id?: string
-          created_at?: string | null
-          job_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "job_categories_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "jobs"
@@ -836,6 +784,7 @@ export type Database = {
       }
       training_modules: {
         Row: {
+          archived: boolean
           content: string | null
           created_at: string
           created_by: string
@@ -849,6 +798,7 @@ export type Database = {
           video_url: string | null
         }
         Insert: {
+          archived?: boolean
           content?: string | null
           created_at?: string
           created_by: string
@@ -862,6 +812,7 @@ export type Database = {
           video_url?: string | null
         }
         Update: {
+          archived?: boolean
           content?: string | null
           created_at?: string
           created_by?: string
@@ -927,6 +878,7 @@ export type Database = {
       }
       videos: {
         Row: {
+          archived: boolean
           created_at: string
           created_by: string
           description: string | null
@@ -941,6 +893,7 @@ export type Database = {
           url: string
         }
         Insert: {
+          archived?: boolean
           created_at?: string
           created_by: string
           description?: string | null
@@ -955,6 +908,7 @@ export type Database = {
           url: string
         }
         Update: {
+          archived?: boolean
           created_at?: string
           created_by?: string
           description?: string | null

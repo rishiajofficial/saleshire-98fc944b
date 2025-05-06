@@ -7,7 +7,9 @@ import { Database } from '@/integrations/supabase/types';
 export type TableName = 'activity_logs' | 'assessment_results' | 'assessment_sections' | 
                         'assessments' | 'candidates' | 'interviews' | 'manager_regions' | 
                         'managers' | 'profiles' | 'questions' | 'sales_tasks' | 'shops' | 
-                        'training_modules' | 'videos' | 'job_applications';
+                        'training_modules' | 'videos' | 'job_applications' | 'job_assessments' |
+                        'job_training' | 'module_assessments' | 'module_videos' |
+                        'quiz_results' | 'training_progress';
 
 export function useDatabaseQuery<T = any>(
   tableName: TableName,

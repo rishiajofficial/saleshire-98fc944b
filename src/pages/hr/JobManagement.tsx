@@ -22,7 +22,8 @@ const JobManagementPage = () => {
     try {
       const { data, error } = await supabase
         .from('assessments')
-        .select('id, title');
+        .select('id, title')
+        .eq('archived', false);
       
       if (error) throw error;
       setAssessments(data || []);
@@ -88,7 +89,6 @@ const JobManagementPage = () => {
       const updatedJob = {
         ...jobToUpdate,
         archived,
-        // Make sure required properties in EditingJob have default values if they're optional in Job
         department: jobToUpdate.department || "",
         location: jobToUpdate.location || "",
         employment_type: jobToUpdate.employment_type || "",
@@ -121,7 +121,7 @@ const JobManagementPage = () => {
           onJobUpdated={handleJobUpdated}
           onJobArchived={handleJobArchived}
           assessments={assessments}
-          categories={[]} // Add empty categories array to fix the TS error
+          categories={[]} // Pass empty array for categories since job_categories table was removed
         />
       </div>
     </MainLayout>
