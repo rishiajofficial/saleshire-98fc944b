@@ -93,13 +93,13 @@ export const useJobOpenings = () => {
       if (jobTrainingError) throw jobTrainingError;
       
       // Delete the job application
-      const { error } = await supabase
+      const { error: deleteError } = await supabase
         .from('job_applications')
         .delete()
         .eq('candidate_id', user.id)
         .eq('job_id', jobToDelete);
         
-      if (error) throw error;
+      if (deleteError) throw deleteError;
       
       // Clear training progress for modules associated with this job
       if (jobTrainingData && jobTrainingData.length > 0) {
@@ -149,6 +149,10 @@ export const useJobOpenings = () => {
       });
       
       setJobToDelete(null);
+
+      // Important: Refetch jobs to update the UI
+      refetchJobs();
+      
     } catch (err: any) {
       console.error("Error deleting application:", err);
       toast.error("Failed to withdraw application: " + err.message);

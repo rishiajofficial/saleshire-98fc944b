@@ -8,7 +8,6 @@ import { StatusCard } from '@/components/dashboard/StatusCard';
 import { NotificationsCard } from '@/components/dashboard/NotificationsCard';
 import { HiringJourneyCard } from '@/components/dashboard/HiringJourneyCard';
 import { TrainingCard } from '@/components/dashboard/TrainingCard';
-import { ApplicationPrompt } from '@/components/dashboard/ApplicationPrompt';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -32,7 +31,6 @@ const CandidateDashboard = () => {
     currentStep,
     trainingModules,
     isLoadingTraining,
-    showApplicationPrompt,
     canAccessTraining,
   } = useCandidateDashboardState(user?.id, selectedJobId);
 
@@ -153,7 +151,6 @@ const CandidateDashboard = () => {
       <TooltipProvider>
         <div className="container mx-auto px-4 py-8 space-y-8">
           <DashboardHeader userName={profile?.name} />
-          {showApplicationPrompt && <ApplicationPrompt />}
           <DashboardLayout sideContent={sideContent}>
             {mainContent}
           </DashboardLayout>
