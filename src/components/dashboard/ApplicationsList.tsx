@@ -26,7 +26,7 @@ import {
   Clock,
 } from "lucide-react";
 
-interface Application {
+export interface Application {
   id: string;
   job_id: string;
   job_title?: string;

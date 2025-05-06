@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -17,13 +18,13 @@ import {
 import { AssessmentWithStats } from "@/types";
 
 interface AssessmentListProps {
-  assessments: AssessmentWithStats[];
-  isLoading: boolean;
+  assessments?: AssessmentWithStats[];
+  isLoading?: boolean;
 }
 
 const AssessmentList: React.FC<AssessmentListProps> = ({
-  assessments,
-  isLoading,
+  assessments = [],
+  isLoading = false,
 }) => {
   // Format date for display
   const formatDate = (dateString: string) => {

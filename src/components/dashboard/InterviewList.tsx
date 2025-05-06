@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -17,13 +18,13 @@ import {
 import { Interview } from "@/types";
 
 interface InterviewListProps {
-  interviews: Interview[];
-  isLoading: boolean;
+  interviews?: Interview[];
+  isLoading?: boolean;
 }
 
 const InterviewList: React.FC<InterviewListProps> = ({
-  interviews,
-  isLoading,
+  interviews = [],
+  isLoading = false,
 }) => {
   // Format datetime for display
   const formatDateTime = (dateString: string) => {

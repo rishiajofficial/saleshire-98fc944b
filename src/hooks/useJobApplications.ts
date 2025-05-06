@@ -1,6 +1,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Application } from "@/components/dashboard/ApplicationsList";
 
 export const useJobApplications = (userId?: string, role?: string) => {
   return useQuery({
@@ -41,21 +42,28 @@ export const useJobApplications = (userId?: string, role?: string) => {
         throw new Error(`Error fetching job applications: ${error.message}`);
       }
       
-      // Format data for easier consumption
-      const formattedData = data?.map(app => ({
-        id: app.id,
-        job_id: app.job_id,
-        job_title: app.jobs?.title,
-        candidate_id: app.candidate_id,
-        candidate_name: app.candidates?.profile?.name,
-        candidate_email: app.candidates?.profile?.email,
-        status: app.status,
-        created_at: app.created_at,
-        updated_at: app.updated_at,
-        assessment_results: app.candidates?.assessment_results || []
-      })) || [];
+      // Format data for easier consumption and ensure assessment_results is always an array
+      const formattedData = data?.map(app => {
+        // Handle potential error case for assessment_results
+        const assessment_results = Array.isArray(app.candidates?.assessment_results) 
+          ? app.candidates?.assessment_results 
+          : [];
+          
+        return {
+          id: app.id,
+          job_id: app.job_id,
+          job_title: app.jobs?.title,
+          candidate_id: app.candidate_id,
+          candidate_name: app.candidates?.profile?.name,
+          candidate_email: app.candidates?.profile?.email,
+          status: app.status,
+          created_at: app.created_at,
+          updated_at: app.updated_at,
+          assessment_results
+        };
+      }) || [];
       
-      return formattedData;
+      return formattedData as Application[];
     },
     enabled: !!userId
   });

@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -6,19 +7,19 @@ import { Users, FileText, Calendar, ArrowRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface DashboardStatsProps {
-  totalCandidates: number;
-  pendingReviews: number;
-  interviewsScheduled: number;
+  totalCandidates?: number;
+  pendingReviews?: number;
+  interviewsScheduled?: number;
   nextInterviewDate?: string;
-  isLoading: boolean;
+  isLoading?: boolean;
 }
 
 const DashboardStats: React.FC<DashboardStatsProps> = ({
-  totalCandidates,
-  pendingReviews,
-  interviewsScheduled,
+  totalCandidates = 0,
+  pendingReviews = 0,
+  interviewsScheduled = 0,
   nextInterviewDate,
-  isLoading,
+  isLoading = false,
 }) => {
   const { profile } = useAuth();
   const role = profile?.role?.toLowerCase();
