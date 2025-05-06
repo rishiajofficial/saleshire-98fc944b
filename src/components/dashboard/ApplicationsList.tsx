@@ -24,6 +24,7 @@ import {
   ChevronDown,
   ChevronUp,
   Clock,
+  User,
 } from "lucide-react";
 
 export interface Application {
@@ -225,7 +226,7 @@ const ApplicationsList: React.FC<ApplicationsListProps> = ({
                       </TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="sm" asChild>
-                          <Link to={`/candidates/${application.candidate_id}`}>
+                          <Link to={`/applications/${application.id}`}>
                             Review
                           </Link>
                         </Button>
@@ -252,15 +253,15 @@ const ApplicationsList: React.FC<ApplicationsListProps> = ({
                               <h4 className="text-sm font-medium mb-2">Actions</h4>
                               <div className="space-y-2">
                                 <Button size="sm" variant="default" className="w-full justify-start" asChild>
-                                  <Link to={`/candidates/${application.candidate_id}`}>
+                                  <Link to={`/applications/${application.id}`}>
                                     <CheckCircle className="h-4 w-4 mr-2" />
-                                    Approve
+                                    View Application
                                   </Link>
                                 </Button>
                                 <Button size="sm" variant="outline" className="w-full justify-start" asChild>
                                   <Link to={`/candidates/${application.candidate_id}`}>
-                                    <XCircle className="h-4 w-4 mr-2" />
-                                    Reject
+                                    <User className="h-4 w-4 mr-2" />
+                                    View Candidate
                                   </Link>
                                 </Button>
                               </div>

@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,6 +22,7 @@ import AssessmentQuiz from "./pages/training/AssessmentQuiz";
 import VideoPlayer from "./pages/training/VideoPlayer";
 import Candidates from "./pages/manager/Candidates";
 import CandidateDetail from "./pages/manager/CandidateDetail";
+import JobApplicationDetail from "./pages/manager/JobApplicationDetail";
 import Assessments from "./pages/manager/Assessments";
 import Analytics from "./pages/manager/Analytics";
 import Interviews from "./pages/manager/Interviews";
