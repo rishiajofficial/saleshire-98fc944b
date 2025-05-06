@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -15,9 +14,9 @@ import { ProjectStatusSection } from "@/components/candidates/ProjectStatusSecti
 import { StatusBadge } from "@/components/candidates/StatusBadge";
 import { StatusUpdateSection } from "@/components/candidates/StatusUpdateSection";
 import { AssessmentResultsSection } from "@/components/candidates/AssessmentResultsSection";
-import { useState as useStateSafe } from "react";
 import { toast } from "sonner";
 import { updateApplicationStatus } from "@/hooks/useDatabaseQuery";
+import { JobApplicationCandidate } from "@/types/candidate"; 
 
 const JobApplicationDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -227,10 +226,24 @@ const JobApplicationDetail = () => {
     );
   }
 
-  const assessmentResults = application.candidates?.assessment_results && 
+  // Ensure assessment_results is an array, even if it's an error
+  const assessmentResults = application?.candidates?.assessment_results && 
     Array.isArray(application.candidates.assessment_results) 
       ? application.candidates.assessment_results 
       : [];
+
+  // Create a safe candidate object that matches our JobApplicationCandidate type
+  const candidateData = application?.candidates ? {
+    ...application.candidates,
+    // Ensure required fields have default values if missing
+    id: application.candidates.id,
+    status: application.candidates.status || applicationStatus,
+    current_step: application.candidates.current_step || 1,
+    assessment_results: assessmentResults,
+    // Use empty string as default for optional string fields
+    updated_at: application.candidates.updated_at || "",
+    assigned_manager: application.candidates.assigned_manager || null
+  } : null;
 
   return (
     <MainLayout>
@@ -350,9 +363,9 @@ const JobApplicationDetail = () => {
             </TabsContent>
             
             <TabsContent value="candidate">
-              {application.candidates && (
+              {candidateData && (
                 <CandidateInfo 
-                  candidate={application.candidates}
+                  candidate={candidateData as any}
                   phone={phone}
                   location={location}
                   region={region}
@@ -379,14 +392,14 @@ const JobApplicationDetail = () => {
                 <StatusUpdateSection 
                   applicationStatus={applicationStatus}
                   isUpdatingStatus={isUpdating}
-                  candidateData={application.candidates || null}
+                  candidateData={candidateData}
                   onStatusChange={handleStatusChange}
                   onStatusUpdate={handleStatusUpdate}
                 />
                 
-                {application.candidates && (
+                {candidateData && (
                   <ProjectStatusSection 
-                    candidate={application.candidates}
+                    candidate={candidateData as any}
                     projectStatus={projectStatus}
                     isUpdatingProject={isUpdatingProject}
                     onAssignProject={handleAssignProject}

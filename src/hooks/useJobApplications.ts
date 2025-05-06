@@ -45,9 +45,10 @@ export const useJobApplications = (userId?: string, role?: string) => {
       // Format data for easier consumption and ensure assessment_results is always an array
       const formattedData = data?.map(app => {
         // Handle potential error case for assessment_results
-        const assessment_results = Array.isArray(app.candidates?.assessment_results) 
-          ? app.candidates?.assessment_results 
-          : [];
+        const assessment_results = app.candidates?.assessment_results && 
+          Array.isArray(app.candidates.assessment_results) 
+            ? app.candidates.assessment_results 
+            : [];
           
         return {
           id: app.id,
