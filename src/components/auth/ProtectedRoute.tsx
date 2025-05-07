@@ -19,8 +19,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // Save current path for redirect after login - only do this once when determined not logged in
   useEffect(() => {
     if (!user && !isLoading) {
-      // Store the attempted URL for redirecting after login
-      sessionStorage.setItem('intendedPath', location.pathname);
+      // Store the attempted URL for redirecting after login, but only if it's not a public route
+      if (!['/login', '/register', '/forgot-password', '/reset-password', '/', '/careers'].includes(location.pathname)) {
+        sessionStorage.setItem('intendedPath', location.pathname);
+      }
     }
   }, [user, isLoading, location.pathname]);
   
@@ -45,17 +47,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   
   // If profile is loaded and role is not allowed, redirect to appropriate dashboard
   if (!allowedRoles.includes(profile.role as UserRole)) {
-    if (profile.role === 'admin') {
-      return <Navigate to="/dashboard/admin" replace />;
-    } else if (profile.role === 'manager') {
-      return <Navigate to="/dashboard/manager" replace />;
-    } else if (profile.role === 'director') {
-      return <Navigate to="/dashboard/director" replace />;
-    } else if (profile.role === 'hr') {
-      return <Navigate to="/dashboard/hr" replace />;
-    } else {
-      return <Navigate to="/dashboard/candidate" replace />;
-    }
+    const dashboardPath = `/dashboard/${profile.role}`;
+    return <Navigate to={dashboardPath} replace />;
   }
   
   // If everything is fine, render the children

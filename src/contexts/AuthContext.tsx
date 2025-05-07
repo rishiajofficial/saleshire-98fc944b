@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -85,7 +84,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               currentPath !== '/reset-password' &&
               currentPath !== '/' &&
               currentPath !== '/careers') {
-            window.location.href = '/login'; // Use direct URL navigation instead of useNavigate
+            // Just change location once instead of forcing a reload
+            window.location.replace('/login');
           }
         }
       }
@@ -111,7 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             currentPath !== '/reset-password' &&
             currentPath !== '/' &&
             currentPath !== '/careers') {
-          window.location.href = '/login'; // Use direct URL navigation instead of useNavigate
+          window.location.replace('/login');
         }
       }
     });
@@ -257,18 +257,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Sign out function
+  // Sign out function - optimized to prevent multiple refreshes
   const signOut = async () => {
     try {
       setIsLoading(true);
+      console.log("AuthContext: Attempting signOut. Current session state:", session);
+
       // Clear any stored session data
       sessionStorage.clear();
-      localStorage.clear();
       
-      // Log session state right before calling Supabase signout
-      console.log("AuthContext: Attempting signOut. Current session state:", session);
+      // Clean up localStorage items related to auth to prevent stale data
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+          localStorage.removeItem(key);
+        }
+      });
       
-      // Call Supabase signOut
+      // Only call supabase.auth.signOut once and handle the redirection directly
       const { error } = await supabase.auth.signOut();
       
       if (error) {
@@ -282,8 +287,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setProfile(null);
       
       toast.success('Successfully signed out');
-      // Navigation is handled by onAuthStateChange listener or redirect to login
-      window.location.href = '/login';
+      
+      // Use replace instead of href to prevent additional history entries
+      window.location.replace('/login');
     } catch (error: any) {
       toast.error(error.message || 'Failed to sign out');
       console.error('AuthContext: Error in signOut function wrapper:', error.message);
