@@ -25,7 +25,7 @@ const AdminDashboard = () => {
     <MainLayout>
       <TooltipProvider>
         <div className="container mx-auto px-4 py-8 space-y-8">
-          <DashboardHeader userName={profile?.name} />
+          <DashboardHeader userName={profile?.name} userRole={profile?.role} />
           <DashboardStats />
 
           <Tabs defaultValue="applications" className="w-full">

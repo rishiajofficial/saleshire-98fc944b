@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
@@ -150,7 +149,7 @@ const CandidateDashboard = () => {
     <MainLayout>
       <TooltipProvider>
         <div className="container mx-auto px-4 py-8 space-y-8">
-          <DashboardHeader userName={profile?.name} />
+          <DashboardHeader userName={profile?.name} userRole={profile?.role} />
           <DashboardLayout sideContent={sideContent}>
             {mainContent}
           </DashboardLayout>
