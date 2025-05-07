@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { useTrainingProgress } from '@/hooks/training/useTrainingProgress';
 import { TrainingModuleProgress } from '@/types/training';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth';
 
 export const useTrainingModulesList = () => {
   const { user } = useAuth();

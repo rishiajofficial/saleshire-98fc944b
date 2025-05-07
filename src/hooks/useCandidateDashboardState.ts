@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth';
 import { useCandidateDashboardData } from './useCandidateDashboardData';
 import { useTrainingModules } from './useTrainingModules';
 import { TrainingModuleProgress } from '@/types/training';

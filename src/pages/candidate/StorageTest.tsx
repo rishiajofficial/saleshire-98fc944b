@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { Button } from "@/components/ui/button"; // Optional: for styling
 import MainLayout from '@/components/layout/MainLayout'; // Assuming you want layout
 

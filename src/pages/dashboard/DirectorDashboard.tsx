@@ -8,7 +8,7 @@ import AssessmentList from "@/components/dashboard/AssessmentList";
 import JobListings from "@/components/dashboard/JobListings";
 import ApplicationsList from "@/components/dashboard/ApplicationsList";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { useJobApplications } from "@/hooks/useJobApplications";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 

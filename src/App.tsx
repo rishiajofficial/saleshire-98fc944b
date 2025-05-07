@@ -37,7 +37,7 @@ import TrainingModuleDetails from "./pages/admin/TrainingModuleDetails";
 import QuestionDetails from "./pages/admin/QuestionDetails";
 import JobOpenings from "./pages/candidate/JobOpenings";
 import JobManagement from "./pages/hr/JobManagement";
-import { AuthProvider } from "./contexts/AuthContext";
+import { AuthProvider } from "./contexts/auth";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import ModuleView from "./pages/training/ModuleView";
 import Careers from "./pages/public/Careers";
