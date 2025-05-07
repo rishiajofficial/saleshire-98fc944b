@@ -21,7 +21,7 @@ const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 // Create a custom hook for router independent navigation
 // This will be used only when a router is available
 const useNavigation = () => {
-  // Store navigation function that will be set when used within a router
+  // Store navigation function that will be set when used within a router context
   const navigate = (path: string) => {
     // This is just a placeholder that will be overridden when used in a component with router context
     console.warn("Navigation attempted outside Router context - this is safe to ignore during initialization");
@@ -46,35 +46,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // This flag helps prevent redirect loops
   const [initialAuthCheckComplete, setInitialAuthCheckComplete] = useState<boolean>(false);
   
+  // Flag to track if profile is being fetched to prevent duplicate requests
+  const isProfileFetchingRef = useRef<boolean>(false);
+  
   useEffect(() => {
     console.log("Auth Provider initialized");
     
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
-        console.log('Auth state changed:', event, 'Session:', currentSession);
+        console.log('Auth state changed:', event, 'Session:', currentSession?.user?.id);
+        
+        // Update session state
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
         if (event === 'SIGNED_IN') {
           console.log('User signed in:', currentSession?.user?.id);
-          if (currentSession?.user) {
+          if (currentSession?.user && !isProfileFetchingRef.current) {
             // Defer profile fetching to avoid potential auth deadlocks
+            isProfileFetchingRef.current = true;
             setTimeout(() => {
-              fetchProfile(currentSession.user.id);
+              fetchProfile(currentSession.user.id).finally(() => {
+                isProfileFetchingRef.current = false;
+              });
             }, 0);
           }
         } else if (event === 'SIGNED_OUT') {
           console.log('AuthContext: SIGNED_OUT event detected. Clearing profile.');
           setProfile(null);
           
-          // Handle navigation through window.location instead of useNavigate
+          // Handle navigation through window.location only when needed
           const currentPath = locationRef.current.pathname;
-          if (currentPath !== '/login' && 
+          if (initialAuthCheckComplete && 
+              currentPath !== '/login' && 
               currentPath !== '/register' && 
               currentPath !== '/forgot-password' && 
               currentPath !== '/reset-password' &&
-              currentPath !== '/') {
+              currentPath !== '/' &&
+              currentPath !== '/careers') {
             window.location.href = '/login'; // Use direct URL navigation instead of useNavigate
           }
         }
@@ -93,13 +103,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsLoading(false);
         setInitialAuthCheckComplete(true);
         
-        // Handle navigation through window.location instead of useNavigate
+        // Only redirect if not on public pages
         const currentPath = locationRef.current.pathname;
         if (currentPath !== '/login' && 
             currentPath !== '/register' && 
             currentPath !== '/forgot-password' && 
             currentPath !== '/reset-password' &&
-            currentPath !== '/') {
+            currentPath !== '/' &&
+            currentPath !== '/careers') {
           window.location.href = '/login'; // Use direct URL navigation instead of useNavigate
         }
       }
