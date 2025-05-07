@@ -1,19 +1,11 @@
+
 import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useLocation } from 'react-router-dom';
-
-interface AuthContextProps {
-  session: Session | null;
-  user: User | null;
-  profile: any; // Profile data from the profiles table
-  isLoading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, userData: any) => Promise<void>;
-  signOut: () => Promise<void>;
-  updateProfile: (data: any) => Promise<void>;
-}
+import { AuthContextProps } from './types';
+import { cleanupAuthState, fetchUserProfile } from './authUtils';
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
@@ -66,7 +58,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Defer profile fetching to avoid potential auth deadlocks
             isProfileFetchingRef.current = true;
             setTimeout(() => {
-              fetchProfile(currentSession.user.id).finally(() => {
+              fetchUserProfile(currentSession.user.id).then(profileData => {
+                setProfile(profileData);
                 isProfileFetchingRef.current = false;
               });
             }, 0);
@@ -98,7 +91,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(currentSession?.user ?? null);
       
       if (currentSession?.user) {
-        fetchProfile(currentSession.user.id);
+        fetchUserProfile(currentSession.user.id).then(profileData => {
+          setProfile(profileData);
+          setIsLoading(false);
+          setInitialAuthCheckComplete(true);
+        });
       } else {
         setIsLoading(false);
         setInitialAuthCheckComplete(true);
@@ -120,55 +117,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       subscription.unsubscribe();
     };
   }, []);
-
-  // Fetch user profile data from Supabase
-  const fetchProfile = async (userId: string) => {
-    try {
-      console.log('Fetching profile for user:', userId);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      
-      if (error) {
-        throw error;
-      }
-
-      if (data) {
-        console.log('Profile fetched:', data);
-        setProfile(data);
-        
-        // Now fetch additional data separately if needed
-        if (data.role === 'candidate') {
-          const { data: candidateData, error: candidateError } = await supabase
-            .from('candidates')
-            .select('*')
-            .eq('id', userId)
-            .single();
-            
-          if (!candidateError && candidateData) {
-            setProfile(prev => ({ ...prev, candidateData }));
-          }
-        } else if (data.role === 'manager') {
-          const { data: managerData, error: managerError } = await supabase
-            .from('managers')
-            .select('*')
-            .eq('id', userId)
-            .single();
-            
-          if (!managerError && managerData) {
-            setProfile(prev => ({ ...prev, managerData }));
-          }
-        }
-      }
-    } catch (error: any) {
-      console.error('Error fetching profile:', error.message);
-    } finally {
-      setIsLoading(false);
-      setInitialAuthCheckComplete(true);
-    }
-  };
 
   // Sign in function
   const signIn = async (email: string, password: string) => {
@@ -263,15 +211,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       console.log("AuthContext: Attempting signOut. Current session state:", session);
 
-      // Clear any stored session data
-      sessionStorage.clear();
-      
-      // Clean up localStorage items related to auth to prevent stale data
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-          localStorage.removeItem(key);
-        }
-      });
+      // Clean up auth state
+      cleanupAuthState();
       
       // Only call supabase.auth.signOut once and handle the redirection directly
       const { error } = await supabase.auth.signOut();
@@ -310,7 +251,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
 
-      await fetchProfile(user?.id as string);
+      // Fetch the updated profile
+      const updatedProfile = await fetchUserProfile(user?.id as string);
+      if (updatedProfile) {
+        setProfile(updatedProfile);
+      }
+      
       toast.success('Profile updated successfully');
     } catch (error: any) {
       toast.error(error.message || 'Failed to update profile');

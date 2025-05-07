@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth';
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from 'sonner';
 import AuthLayout from '@/components/layout/AuthLayout';
