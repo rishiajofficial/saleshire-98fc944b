@@ -2,16 +2,15 @@
 import React from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import DashboardStats from "@/components/dashboard/DashboardStats";
-import { ApplicationsList } from "@/components/dashboard/ApplicationsList";
-import RecentResultsList from "@/components/dashboard/RecentResultsList";
+import AssessmentList from "@/components/dashboard/AssessmentList";
+import JobListings from "@/components/dashboard/JobListings";
+import ApplicationsList from "@/components/dashboard/ApplicationsList";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import InterviewList from "@/components/dashboard/InterviewList";
 import { useAuth } from "@/contexts/auth";
 import { useJobApplications } from "@/hooks/useJobApplications";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import JobListings from "@/components/dashboard/JobListings";
-import AssessmentList from "@/components/dashboard/AssessmentList";
 
 const DirectorDashboard = () => {
   const { user, profile } = useAuth();
@@ -38,7 +37,7 @@ const DirectorDashboard = () => {
               <ApplicationsList 
                 applications={applications || []} 
                 isLoading={isLoadingApplications}
-                userRole={profile?.role || 'director'}
+                role={profile?.role || 'director'}
               />
             </TabsContent>
             <TabsContent value="jobs">

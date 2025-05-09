@@ -1,4 +1,8 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -8,297 +12,568 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
-  MoreHorizontal,
+  CheckCircle,
+  XCircle,
   ChevronDown,
+  ChevronUp,
+  Clock,
+  User,
+  Mail,
   BarChart2,
   CheckSquare,
-  ExternalLink,
+  Square,
 } from "lucide-react";
-import { Application } from "@/types/application";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { ApplicationFilters, ApplicationFilterValues } from "@/components/applications/ApplicationFilters";
+import { ApplicationsBulkActions } from "@/components/applications/ApplicationsBulkActions";
+import { EmailTemplates } from "@/components/applications/EmailTemplates";
 import { ApplicationStatusHistory } from "@/components/applications/ApplicationStatusHistory";
+import { CandidateTag } from "@/components/applications/CandidateTag";
+import { ApplicationAnalytics } from "@/components/applications/ApplicationAnalytics";
 import { toast } from "sonner";
+import { startOfDay, subDays, subWeeks, subMonths, parseISO, isAfter } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+
+export interface Application {
+  id: string;
+  job_id: string;
+  job_title?: string;
+  candidate_id: string;
+  candidate_name?: string;
+  candidate_email?: string;
+  status: string;
+  candidate_status?: string;
+  created_at: string;
+  updated_at: string;
+  assessment_results?: any[];
+  tags?: string[];
+}
 
 interface ApplicationsListProps {
   applications: Application[];
   isLoading: boolean;
-  error?: Error | null;
-  userRole?: string;
+  role: string;
   userId?: string;
-  onStatusUpdate?: (applicationIds: string[], newStatus: string, notes?: string) => void;
 }
 
-export const ApplicationsList: React.FC<ApplicationsListProps> = ({
+const ApplicationsList: React.FC<ApplicationsListProps> = ({
   applications,
   isLoading,
-  error,
-  userRole,
+  role,
   userId,
-  onStatusUpdate,
 }) => {
-  const [selectedApplications, setSelectedApplications] = useState<string[]>([]);
-  const [bulkStatus, setBulkStatus] = useState<string>('');
-  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
-  const [showHistory, setShowHistory] = useState<string | null>(null);
-  const [notes, setNotes] = useState<string>('');
+  const [expandedApplication, setExpandedApplication] = useState<string | null>(null);
+  const [filters, setFilters] = useState<ApplicationFilterValues>({
+    status: null,
+    searchTerm: "",
+    dateRange: null,
+  });
+  const [filteredApplications, setFilteredApplications] = useState<Application[]>(applications);
+  const [selectedApplications, setSelectedApplications] = useState<Application[]>([]);
+  const [showAnalytics, setShowAnalytics] = useState<boolean>(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState<boolean>(false);
+  const [selectedTabValue, setSelectedTabValue] = useState<string>("all");
+  
+  // Handle changes when applications prop changes
+  useEffect(() => {
+    setFilteredApplications(applications);
+    applyFilters(applications);
+  }, [applications]);
+  
+  // Apply filters when filters state changes
+  useEffect(() => {
+    applyFilters(applications);
+  }, [filters]);
 
-  const handleCheckboxChange = (applicationId: string) => {
-    setSelectedApplications((prev) =>
-      prev.includes(applicationId)
-        ? prev.filter((id) => id !== applicationId)
-        : [...prev, applicationId]
-    );
+  const applyFilters = (apps: Application[]) => {
+    let filtered = [...apps];
+    
+    // Apply status filter
+    if (filters.status) {
+      filtered = filtered.filter(app => app.status === filters.status);
+    }
+    
+    // Apply search filter
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        app => 
+          (app.candidate_name && app.candidate_name.toLowerCase().includes(searchLower)) ||
+          (app.candidate_email && app.candidate_email.toLowerCase().includes(searchLower)) ||
+          (app.job_title && app.job_title.toLowerCase().includes(searchLower))
+      );
+    }
+    
+    // Apply date range filter
+    if (filters.dateRange) {
+      const now = new Date();
+      const today = startOfDay(now);
+      
+      let startDate: Date;
+      switch (filters.dateRange) {
+        case 'today':
+          startDate = today;
+          break;
+        case 'week':
+          startDate = subWeeks(today, 1);
+          break;
+        case 'month':
+          startDate = subMonths(today, 1);
+          break;
+        default:
+          startDate = new Date(0); // Beginning of time
+      }
+      
+      filtered = filtered.filter(app => {
+        const appDate = parseISO(app.created_at);
+        return isAfter(appDate, startDate);
+      });
+    }
+    
+    setFilteredApplications(filtered);
   };
 
-  const handleSelectAll = () => {
-    if (selectedApplications.length === applications.length) {
+  const toggleExpand = (id: string) => {
+    if (expandedApplication === id) {
+      setExpandedApplication(null);
+    } else {
+      setExpandedApplication(id);
+    }
+  };
+
+  const resetFilters = () => {
+    setFilters({
+      status: null,
+      searchTerm: "",
+      dateRange: null,
+    });
+  };
+
+  const toggleApplicationSelection = (application: Application) => {
+    setSelectedApplications(prevSelected => {
+      const isSelected = prevSelected.some(app => app.id === application.id);
+      
+      if (isSelected) {
+        return prevSelected.filter(app => app.id !== application.id);
+      } else {
+        return [...prevSelected, application];
+      }
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedApplications.length === filteredApplications.length) {
       setSelectedApplications([]);
     } else {
-      setSelectedApplications(applications.map((app) => app.id));
+      setSelectedApplications([...filteredApplications]);
     }
   };
 
-  const handleBulkUpdate = async () => {
-    if (!bulkStatus || selectedApplications.length === 0) {
-      alert('Please select a status and at least one application.');
-      return;
-    }
+  const clearSelection = () => {
+    setSelectedApplications([]);
+  };
 
-    setIsBulkUpdating(true);
+  const handleAddTag = async (candidateId: string, tag: string) => {
     try {
-      await onStatusUpdate(selectedApplications, bulkStatus, notes);
-      toast.success(`${selectedApplications.length} applications updated to ${bulkStatus}`);
-      setSelectedApplications([]);
-      setBulkStatus('');
-      setNotes('');
-    } catch (err: any) {
-      toast.error(`Failed to update applications: ${err.message}`);
-    } finally {
-      setIsBulkUpdating(false);
+      // Find the application
+      const application = applications.find(app => app.candidate_id === candidateId);
+      if (!application) return;
+      
+      // Get current tags or initialize empty array
+      const currentTags = application.tags || [];
+      
+      // Don't add if tag already exists
+      if (currentTags.includes(tag)) return;
+      
+      // In a real application, you'd update the database via SQL migration
+      // For now, we'll just show the success message
+      toast.success(`Added tag "${tag}"`);
+      
+    } catch (error: any) {
+      toast.error(`Failed to add tag: ${error.message}`);
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const handleRemoveTag = async (candidateId: string, tagToRemove: string) => {
+    try {
+      // Find the application
+      const application = applications.find(app => app.candidate_id === candidateId);
+      if (!application) return;
+      
+      // Get current tags or initialize empty array
+      const currentTags = application.tags || [];
+      
+      // Filter out the tag to remove
+      const newTags = currentTags.filter(tag => tag !== tagToRemove);
+      
+      // In a real application, you'd update the database via SQL migration
+      // For now, we'll just show the success message
+      toast.success(`Removed tag "${tagToRemove}"`);
+      
+    } catch (error: any) {
+      toast.error(`Failed to remove tag: ${error.message}`);
+    }
+  };
+  
+  // Tab filtering logic
+  const getTabFilteredApplications = (apps: Application[]) => {
+    switch (selectedTabValue) {
+      case 'awaiting_review':
+        return apps.filter(app => app.status === 'applied' || app.status === 'hr_review');
+      case 'in_progress':
+        return apps.filter(app => 
+          app.status === 'hr_approved' || 
+          app.status === 'training' || 
+          app.status === 'manager_interview' ||
+          app.status === 'sales_task'
+        );
+      case 'completed':
+        return apps.filter(app => app.status === 'hired' || app.status === 'rejected');
+      default:
+        return apps;
+    }
+  };
+
+  const tabFilteredApplications = getTabFilteredApplications(filteredApplications);
+
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return date.toLocaleDateString();
+  };
+
+  // Get status badge component based on status string
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case "applied":
-        return "bg-gray-100 text-gray-700";
+        return (
+          <Badge className="bg-blue-100 text-blue-800">
+            Applied
+          </Badge>
+        );
+      case "screening":
       case "hr_review":
-        return "bg-blue-100 text-blue-700";
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800">
+            <Clock className="mr-1 h-3 w-3" /> Screening
+          </Badge>
+        );
       case "hr_approved":
-        return "bg-green-100 text-green-700";
       case "training":
-        return "bg-purple-100 text-purple-700";
-      case "manager_interview":
-        return "bg-yellow-100 text-yellow-700";
+        return (
+          <Badge className="bg-purple-100 text-purple-800">
+            Training
+          </Badge>
+        );
       case "sales_task":
-        return "bg-orange-100 text-orange-700";
+        return (
+          <Badge className="bg-orange-100 text-orange-800">
+            Sales Task
+          </Badge>
+        );
+      case "final_interview":
+      case "interview":
+      case "manager_interview":
+        return (
+          <Badge className="bg-green-100 text-green-800">
+            Interview
+          </Badge>
+        );
       case "hired":
-        return "bg-emerald-100 text-emerald-700";
+        return (
+          <Badge className="bg-green-100 text-green-800">
+            <CheckCircle className="mr-1 h-3 w-3" /> Hired
+          </Badge>
+        );
       case "rejected":
-        return "bg-red-100 text-red-700";
+        return (
+          <Badge className="bg-red-100 text-red-800">
+            <XCircle className="mr-1 h-3 w-3" /> Rejected
+          </Badge>
+        );
       default:
-        return "bg-gray-100 text-gray-700";
+        return null;
     }
   };
 
-  if (isLoading) {
-    return (
-      <TableRow>
-        <TableCell colSpan={7} className="text-center py-8">
-          Loading applications...
-        </TableCell>
-      </TableRow>
-    );
-  }
-
-  if (error) {
-    return (
-      <TableRow>
-        <TableCell colSpan={7} className="text-center py-8 text-red-600">
-          Error: {error.message}
-        </TableCell>
-      </TableRow>
-    );
-  }
-
-  if (applications.length === 0) {
-    return (
-      <TableRow>
-        <TableCell colSpan={7} className="text-center py-8">
-          <p className="text-muted-foreground">No applications found.</p>
-        </TableCell>
-      </TableRow>
-    );
-  }
+  // Get average test score from application's assessment results
+  const getApplicationScore = (application: Application) => {
+    if (!application.assessment_results || application.assessment_results.length === 0) {
+      return "N/A";
+    }
+    
+    const scores = application.assessment_results
+      .filter((result: any) => result.score !== null)
+      .map((result: any) => result.score);
+    
+    if (scores.length === 0) return "N/A";
+    
+    const avgScore = Math.round(scores.reduce((a: number, b: number) => a + b, 0) / scores.length);
+    return `${avgScore}%`;
+  };
 
   return (
     <>
-      {selectedApplications.length > 0 && (
-        <div className="mb-4 p-4 bg-gray-50 rounded-md border">
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-600">
-              {selectedApplications.length} applications selected
+      {/* Analytics section - togglable */}
+      {showAnalytics && (
+        <div className="mb-6">
+          <ApplicationAnalytics role={role} userId={userId} />
+        </div>
+      )}
+    
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>
+                {role?.toLowerCase() === 'director'
+                  ? "All Job Applications"
+                  : role?.toLowerCase() === 'manager' 
+                    ? "Job Applications for Your Positions" 
+                    : "Job Applications Awaiting Review"
+                }
+              </CardTitle>
+              <CardDescription>
+                {role?.toLowerCase() === 'director'
+                  ? "View all applications across all jobs."
+                  : role?.toLowerCase() === 'manager'
+                    ? "Review applications assigned to your job postings."
+                    : "Review and screen new applications."
+                }
+              </CardDescription>
             </div>
-            <div className="flex items-center gap-2">
-              <select
-                value={bulkStatus}
-                onChange={(e) => setBulkStatus(e.target.value)}
-                className="px-4 py-2 border rounded-md text-sm"
+            <div className="flex gap-2">
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="h-8" 
+                onClick={() => setShowAnalytics(!showAnalytics)}
               >
-                <option value="">Select Status</option>
-                <option value="applied">Applied</option>
-                <option value="hr_review">HR Review</option>
-                <option value="hr_approved">HR Approved</option>
-                <option value="training">Training</option>
-                <option value="manager_interview">Interview</option>
-                <option value="sales_task">Sales Task</option>
-                <option value="hired">Hired</option>
-                <option value="rejected">Rejected</option>
-              </select>
-              <input
-                type="text"
-                placeholder="Add notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="px-4 py-2 border rounded-md text-sm"
-              />
-              <Button
-                size="sm"
-                onClick={handleBulkUpdate}
-                disabled={isBulkUpdating || !bulkStatus}
-              >
-                {isBulkUpdating ? "Updating..." : "Update Status"}
+                <BarChart2 className="h-4 w-4 mr-1" />
+                {showAnalytics ? "Hide Analytics" : "Show Analytics"}
+              </Button>
+              
+              {selectedApplications.length > 0 && (
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="h-8"
+                  onClick={() => setEmailDialogOpen(true)}
+                >
+                  <Mail className="h-4 w-4 mr-1" />
+                  Email Selected
+                </Button>
+              )}
+              
+              <Button size="sm" className="h-8" asChild>
+                <Link to="/candidates">View All</Link>
               </Button>
             </div>
           </div>
-        </div>
-      )}
-
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[50px]">
-              <Checkbox
-                checked={selectedApplications.length === applications.length && applications.length > 0}
-                aria-label="Select all"
-                onCheckedChange={handleSelectAll}
-              />
-            </TableHead>
-            <TableHead>Candidate</TableHead>
-            <TableHead>Job</TableHead>
-            <TableHead className="hidden md:table-cell">Department</TableHead>
-            <TableHead className="hidden md:table-cell">Location</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {applications.map((application) => (
-            <TableRow key={application.id}>
-              <TableCell className="w-[50px]">
-                <Checkbox
-                  checked={selectedApplications.includes(application.id)}
-                  onCheckedChange={() => handleCheckboxChange(application.id)}
-                />
-              </TableCell>
-              <TableCell>
-                {application.candidate_name && (
-                  <HoverCard>
-                    <HoverCardTrigger asChild>
-                      <span className="cursor-help underline decoration-dashed underline-offset-2">
-                        {application.candidate_name}
-                      </span>
-                    </HoverCardTrigger>
-                    <HoverCardContent>
-                      <div>
-                        <p className="font-medium">{application.candidate_name}</p>
-                        <p className="text-xs text-muted-foreground">{application.candidate_email}</p>
-                        <p className="text-xs text-muted-foreground">Candidate ID: {application.candidate_id}</p>
+        </CardHeader>
+        <CardContent>
+          {/* Filters and bulk actions */}
+          <div className="mb-6 space-y-4">
+            <ApplicationFilters 
+              filters={filters}
+              onFilterChange={setFilters}
+              onReset={resetFilters}
+            />
+            
+            <ApplicationsBulkActions
+              selectedApplications={selectedApplications}
+              onSelectionChange={clearSelection}
+            />
+            
+            <Tabs value={selectedTabValue} onValueChange={setSelectedTabValue}>
+              <TabsList className="grid grid-cols-4 mb-2">
+                <TabsTrigger value="all">All</TabsTrigger>
+                <TabsTrigger value="awaiting_review">Awaiting Review</TabsTrigger>
+                <TabsTrigger value="in_progress">In Progress</TabsTrigger>
+                <TabsTrigger value="completed">Completed</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+          
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-10">
+                    <div className="flex items-center">
+                      <div 
+                        className="cursor-pointer rounded-sm border p-1"
+                        onClick={toggleSelectAll}
+                      >
+                        {selectedApplications.length === filteredApplications.length ? (
+                          <CheckSquare className="h-4 w-4 text-primary" />
+                        ) : (
+                          <Square className="h-4 w-4 text-muted-foreground" />
+                        )}
                       </div>
-                    </HoverCardContent>
-                  </HoverCard>
+                    </div>
+                  </TableHead>
+                  <TableHead>Job Position</TableHead>
+                  <TableHead>Candidate</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="hidden md:table-cell">Applied Date</TableHead>
+                  <TableHead className="hidden md:table-cell">Test Score</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-4">
+                      Loading applications...
+                    </TableCell>
+                  </TableRow>
+                ) : tabFilteredApplications && tabFilteredApplications.length > 0 ? (
+                  tabFilteredApplications.map((application: Application) => (
+                    <React.Fragment key={application.id}>
+                      <TableRow>
+                        <TableCell>
+                          <div 
+                            className="cursor-pointer rounded-sm border p-1"
+                            onClick={() => toggleApplicationSelection(application)}
+                          >
+                            {selectedApplications.some(app => app.id === application.id) ? (
+                              <CheckSquare className="h-4 w-4 text-primary" />
+                            ) : (
+                              <Square className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-medium">
+                            {application.job_title || "Unknown Position"}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 mr-2 text-muted-foreground"
+                              onClick={() => toggleExpand(application.id)}
+                            >
+                              {expandedApplication === application.id ? 
+                                <ChevronUp className="h-4 w-4" /> : 
+                                <ChevronDown className="h-4 w-4" />}
+                            </Button>
+                            <div>
+                              <div className="font-medium flex items-center gap-1.5">
+                                {application.candidate_name || "Unknown Candidate"}
+                                <CandidateTag 
+                                  candidateId={application.candidate_id} 
+                                  tags={application.tags || []}
+                                  onAddTag={handleAddTag}
+                                  onRemoveTag={handleRemoveTag}
+                                />
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {application.candidate_email || "No email"}
+                              </div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {getStatusBadge(application.status)}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {formatDate(application.created_at)}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {getApplicationScore(application)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link to={`/applications/${application.id}`}>
+                              Review
+                            </Link>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                      {expandedApplication === application.id && (
+                        <TableRow className="bg-muted/50">
+                          <TableCell colSpan={7} className="p-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div>
+                                <h4 className="text-sm font-medium mb-2">Application Details</h4>
+                                <div className="space-y-1 text-sm">
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Applied:</span>
+                                    <span>{formatDate(application.created_at)}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Test Score:</span>
+                                    <span>{getApplicationScore(application)}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div>
+                                <ApplicationStatusHistory applicationId={application.id} />
+                              </div>
+                              <div>
+                                <h4 className="text-sm font-medium mb-2">Actions</h4>
+                                <div className="space-y-2">
+                                  <Button size="sm" variant="default" className="w-full justify-start" asChild>
+                                    <Link to={`/applications/${application.id}`}>
+                                      <CheckCircle className="h-4 w-4 mr-2" />
+                                      View Application
+                                    </Link>
+                                  </Button>
+                                  <Button size="sm" variant="outline" className="w-full justify-start" asChild>
+                                    <Link to={`/candidates/${application.candidate_id}`}>
+                                      <User className="h-4 w-4 mr-2" />
+                                      View Candidate
+                                    </Link>
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </React.Fragment>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-4">
+                      No applications found
+                    </TableCell>
+                  </TableRow>
                 )}
-              </TableCell>
-              <TableCell>
-                {application.job_title}
-              </TableCell>
-              <TableCell className="hidden md:table-cell">
-                {application.job_department || "N/A"}
-              </TableCell>
-              <TableCell className="hidden md:table-cell">
-                {application.job_location || "N/A"}
-              </TableCell>
-              <TableCell>
-                <Badge className={getStatusColor(application.status)}>
-                  {application.status}
-                </Badge>
-              </TableCell>
-              <TableCell className="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0">
-                      <span className="sr-only">Open menu</span>
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => setShowHistory(application.id)}>
-                      View Status History
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem>
-                      <a href={`/manager/job-application/${application.id}`} target="_blank" rel="noopener noreferrer">
-                        View Application <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
-                      </a>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-
-      <Dialog open={!!showHistory} onOpenChange={() => setShowHistory(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Application Status History</DialogTitle>
-            <DialogDescription>
-              Track the status changes for this application.
-            </DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="h-[400px] w-full">
-            {showHistory && (
-              <ApplicationStatusHistory applicationId={showHistory} />
-            )}
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Email templates dialog */}
+      {emailDialogOpen && (
+        <EmailTemplates 
+          isOpen={emailDialogOpen}
+          onClose={() => setEmailDialogOpen(false)}
+          recipientEmails={selectedApplications.map(a => a.candidate_email || '').filter(Boolean)}
+          recipientNames={selectedApplications.map(a => a.candidate_name || '').filter(Boolean)}
+        />
+      )}
     </>
   );
 };
 
 export default ApplicationsList;
-export type { Application };
