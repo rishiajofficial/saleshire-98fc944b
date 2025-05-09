@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useJobs } from '@/hooks/useJobs';
 import { useJobApplications } from '@/hooks/useJobApplications';
@@ -15,6 +14,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ApplicationFilters, ApplicationFilterValues } from '@/components/applications/ApplicationFilters';
 import { Loader2, Plus, RefreshCw } from 'lucide-react';
 
+interface EditingJob {
+  id: string;
+  title: string;
+  description: string;
+  department: string;
+  location: string;
+  employment_type: string;
+  salary_range: string;
+  selectedAssessment: string;
+  selectedModules: string[];
+  status?: string;
+  archived?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  created_by?: string;
+}
+
 const JobManagementPage = () => {
   const { jobs, loading, error, fetchJobs, createJob, updateJob, deleteJob } = useJobs();
   const [assessments, setAssessments] = useState<{ id: string; title: string }[]>([]);
@@ -30,7 +46,7 @@ const JobManagementPage = () => {
   const [uniqueDepartments, setUniqueDepartments] = useState<string[]>([]);
   const [uniqueLocations, setUniqueLocations] = useState<string[]>([]);
   const [showJobCreationDialog, setShowJobCreationDialog] = useState(false);
-  const [templateData, setTemplateData] = useState<Partial<Job> | null>(null);
+  const [templateData, setTemplateData] = useState<EditingJob | null>(null);
   
   useEffect(() => {
     fetchJobs();
@@ -207,8 +223,8 @@ const JobManagementPage = () => {
   };
   
   const handleTemplateSelected = (template: Partial<Job>) => {
-    // Create a copy with all required EditingJob properties
-    const templateWithRequiredFields = {
+    // Create a complete EditingJob object with required fields
+    const templateWithRequiredFields: EditingJob = {
       id: '',  // Add a temporary ID that will be replaced on creation
       title: template.title || '',
       description: template.description || '',
@@ -219,7 +235,10 @@ const JobManagementPage = () => {
       selectedAssessment: template.selectedAssessment || 'none',
       selectedModules: template.selectedModules || [],
       status: template.status || 'active',
-      ...template
+      archived: template.archived,
+      created_at: template.created_at,
+      updated_at: template.updated_at,
+      created_by: template.created_by
     };
     
     setTemplateData(templateWithRequiredFields);

@@ -18,9 +18,8 @@ import {
 
 import { cn } from "@/lib/utils";
 
-interface ChartContainerProps {
-  children: React.ReactNode;
-  className?: string;
+interface ChartContainerProps extends React.HTMLAttributes<HTMLDivElement> {
+  children: React.ReactElement;
   columns?: number;
 }
 
@@ -29,7 +28,7 @@ const ChartContainer = ({
   children,
   ...props
 }: ChartContainerProps) => (
-  <div className={cn("w-full h-full", className)}>
+  <div className={cn("w-full h-full", className)} {...props}>
     <ResponsiveContainer width="100%" height="100%">
       {children}
     </ResponsiveContainer>
@@ -120,7 +119,7 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   return null;
 };
 
-// Fix Bar component to use a simple non-forwarded ref function
+// Simple wrapper components that don't use React.forwardRef
 const Bar = (props: React.ComponentProps<typeof RechartsBar>) => (
   <RechartsBar {...props} />
 );
@@ -147,25 +146,21 @@ const YAxis = (props: React.ComponentProps<typeof RechartsYAxis>) => (
 );
 YAxis.displayName = "YAxis";
 
-// Fix Line component to use a simple non-forwarded ref function
 const Line = (props: React.ComponentProps<typeof RechartsLine>) => (
   <RechartsLine activeDot={{ r: 8 }} {...props} />
 );
 Line.displayName = "Line";
 
-const LineChart = (
-  props: React.ComponentProps<typeof RechartsLineChart>
-) => <RechartsLineChart {...props} />;
+const LineChart = (props: React.ComponentProps<typeof RechartsLineChart>) => (
+  <RechartsLineChart {...props} />
+);
 LineChart.displayName = "LineChart";
 
-const PieChart = (
-  props: React.ComponentProps<typeof RechartsPieChart>
-) => (
+const PieChart = (props: React.ComponentProps<typeof RechartsPieChart>) => (
   <RechartsPieChart className={cn("w-full h-full", props.className)} {...props} />
 );
 PieChart.displayName = "PieChart";
 
-// Fix Pie component
 const Pie = (props: React.ComponentProps<typeof RechartsPie>) => (
   <RechartsPie {...props} />
 );
