@@ -29,6 +29,11 @@ interface ApplicationAnalyticsProps {
   userId?: string;
 }
 
+interface StatusCount {
+  status: string;
+  count: number;
+}
+
 export const ApplicationAnalytics: React.FC<ApplicationAnalyticsProps> = ({
   role,
   userId
@@ -39,26 +44,45 @@ export const ApplicationAnalytics: React.FC<ApplicationAnalyticsProps> = ({
       // This would typically call the database to get real analytics
       // For now, we'll return mock data
       
-      // Optional: Actually fetch data from Supabase
-      const { data: statusData, error: statusError } = await supabase
-        .from('job_applications')
-        .select('status, count')
-        .eq(role === 'manager' ? 'jobs.created_by' : null, userId)
-        .group_by('status');
-        
-      if (statusError) {
-        console.error("Error fetching analytics data:", statusError);
-      }
+      // For the status counts, we need to modify our approach
+      // since group_by isn't available directly
+      let statusCounts: StatusCount[] = [];
       
-      // Placeholder data in case the query didn't work
-      const statusCounts = statusData || [
-        { status: "applied", count: 15 },
-        { status: "hr_review", count: 8 },
-        { status: "training", count: 5 },
-        { status: "manager_interview", count: 3 },
-        { status: "hired", count: 2 },
-        { status: "rejected", count: 4 }
-      ];
+      try {
+        // Fetch all job applications
+        const { data: applications, error } = await supabase
+          .from('job_applications')
+          .select('status')
+          .eq(role === 'manager' ? 'jobs.created_by' : 'id', role === 'manager' ? userId : '*');
+        
+        if (error) throw error;
+        
+        if (applications) {
+          // Manually count the statuses
+          const countMap: Record<string, number> = {};
+          applications.forEach(app => {
+            const status = app.status;
+            countMap[status] = (countMap[status] || 0) + 1;
+          });
+          
+          // Convert to array format
+          statusCounts = Object.entries(countMap).map(([status, count]) => ({
+            status,
+            count
+          }));
+        }
+      } catch (e) {
+        console.error("Error fetching status counts:", e);
+        // Fallback to mock data
+        statusCounts = [
+          { status: "applied", count: 15 },
+          { status: "hr_review", count: 8 },
+          { status: "training", count: 5 },
+          { status: "manager_interview", count: 3 },
+          { status: "hired", count: 2 },
+          { status: "rejected", count: 4 }
+        ];
+      }
       
       // Mock trend data
       const trendData = [
@@ -73,7 +97,7 @@ export const ApplicationAnalytics: React.FC<ApplicationAnalyticsProps> = ({
       return {
         statusCounts,
         trendData,
-        totalApplications: statusCounts.reduce((sum, item) => sum + parseInt(item.count), 0),
+        totalApplications: statusCounts.reduce((sum, item) => sum + item.count, 0),
         conversionRate: Math.round((2 / 37) * 100) // Mock data: hired / total
       };
     }

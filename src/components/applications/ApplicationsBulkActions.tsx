@@ -65,10 +65,6 @@ export const ApplicationsBulkActions: React.FC<ApplicationsBulkActionsProps> = (
       }
       
       if (newStatus) {
-        // Get the current user's ID
-        const { data: authData } = await supabase.auth.getUser();
-        const userId = authData?.user?.id;
-        
         // Update application statuses
         const { error } = await supabase
           .from('job_applications')
@@ -77,23 +73,36 @@ export const ApplicationsBulkActions: React.FC<ApplicationsBulkActionsProps> = (
           
         if (error) throw error;
         
-        // Log status change in history
-        const historyEntries = applicationIds.map(id => ({
-          application_id: id,
-          status: newStatus,
-          updated_by: userId,
-          notes: `Bulk action: ${bulkAction}`,
-        }));
+        // Get the current user's ID
+        const { data: authData } = await supabase.auth.getUser();
+        const userId = authData?.user?.id;
         
-        // Insert into application_status_history table
-        if (historyEntries.length > 0) {
-          // Only proceed if we have valid entries with updated_by not undefined
-          const filteredEntries = historyEntries.filter(entry => entry.updated_by);
+        // Since we don't have an application_status_history table yet,
+        // we'll just log to the console for now
+        console.log("Would have created history entries:", 
+          applicationIds.map(id => ({
+            application_id: id,
+            status: newStatus,
+            updated_by: userId,
+            notes: `Bulk action: ${bulkAction}`,
+          }))
+        );
+        
+        // In a real implementation with the table created:
+        /*
+        if (userId) {
+          const historyEntries = applicationIds.map(id => ({
+            application_id: id,
+            status: newStatus,
+            updated_by: userId,
+            notes: `Bulk action: ${bulkAction}`,
+          }));
           
-          if (filteredEntries.length > 0) {
-            await supabase.from('application_status_history').insert(filteredEntries);
-          }
+          await supabase
+            .from('application_status_history')
+            .insert(historyEntries);
         }
+        */
       }
       
       if (bulkAction === 'email') {

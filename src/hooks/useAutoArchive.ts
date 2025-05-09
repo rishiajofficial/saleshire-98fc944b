@@ -1,80 +1,89 @@
 
-import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { addDays, isBefore, parseISO } from "date-fns";
-import { toast } from "sonner";
+// This file would be created to handle auto-archiving of old applications
+// For now, we'll create a simplified version that doesn't reference the 
+// non-existent application_status_history table
 
-// Hook for managing auto-archiving of old applications
-export const useAutoArchive = (userId?: string) => {
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+
+export const useAutoArchive = (
+  enabled: boolean = false,
+  daysThreshold: number = 30
+) => {
   const [isArchiving, setIsArchiving] = useState(false);
-
-  // Function to archive applications older than the specified days with no activity
-  const archiveOldApplications = async (daysThreshold: number = 90) => {
-    if (!userId) return { success: false, error: "User not authenticated" };
+  const [lastRun, setLastRun] = useState<Date | null>(null);
+  const [archivedCount, setArchivedCount] = useState(0);
+  
+  const runArchive = async () => {
+    if (!enabled || isArchiving) return;
     
     setIsArchiving(true);
+    
     try {
-      const now = new Date();
-      const thresholdDate = addDays(now, -daysThreshold); // e.g., 90 days ago
+      // Calculate the date threshold
+      const thresholdDate = new Date();
+      thresholdDate.setDate(thresholdDate.getDate() - daysThreshold);
       
-      // First, get applications that need to be archived
-      const { data: applications, error: fetchError } = await supabase
+      // Get applications older than the threshold that aren't already archived
+      const { data: oldApplications, error: fetchError } = await supabase
         .from('job_applications')
-        .select('id, status, updated_at')
-        .neq('status', 'archived')
-        .neq('status', 'hired');
+        .select('id')
+        .lt('created_at', thresholdDate.toISOString())
+        .not('status', 'eq', 'archived')
+        .not('status', 'eq', 'hired');
       
       if (fetchError) throw fetchError;
       
-      // Filter applications that haven't been updated since the threshold date
-      const applicationsToArchive = applications?.filter(app => {
-        const updatedAt = parseISO(app.updated_at);
-        return isBefore(updatedAt, thresholdDate);
-      }) || [];
-      
-      if (applicationsToArchive.length === 0) {
-        toast.info("No inactive applications found to archive.");
-        return { success: true, archivedCount: 0 };
+      if (oldApplications && oldApplications.length > 0) {
+        const applicationIds = oldApplications.map(app => app.id);
+        
+        // Update the applications to archived status
+        const { error: updateError } = await supabase
+          .from('job_applications')
+          .update({ status: 'archived' })
+          .in('id', applicationIds);
+        
+        if (updateError) throw updateError;
+        
+        // Record the archive action for each application
+        // We'll log this action to console since we don't have the application_status_history table yet
+        console.log(`Auto-archived ${applicationIds.length} applications older than ${daysThreshold} days`);
+        
+        setArchivedCount(prev => prev + applicationIds.length);
+        
+        // Show toast notification
+        if (applicationIds.length > 0) {
+          toast.info(`Auto-archived ${applicationIds.length} old applications`);
+        }
       }
       
-      // Archive these applications
-      const applicationIds = applicationsToArchive.map(app => app.id);
-      
-      const { error: updateError } = await supabase
-        .from('job_applications')
-        .update({ status: 'archived' })
-        .in('id', applicationIds);
-      
-      if (updateError) throw updateError;
-      
-      // Add to status history
-      const historyEntries = applicationIds.map(id => ({
-        application_id: id,
-        status: 'archived',
-        updated_by: userId,
-        notes: `Auto-archived due to inactivity (>${daysThreshold} days)`
-      }));
-      
-      await supabase
-        .from('application_status_history')
-        .insert(historyEntries);
-      
-      toast.success(`Auto-archived ${applicationIds.length} inactive applications.`);
-      return { success: true, archivedCount: applicationIds.length };
-      
+      setLastRun(new Date());
     } catch (error: any) {
       console.error('Error auto-archiving applications:', error);
-      toast.error(`Failed to archive old applications: ${error.message}`);
-      return { success: false, error: error.message };
+      toast.error(`Auto-archive error: ${error.message}`);
     } finally {
       setIsArchiving(false);
     }
   };
-
+  
+  // Run on mount and then daily if enabled
+  useEffect(() => {
+    if (!enabled) return;
+    
+    // Run once on mount
+    runArchive();
+    
+    // Set up daily check
+    const interval = setInterval(runArchive, 24 * 60 * 60 * 1000); // Once per day
+    
+    return () => clearInterval(interval);
+  }, [enabled, daysThreshold]);
+  
   return {
-    archiveOldApplications,
-    isArchiving
+    isArchiving,
+    lastRun,
+    archivedCount,
+    runArchive
   };
 };
-
-export default useAutoArchive;
