@@ -119,9 +119,9 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   return null;
 };
 
-// Simple wrapper components that don't use React.forwardRef
-const Bar = (props: React.ComponentProps<typeof RechartsBar>) => (
-  <RechartsBar {...props} />
+// Use type assertion to handle the component type compatibility
+const Bar = (props: Omit<React.ComponentProps<typeof RechartsBar>, 'ref'>) => (
+  <RechartsBar {...(props as any)} />
 );
 Bar.displayName = "Bar";
 
@@ -146,8 +146,9 @@ const YAxis = (props: React.ComponentProps<typeof RechartsYAxis>) => (
 );
 YAxis.displayName = "YAxis";
 
-const Line = (props: React.ComponentProps<typeof RechartsLine>) => (
-  <RechartsLine activeDot={{ r: 8 }} {...props} />
+// Use type assertion to handle the component type compatibility
+const Line = (props: Omit<React.ComponentProps<typeof RechartsLine>, 'ref'>) => (
+  <RechartsLine activeDot={{ r: 8 }} {...(props as any)} />
 );
 Line.displayName = "Line";
 
@@ -161,8 +162,9 @@ const PieChart = (props: React.ComponentProps<typeof RechartsPieChart>) => (
 );
 PieChart.displayName = "PieChart";
 
-const Pie = (props: React.ComponentProps<typeof RechartsPie>) => (
-  <RechartsPie {...props} />
+// Use type assertion to handle the component type compatibility
+const Pie = (props: Omit<React.ComponentProps<typeof RechartsPie>, 'ref'>) => (
+  <RechartsPie {...(props as any)} />
 );
 Pie.displayName = "Pie";
 
