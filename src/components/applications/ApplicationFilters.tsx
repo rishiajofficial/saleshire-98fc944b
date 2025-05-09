@@ -63,13 +63,13 @@ export const ApplicationFilters: React.FC<ApplicationFiltersProps> = ({
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         </div>
         
-        <Select value={filters.status || ''} onValueChange={handleStatusChange}>
+        <Select value={filters.status || 'all'} onValueChange={handleStatusChange}>
           <SelectTrigger>
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
-              <SelectItem value="">All Statuses</SelectItem>
+              <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="applied">Applied</SelectItem>
               <SelectItem value="hr_review">HR Review</SelectItem>
               <SelectItem value="hr_approved">HR Approved</SelectItem>
@@ -82,13 +82,13 @@ export const ApplicationFilters: React.FC<ApplicationFiltersProps> = ({
           </SelectContent>
         </Select>
         
-        <Select value={filters.dateRange || ''} onValueChange={handleDateRangeChange}>
+        <Select value={filters.dateRange || 'all'} onValueChange={handleDateRangeChange}>
           <SelectTrigger>
             <SelectValue placeholder="Date range" />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
-              <SelectItem value="">All Time</SelectItem>
+              <SelectItem value="all">All Time</SelectItem>
               <SelectItem value="today">Today</SelectItem>
               <SelectItem value="week">This Week</SelectItem>
               <SelectItem value="month">This Month</SelectItem>

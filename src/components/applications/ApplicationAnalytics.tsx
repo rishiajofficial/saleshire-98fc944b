@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -7,200 +7,169 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Legend,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer 
+} from "recharts";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-interface ApplicationAnalyticsProps {
-  role: string;
-  userId?: string;
-}
-
-interface StatusCount {
+interface AnalyticsData {
   status: string;
   count: number;
 }
 
-export const ApplicationAnalytics: React.FC<ApplicationAnalyticsProps> = ({
-  role,
-  userId
-}) => {
-  const { data: analyticsData, isLoading } = useQuery({
-    queryKey: ['application-analytics', userId, role],
-    queryFn: async () => {
-      // This would typically call the database to get real analytics
-      // For now, we'll return mock data
-      
-      // For the status counts, we need to modify our approach
-      // since group_by isn't available directly
-      let statusCounts: StatusCount[] = [];
+export const ApplicationAnalytics = () => {
+  const [data, setData] = useState<AnalyticsData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [timeframe, setTimeframe] = useState<string>("all_time");
+
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      setIsLoading(true);
+      setError(null);
       
       try {
-        // Fetch all job applications
+        // Define the date range for the query
+        let dateFilter = {};
+        const now = new Date();
+        
+        if (timeframe === "last_week") {
+          const lastWeek = new Date();
+          lastWeek.setDate(now.getDate() - 7);
+          dateFilter = { created_at: { gte: lastWeek.toISOString() } };
+        } else if (timeframe === "last_month") {
+          const lastMonth = new Date();
+          lastMonth.setMonth(now.getMonth() - 1);
+          dateFilter = { created_at: { gte: lastMonth.toISOString() } };
+        } else if (timeframe === "last_year") {
+          const lastYear = new Date();
+          lastYear.setFullYear(now.getFullYear() - 1);
+          dateFilter = { created_at: { gte: lastYear.toISOString() } };
+        }
+        
+        // Instead of using group_by which doesn't exist, we'll fetch all applications
+        // and aggregate the counts in JS
         const { data: applications, error } = await supabase
           .from('job_applications')
-          .select('status')
-          .eq(role === 'manager' ? 'jobs.created_by' : 'id', role === 'manager' ? userId : '*');
-        
-        if (error) throw error;
-        
-        if (applications) {
-          // Manually count the statuses
-          const countMap: Record<string, number> = {};
-          applications.forEach(app => {
-            const status = app.status;
-            countMap[status] = (countMap[status] || 0) + 1;
-          });
+          .select('status, created_at')
+          .order('created_at', { ascending: false });
           
-          // Convert to array format
-          statusCounts = Object.entries(countMap).map(([status, count]) => ({
-            status,
-            count
-          }));
+        if (error) throw error;
+
+        // Filter by date if needed
+        let filteredApplications = applications;
+        if (timeframe !== "all_time") {
+          const cutoffDate = new Date();
+          if (timeframe === "last_week") {
+            cutoffDate.setDate(cutoffDate.getDate() - 7);
+          } else if (timeframe === "last_month") {
+            cutoffDate.setMonth(cutoffDate.getMonth() - 1);
+          } else if (timeframe === "last_year") {
+            cutoffDate.setFullYear(cutoffDate.getFullYear() - 1);
+          }
+          
+          filteredApplications = applications.filter(app => 
+            new Date(app.created_at) >= cutoffDate
+          );
         }
-      } catch (e) {
-        console.error("Error fetching status counts:", e);
-        // Fallback to mock data
-        statusCounts = [
-          { status: "applied", count: 15 },
-          { status: "hr_review", count: 8 },
-          { status: "training", count: 5 },
-          { status: "manager_interview", count: 3 },
-          { status: "hired", count: 2 },
-          { status: "rejected", count: 4 }
-        ];
+        
+        // Aggregate the data manually
+        const statusCounts: Record<string, number> = {};
+        
+        filteredApplications.forEach(app => {
+          const status = app.status || 'unknown';
+          statusCounts[status] = (statusCounts[status] || 0) + 1;
+        });
+        
+        // Transform the aggregated data
+        const chartData = Object.entries(statusCounts).map(([status, count]) => ({
+          status: formatStatus(status),
+          count
+        }));
+        
+        setData(chartData);
+      } catch (err: any) {
+        console.error("Error fetching analytics:", err);
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
       }
-      
-      // Mock trend data
-      const trendData = [
-        { month: "Jan", applications: 4 },
-        { month: "Feb", applications: 7 },
-        { month: "Mar", applications: 5 },
-        { month: "Apr", applications: 12 },
-        { month: "May", applications: 14 },
-        { month: "Jun", applications: 8 }
-      ];
-      
-      return {
-        statusCounts,
-        trendData,
-        totalApplications: statusCounts.reduce((sum, item) => sum + item.count, 0),
-        conversionRate: Math.round((2 / 37) * 100) // Mock data: hired / total
-      };
-    }
-  });
+    };
+    
+    fetchAnalytics();
+  }, [timeframe]);
 
-  if (isLoading || !analyticsData) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Analytics Dashboard</CardTitle>
-          <CardDescription>
-            Loading application analytics...
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="h-64 flex items-center justify-center">
-          <div className="animate-pulse text-muted-foreground">
-            Loading analytics data...
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#FF0000'];
+  // Helper to format status for display
+  const formatStatus = (status: string): string => {
+    return status
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Application Analytics</CardTitle>
-        <CardDescription>
-          Overview of job applications and their statuses
-        </CardDescription>
+        <div className="flex justify-between items-center">
+          <div>
+            <CardTitle>Application Analytics</CardTitle>
+            <CardDescription>Overview of application statuses</CardDescription>
+          </div>
+          <Select
+            value={timeframe}
+            onValueChange={(value) => setTimeframe(value)}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select timeframe" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all_time">All Time</SelectItem>
+              <SelectItem value="last_week">Last Week</SelectItem>
+              <SelectItem value="last_month">Last Month</SelectItem>
+              <SelectItem value="last_year">Last Year</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-muted/30 p-4 rounded-lg">
-            <div className="text-2xl font-bold">{analyticsData.totalApplications}</div>
-            <div className="text-sm text-muted-foreground">Total Applications</div>
+        {isLoading ? (
+          <div className="h-[300px] flex items-center justify-center">
+            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
           </div>
-          <div className="bg-muted/30 p-4 rounded-lg">
-            <div className="text-2xl font-bold">{analyticsData.statusCounts.find(s => s.status === 'hired')?.count || 0}</div>
-            <div className="text-sm text-muted-foreground">Candidates Hired</div>
+        ) : error ? (
+          <div className="h-[300px] flex items-center justify-center text-red-500">
+            Error: {error}
           </div>
-          <div className="bg-muted/30 p-4 rounded-lg">
-            <div className="text-2xl font-bold">{analyticsData.conversionRate}%</div>
-            <div className="text-sm text-muted-foreground">Conversion Rate</div>
+        ) : data.length === 0 ? (
+          <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+            No application data available for the selected timeframe.
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div>
-            <h3 className="text-lg font-medium mb-4">Applications by Status</h3>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={analyticsData.statusCounts}
-                    dataKey="count"
-                    nameKey="status"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {analyticsData.statusCounts.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+        ) : (
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="status" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="count" fill="#6366f1" />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
-          
-          <div>
-            <h3 className="text-lg font-medium mb-4">Application Trends</h3>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={analyticsData.trendData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="applications" fill="#8884d8" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-        
-        <div className="mt-8">
-          <h3 className="text-lg font-medium mb-4">Status Breakdown</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {analyticsData.statusCounts.map((status) => (
-              <div key={status.status} className="bg-muted/30 p-3 rounded-md flex justify-between">
-                <Badge className="capitalize">{status.status.replace('_', ' ')}</Badge>
-                <span className="font-semibold">{status.count}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   );

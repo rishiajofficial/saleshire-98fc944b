@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -62,7 +63,7 @@ const Profile = () => {
   const parseLocation = (location: string | undefined) => {
     if (!location) return { city: "", state: "" };
 
-    const parts = location.split(", ");
+    const parts = location.split(', ');
     if (parts.length === 2) {
       return { city: parts[0], state: parts[1] };
     }
@@ -280,13 +281,14 @@ const Profile = () => {
                                 <FormLabel>State</FormLabel>
                                 <FormControl>
                                   <Select
-                                    value={field.value || ""}
+                                    value={field.value || "none"}
                                     onValueChange={field.onChange}
                                   >
                                     <SelectTrigger>
                                       <SelectValue placeholder="Select a state" />
                                     </SelectTrigger>
                                     <SelectContent>
+                                      <SelectItem value="none" disabled>Select a state</SelectItem>
                                       {indianStates.map((state) => (
                                         <SelectItem key={state} value={state}>
                                           {state}

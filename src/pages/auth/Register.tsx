@@ -238,13 +238,14 @@ const Register = () => {
                   <div className="space-y-2">
                     <Label htmlFor="state">State</Label>
                     <Select
-                      value={state}
+                      value={state || "select_state"}
                       onValueChange={(value) => setState(value)}
                     >
                       <SelectTrigger id="state">
                         <SelectValue placeholder="Select state" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="select_state" disabled>Select state</SelectItem>
                         {indianStates.map((stateName) => (
                           <SelectItem key={stateName} value={stateName}>
                             {stateName}

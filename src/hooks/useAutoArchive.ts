@@ -1,8 +1,4 @@
 
-// This file would be created to handle auto-archiving of old applications
-// For now, we'll create a simplified version that doesn't reference the 
-// non-existent application_status_history table
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -46,9 +42,26 @@ export const useAutoArchive = (
         
         if (updateError) throw updateError;
         
-        // Record the archive action for each application
-        // We'll log this action to console since we don't have the application_status_history table yet
-        console.log(`Auto-archived ${applicationIds.length} applications older than ${daysThreshold} days`);
+        // Get the current user
+        const { data: userData } = await supabase.auth.getUser();
+        const userId = userData.user?.id || 'system';
+        
+        // Log to activity_logs instead of application_status_history
+        for (const appId of applicationIds) {
+          await supabase
+            .from('activity_logs')
+            .insert({
+              entity_type: 'job_application',
+              entity_id: appId,
+              action: 'status_change',
+              user_id: userId,
+              details: {
+                old_status: 'unknown',
+                new_status: 'archived',
+                notes: `Auto-archived after ${daysThreshold} days of inactivity`
+              }
+            });
+        }
         
         setArchivedCount(prev => prev + applicationIds.length);
         

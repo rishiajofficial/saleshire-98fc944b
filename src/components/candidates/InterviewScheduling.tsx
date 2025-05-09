@@ -103,7 +103,7 @@ export const InterviewScheduling = ({
             <div>
               <Label>Manager</Label>
               <Select 
-                value={interviewManagerId} 
+                value={interviewManagerId || "default"} 
                 onValueChange={onManagerChange}
                 disabled={isLoadingManagers || isManagingInterview}
               >
@@ -119,6 +119,9 @@ export const InterviewScheduling = ({
                         {manager.name}
                       </SelectItem>
                     ))
+                  )}
+                  {!isLoadingManagers && (!managers || managers.length === 0) && (
+                    <SelectItem value="default" disabled>No managers available</SelectItem>
                   )}
                 </SelectContent>
               </Select>
@@ -151,6 +154,7 @@ export const InterviewScheduling = ({
                   onSelect={onDateChange}
                   disabled={(date) => date < new Date()}
                   initialFocus
+                  className="pointer-events-auto"
                 />
               </PopoverContent>
             </Popover>
@@ -196,4 +200,3 @@ export const InterviewScheduling = ({
     </Card>
   );
 };
-

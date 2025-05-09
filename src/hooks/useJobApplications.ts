@@ -22,13 +22,7 @@ export const useJobApplications = (userId?: string, role?: string) => {
               name,
               email
             ),
-            assessment_results (
-              id,
-              score,
-              completed
-            ),
-            status,
-            tags
+            status
           )
         `)
         .order('created_at', { ascending: false });
@@ -44,18 +38,8 @@ export const useJobApplications = (userId?: string, role?: string) => {
         throw new Error(`Error fetching job applications: ${error.message}`);
       }
       
-      // Format data for easier consumption and ensure assessment_results is always an array
+      // Format data for easier consumption
       const formattedData = data?.map(app => {
-        // Handle potential error case for assessment_results
-        const assessment_results = app.candidates?.assessment_results && 
-          Array.isArray(app.candidates.assessment_results) 
-            ? app.candidates.assessment_results 
-            : [];
-
-        // Since we don't have tags in the database yet, we'll mock them
-        // In a real app, this would come from the database
-        // For now, we'll just add empty tags array to avoid TypeScript errors
-          
         return {
           id: app.id,
           job_id: app.job_id,
@@ -67,8 +51,8 @@ export const useJobApplications = (userId?: string, role?: string) => {
           candidate_status: app.candidates?.status,
           created_at: app.created_at,
           updated_at: app.updated_at,
-          assessment_results,
-          tags: [] // Mock empty array for now
+          assessment_results: [],  // Mock empty array for now
+          tags: []  // Mock empty array for now
         };
       }) || [];
       

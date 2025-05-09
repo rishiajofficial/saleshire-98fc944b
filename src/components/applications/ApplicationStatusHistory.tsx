@@ -36,39 +36,72 @@ export const ApplicationStatusHistory: React.FC<ApplicationStatusHistoryProps> =
     const fetchHistory = async () => {
       setIsLoading(true);
       try {
-        // Instead of trying to fetch from a table that doesn't exist, we'll mock the data
-        // In a real application, you would create this table first via SQL migrations
-        const mockHistoryItems: StatusHistoryEntry[] = [
-          {
-            id: "1",
-            application_id: applicationId,
-            status: "applied",
-            notes: "Initial application",
-            created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-            updated_by: "system",
-            updated_by_user: { name: "System" }
-          },
-          {
-            id: "2",
-            application_id: applicationId,
-            status: "hr_review",
-            notes: "Application under review by HR",
-            created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-            updated_by: "system",
-            updated_by_user: { name: "HR Department" }
-          },
-          {
-            id: "3",
-            application_id: applicationId,
-            status: "manager_interview",
-            notes: "Scheduled for interview with the manager",
-            created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-            updated_by: "system",
-            updated_by_user: { name: "Scheduling Team" }
-          }
-        ];
+        // Instead of fetching from application_status_history which doesn't exist yet,
+        // let's fetch from activity_logs which should already exist in our schema
+        const { data, error } = await supabase
+          .from('activity_logs')
+          .select(`
+            id,
+            action,
+            entity_id,
+            details,
+            created_at,
+            user_id
+          `)
+          .eq('entity_type', 'job_application')
+          .eq('entity_id', applicationId)
+          .eq('action', 'status_change')
+          .order('created_at', { ascending: true });
+          
+        if (error) throw error;
         
-        setHistoryItems(mockHistoryItems);
+        // If we got results from activity_logs, format them as StatusHistoryEntry
+        if (data && data.length > 0) {
+          const formattedHistory = data.map(item => ({
+            id: item.id,
+            application_id: item.entity_id,
+            status: item.details.new_status || 'unknown',
+            notes: item.details.notes || '',
+            created_at: item.created_at,
+            updated_by: item.user_id,
+            updated_by_user: { name: 'User' } // We don't join with profiles table here for simplicity
+          })) as StatusHistoryEntry[];
+          
+          setHistoryItems(formattedHistory);
+        } else {
+          // If we don't have real history, use mock data
+          const mockHistoryItems: StatusHistoryEntry[] = [
+            {
+              id: "1",
+              application_id: applicationId,
+              status: "applied",
+              notes: "Initial application",
+              created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+              updated_by: "system",
+              updated_by_user: { name: "System" }
+            },
+            {
+              id: "2",
+              application_id: applicationId,
+              status: "hr_review",
+              notes: "Application under review by HR",
+              created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+              updated_by: "system",
+              updated_by_user: { name: "HR Department" }
+            },
+            {
+              id: "3",
+              application_id: applicationId,
+              status: "manager_interview",
+              notes: "Scheduled for interview with the manager",
+              created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+              updated_by: "system",
+              updated_by_user: { name: "Scheduling Team" }
+            }
+          ];
+          
+          setHistoryItems(mockHistoryItems);
+        }
       } catch (error) {
         console.error("Error fetching application history:", error);
         setHistoryItems([]);

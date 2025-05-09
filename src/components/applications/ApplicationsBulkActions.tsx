@@ -73,36 +73,25 @@ export const ApplicationsBulkActions: React.FC<ApplicationsBulkActionsProps> = (
           
         if (error) throw error;
         
-        // Get the current user's ID
-        const { data: authData } = await supabase.auth.getUser();
-        const userId = authData?.user?.id;
+        // Since we don't have application_status_history table yet, we'll just
+        // log this to activity_logs instead
+        const { data: userData } = await supabase.auth.getUser();
+        const userId = userData.user?.id;
         
-        // Since we don't have an application_status_history table yet,
-        // we'll just log to the console for now
-        console.log("Would have created history entries:", 
-          applicationIds.map(id => ({
-            application_id: id,
-            status: newStatus,
-            updated_by: userId,
-            notes: `Bulk action: ${bulkAction}`,
-          }))
-        );
-        
-        // In a real implementation with the table created:
-        /*
-        if (userId) {
-          const historyEntries = applicationIds.map(id => ({
-            application_id: id,
-            status: newStatus,
-            updated_by: userId,
-            notes: `Bulk action: ${bulkAction}`,
-          }));
-          
-          await supabase
-            .from('application_status_history')
-            .insert(historyEntries);
+        // Create history entries for each application
+        for (const appId of applicationIds) {
+          await supabase.from('activity_logs').insert({
+            action: 'status_change',
+            entity_type: 'job_application',
+            entity_id: appId,
+            user_id: userId || 'system',
+            details: { 
+              old_status: 'unknown', 
+              new_status: newStatus,
+              notes: `Bulk action: ${bulkAction}`
+            }
+          });
         }
-        */
       }
       
       if (bulkAction === 'email') {

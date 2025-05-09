@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -213,12 +214,12 @@ const ApplicationStepProfile = ({ onNext, profileData, setProfileData }: Applica
                   <FormItem>
                     <FormLabel>State</FormLabel>
                     <FormControl>
-                      <Select value={field.value || "select_state"} onValueChange={field.onChange}>
+                      <Select value={field.value || "none"} onValueChange={field.onChange}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a state" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="select_state" disabled>Select a state</SelectItem>
+                          <SelectItem value="none" disabled>Select a state</SelectItem>
                           {indianStates.map((state) => (
                             <SelectItem key={state} value={state}>
                               {state}
