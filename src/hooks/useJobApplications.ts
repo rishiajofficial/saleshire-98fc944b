@@ -1,7 +1,6 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Application } from "@/components/dashboard/ApplicationsList";
+import { Application } from "@/types/application";
 
 export const useJobApplications = (
   userId?: string, 

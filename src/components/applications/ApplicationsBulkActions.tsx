@@ -19,7 +19,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Application } from "@/components/dashboard/ApplicationsList";
+import { Application } from "@/types/application";
 
 interface ApplicationsBulkActionsProps {
   selectedApplications: Application[];

@@ -207,7 +207,22 @@ const JobManagementPage = () => {
   };
   
   const handleTemplateSelected = (template: Partial<Job>) => {
-    setTemplateData(template);
+    // Create a copy with all required EditingJob properties
+    const templateWithRequiredFields = {
+      id: '',  // Add a temporary ID that will be replaced on creation
+      title: template.title || '',
+      description: template.description || '',
+      department: template.department || '',
+      location: template.location || '',
+      employment_type: template.employment_type || '',
+      salary_range: template.salary_range || '',
+      selectedAssessment: template.selectedAssessment || 'none',
+      selectedModules: template.selectedModules || [],
+      status: template.status || 'active',
+      ...template
+    };
+    
+    setTemplateData(templateWithRequiredFields);
     setShowJobCreationDialog(true);
   };
 

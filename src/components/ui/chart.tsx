@@ -1,6 +1,5 @@
 
 import * as React from "react";
-import { ChartContainer as RechartContainer } from "recharts";
 import {
   Bar as RechartsBar,
   BarChart as RechartsBarChart,
@@ -19,17 +18,18 @@ import {
 
 import { cn } from "@/lib/utils";
 
-interface ChartContainerProps extends React.ComponentProps<typeof RechartContainer> {
+interface ChartContainerProps {
   children: React.ReactNode;
+  className?: string;
   columns?: number;
 }
 
 const ChartContainer = React.forwardRef<
   React.ElementRef<typeof ResponsiveContainer>,
   ChartContainerProps
->(({ className, children, columns, ...props }, ref) => (
+>(({ className, children, ...props }, ref) => (
   <div className={cn("w-full h-full", className)}>
-    <ResponsiveContainer width="100%" height="100%" {...props}>
+    <ResponsiveContainer width="100%" height="100%">
       {children}
     </ResponsiveContainer>
   </div>
@@ -128,12 +128,10 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   return null;
 };
 
-const Bar = React.forwardRef<
-  React.ElementRef<typeof RechartsBar>,
-  React.ComponentProps<typeof RechartsBar>
->(({ className, ...props }, ref) => (
-  <RechartsBar ref={ref} {...props} />
-));
+// Fix Bar component - remove forwardRef to avoid type issues
+const Bar = (props: React.ComponentProps<typeof RechartsBar>) => (
+  <RechartsBar {...props} />
+);
 Bar.displayName = "Bar";
 
 const XAxis = React.forwardRef<
@@ -141,7 +139,6 @@ const XAxis = React.forwardRef<
   React.ComponentProps<typeof RechartsXAxis>
 >(({ className, ...props }, ref) => (
   <RechartsXAxis
-    ref={ref}
     axisLine={false}
     tickLine={false}
     tick={{ fontSize: 12 }}
@@ -155,7 +152,6 @@ const YAxis = React.forwardRef<
   React.ComponentProps<typeof RechartsYAxis>
 >(({ className, ...props }, ref) => (
   <RechartsYAxis
-    ref={ref}
     axisLine={false}
     tickLine={false}
     tick={{ fontSize: 12 }}
@@ -165,22 +161,10 @@ const YAxis = React.forwardRef<
 ));
 YAxis.displayName = "YAxis";
 
-const LineChart = React.forwardRef<
-  React.ElementRef<typeof RechartsLineChart>,
-  React.ComponentProps<typeof RechartsLineChart>
->(({ className, children, ...props }, ref) => (
-  <RechartsLineChart ref={ref} className={cn("w-full h-full", className)} {...props}>
-    {children}
-  </RechartsLineChart>
-));
-LineChart.displayName = "LineChart";
-
-const Line = React.forwardRef<
-  React.ElementRef<typeof RechartsLine>,
-  React.ComponentProps<typeof RechartsLine>
->(({ className, ...props }, ref) => (
-  <RechartsLine ref={ref} activeDot={{ r: 8 }} {...props} />
-));
+// Fix Line component - remove forwardRef to avoid type issues
+const Line = (props: React.ComponentProps<typeof RechartsLine>) => (
+  <RechartsLine activeDot={{ r: 8 }} {...props} />
+);
 Line.displayName = "Line";
 
 const PieChart = React.forwardRef<
@@ -193,14 +177,10 @@ const PieChart = React.forwardRef<
 ));
 PieChart.displayName = "PieChart";
 
-const Pie = React.forwardRef<
-  React.ElementRef<typeof RechartsPie>,
-  React.ComponentProps<typeof RechartsPie>
->(({ className, children, ...props }, ref) => (
-  <RechartsPie ref={ref} {...props}>
-    {children}
-  </RechartsPie>
-));
+// Fix Pie component - remove forwardRef to avoid type issues
+const Pie = (props: React.ComponentProps<typeof RechartsPie>) => (
+  <RechartsPie {...props} />
+);
 Pie.displayName = "Pie";
 
 export {

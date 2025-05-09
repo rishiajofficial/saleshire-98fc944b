@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import {
   Table,
@@ -20,6 +21,7 @@ import {
   ChevronDown,
   BarChart2,
   CheckSquare,
+  ExternalLink,
 } from "lucide-react";
 import { Application } from "@/types/application";
 import { Badge } from "@/components/ui/badge";
@@ -37,14 +39,15 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ApplicationStatusHistory } from "@/components/applications/ApplicationStatusHistory";
+import { toast } from "sonner";
 
 interface ApplicationsListProps {
   applications: Application[];
   isLoading: boolean;
-  error: Error | null;
+  error?: Error | null;
   userRole?: string;
   userId?: string;
-  onStatusUpdate: (applicationIds: string[], newStatus: string, notes?: string) => void;
+  onStatusUpdate?: (applicationIds: string[], newStatus: string, notes?: string) => void;
 }
 
 export const ApplicationsList: React.FC<ApplicationsListProps> = ({
@@ -298,4 +301,5 @@ export const ApplicationsList: React.FC<ApplicationsListProps> = ({
   );
 };
 
-import { ExternalLink as ExternalLinkIcon } from 'lucide-react';
+export default ApplicationsList;
+export type { Application };
