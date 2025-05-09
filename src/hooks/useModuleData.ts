@@ -3,7 +3,7 @@ import React from 'react';
 import { useModuleVideos } from './training/useModuleVideos';
 import { useVideoProgress } from './training/useVideoProgress';
 import { useQuizResults } from './training/useQuizResults';
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 
 export const useModuleData = (moduleId: string | undefined) => {
   const { user } = useAuth();

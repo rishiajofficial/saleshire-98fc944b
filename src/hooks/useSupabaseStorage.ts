@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth';
 
 export const useSupabaseStorage = (bucketName: 'resumes' | 'videos' | 'candidate-videos') => {
   const [isUploading, setIsUploading] = useState(false);

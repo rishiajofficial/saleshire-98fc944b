@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { FileText, Upload, Video, X } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from '@/contexts/auth';
 import { useSupabaseStorage } from '@/hooks/useSupabaseStorage';
 import { supabase } from "@/integrations/supabase/client";
 

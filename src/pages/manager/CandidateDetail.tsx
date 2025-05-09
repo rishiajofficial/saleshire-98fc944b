@@ -6,7 +6,7 @@ import { ArrowRight, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from '@/contexts/auth';
 import { supabase } from "@/integrations/supabase/client";
 import { CandidateInfo } from "@/components/candidates/CandidateInfo";
 import { StatusUpdateSection } from "@/components/candidates/StatusUpdateSection";

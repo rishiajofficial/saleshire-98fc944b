@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Info, AlertTriangle, Clock } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from '@/contexts/auth';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 

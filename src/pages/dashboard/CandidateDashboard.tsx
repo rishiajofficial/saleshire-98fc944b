@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth';
 import ErrorMessage from '@/components/ui/error-message';
 import { StatusCard } from '@/components/dashboard/StatusCard';
 import { NotificationsCard } from '@/components/dashboard/NotificationsCard';

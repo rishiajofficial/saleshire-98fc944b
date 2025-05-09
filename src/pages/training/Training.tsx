@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Loader2, Lock } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { supabase } from "@/integrations/supabase/client";
 import MainLayout from '@/components/layout/MainLayout';
 import TrainingHeader from "@/components/training/TrainingHeader";

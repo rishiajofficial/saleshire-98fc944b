@@ -6,7 +6,7 @@ import { Search } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from '@/contexts/auth';
 import { CandidateWithProfile } from "@/types/candidate";
 import { AddCandidateDialog } from "@/components/candidates/AddCandidateDialog";
 import { CandidatesTable } from "@/components/candidates/CandidatesTable";
