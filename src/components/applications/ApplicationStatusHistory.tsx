@@ -1,108 +1,128 @@
 
-import React from "react";
-import { format } from "date-fns";
-import { Timeline, TimelineItem, TimelineConnector, TimelineContent, TimelineDot, TimelineOppositeContent, TimelineSeparator } from "@/components/ui/timeline";
-import { useQuery } from "@tanstack/react-query";
+import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
+import { format } from "date-fns";
+import {
+  Timeline,
+  TimelineItem,
+  TimelineSeparator,
+  TimelineDot,
+  TimelineConnector,
+  TimelineContent,
+  TimelineOppositeContent,
+} from "@/components/ui/timeline";
 
-interface StatusHistoryItem {
+export interface StatusHistoryEntry {
   id: string;
+  application_id: string;
   status: string;
+  notes?: string;
   created_at: string;
   updated_by: string;
-  notes?: string;
+  updated_by_user?: {
+    name: string;
+  };
 }
 
 interface ApplicationStatusHistoryProps {
   applicationId: string;
 }
 
-export const ApplicationStatusHistory: React.FC<ApplicationStatusHistoryProps> = ({ 
-  applicationId 
-}) => {
-  const { data: statusHistory, isLoading } = useQuery({
-    queryKey: ['application-status-history', applicationId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('application_status_history')
-        .select(`*, updated_by_user:profiles!updated_by(name)`)
-        .eq('application_id', applicationId)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data as StatusHistoryItem[];
-    },
-    enabled: !!applicationId
-  });
+export const ApplicationStatusHistory: React.FC<ApplicationStatusHistoryProps> = ({ applicationId }) => {
+  const [historyItems, setHistoryItems] = useState<StatusHistoryEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center p-4">
-        <Loader2 className="h-6 w-6 animate-spin" />
-      </div>
-    );
-  }
+  useEffect(() => {
+    const fetchHistory = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('application_status_history')
+          .select(`
+            *,
+            updated_by_user:profiles!application_status_history_updated_by_fkey(name)
+          `)
+          .eq('application_id', applicationId)
+          .order('created_at', { ascending: false });
 
-  if (!statusHistory || statusHistory.length === 0) {
-    return (
-      <div className="text-center py-4 text-muted-foreground">
-        No status history available.
-      </div>
-    );
-  }
+        if (error) throw error;
 
-  const getStatusBadge = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case "applied":
-        return <Badge className="bg-blue-100 text-blue-800">Applied</Badge>;
-      case "screening":
-      case "hr_review":
-        return <Badge className="bg-yellow-100 text-yellow-800">HR Review</Badge>;
-      case "hr_approved":
-      case "training":
-        return <Badge className="bg-purple-100 text-purple-800">Training</Badge>;
-      case "manager_interview":
-        return <Badge className="bg-green-100 text-green-800">Interview</Badge>;
-      case "sales_task":
-        return <Badge className="bg-orange-100 text-orange-800">Sales Task</Badge>;
-      case "hired":
-        return <Badge className="bg-green-100 text-green-800">Hired</Badge>;
-      case "rejected":
-        return <Badge className="bg-red-100 text-red-800">Rejected</Badge>;
-      case "archived":
-        return <Badge className="bg-gray-100 text-gray-800">Archived</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
+        setHistoryItems(data as StatusHistoryEntry[]);
+      } catch (error) {
+        console.error("Error fetching application history:", error);
+        setHistoryItems([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (applicationId) {
+      fetchHistory();
+    }
+  }, [applicationId]);
+
+  const formatDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), "MMM d, yyyy 'at' h:mm a");
+    } catch (e) {
+      return dateString;
     }
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'applied':
+        return 'bg-blue-500';
+      case 'hr_review':
+      case 'screening':
+        return 'bg-yellow-500';
+      case 'hr_approved':
+        return 'bg-violet-500';
+      case 'manager_interview':
+      case 'interview':
+        return 'bg-green-500';
+      case 'hired':
+        return 'bg-emerald-500';
+      case 'rejected':
+        return 'bg-red-500';
+      case 'archived':
+        return 'bg-gray-500';
+      default:
+        return 'bg-primary';
+    }
+  };
+
+  if (isLoading) {
+    return <div className="text-sm text-center py-2">Loading history...</div>;
+  }
+
+  if (historyItems.length === 0) {
+    return <div className="text-sm text-muted-foreground">No status history available</div>;
+  }
+
   return (
-    <div className="p-3 space-y-4">
-      <h3 className="font-semibold text-lg">Status History</h3>
+    <div>
+      <h4 className="text-sm font-medium mb-2">Application History</h4>
       <Timeline>
-        {statusHistory.map((item) => (
+        {historyItems.map((item) => (
           <TimelineItem key={item.id}>
             <TimelineOppositeContent className="text-xs text-muted-foreground">
-              {format(new Date(item.created_at), 'MMM d, yyyy h:mm a')}
+              {formatDate(item.created_at)}
             </TimelineOppositeContent>
             <TimelineSeparator>
-              <TimelineDot />
+              <TimelineDot className={getStatusColor(item.status)} />
               <TimelineConnector />
             </TimelineSeparator>
-            <TimelineContent className="py-2 px-4">
-              <div className="space-y-1">
-                {getStatusBadge(item.status)}
-                {item.notes && (
-                  <p className="text-sm mt-1">{item.notes}</p>
-                )}
-                {item.updated_by_user?.name && (
-                  <p className="text-xs text-muted-foreground">
-                    Updated by {item.updated_by_user.name}
-                  </p>
-                )}
+            <TimelineContent>
+              <div className="text-sm font-medium capitalize">
+                {item.status.replace('_', ' ')}
               </div>
+              {item.notes && (
+                <p className="text-xs text-muted-foreground mt-1">{item.notes}</p>
+              )}
+              <p className="text-xs mt-1">
+                {item.updated_by_user?.name ? `By ${item.updated_by_user.name}` : 'By system'}
+              </p>
             </TimelineContent>
           </TimelineItem>
         ))}
@@ -110,3 +130,5 @@ export const ApplicationStatusHistory: React.FC<ApplicationStatusHistoryProps> =
     </div>
   );
 };
+
+export default ApplicationStatusHistory;
