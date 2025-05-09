@@ -9,6 +9,7 @@ export type Candidate = Partial<Tables<'candidates'>> & {
   profile?: Pick<Profile, 'name' | 'email'> | null;
   status: string;
   current_step?: number;
+  tags?: string[];
 };
 
 export type CandidateWithProfile = Candidate & {
@@ -25,3 +26,22 @@ export type ManagerProfile = Pick<Profile, 'id' | 'name'>;
 export type JobApplicationCandidate = Candidate & {
   assessment_results?: any[];
 };
+
+export interface StatusHistoryEntry {
+  id: string;
+  application_id: string;
+  status: string;
+  notes?: string;
+  created_at: string;
+  updated_by: string;
+  updated_by_user?: {
+    name: string;
+  };
+}
+
+export interface CandidateTag {
+  id: string;
+  name: string;
+  color?: string;
+  description?: string;
+}

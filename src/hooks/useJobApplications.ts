@@ -27,7 +27,8 @@ export const useJobApplications = (userId?: string, role?: string) => {
               score,
               completed
             ),
-            status
+            status,
+            tags
           )
         `)
         .order('created_at', { ascending: false });
@@ -62,11 +63,12 @@ export const useJobApplications = (userId?: string, role?: string) => {
           candidate_status: app.candidates?.status,
           created_at: app.created_at,
           updated_at: app.updated_at,
-          assessment_results
+          assessment_results,
+          tags: app.candidates?.tags || []
         };
       }) || [];
       
-      // Filter out archived candidates
+      // Filter out archived candidates and rejected applications
       const filteredData = formattedData.filter(app => 
         app.candidate_status !== 'archived' && 
         app.candidate_status !== 'rejected'
@@ -74,6 +76,85 @@ export const useJobApplications = (userId?: string, role?: string) => {
       
       return filteredData as Application[];
     },
-    enabled: !!userId
+    enabled: !!userId,
+    refetchInterval: 30000 // Refresh every 30 seconds to catch status changes
   });
+};
+
+// Function to update application status with history tracking
+export const updateApplicationStatus = async (
+  applicationId: string,
+  newStatus: string,
+  notes?: string,
+  userId?: string
+) => {
+  try {
+    // Start a transaction
+    const { error: statusError } = await supabase
+      .from('job_applications')
+      .update({ status: newStatus })
+      .eq('id', applicationId);
+      
+    if (statusError) throw statusError;
+    
+    // Record the history
+    const { error: historyError } = await supabase
+      .from('application_status_history')
+      .insert({
+        application_id: applicationId,
+        status: newStatus,
+        updated_by: userId,
+        notes: notes || `Status updated to ${newStatus}`
+      });
+      
+    if (historyError) throw historyError;
+    
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error updating application status:', error.message);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+};
+
+// Function for bulk status updates
+export const bulkUpdateApplicationStatus = async (
+  applicationIds: string[],
+  newStatus: string,
+  notes?: string,
+  userId?: string
+) => {
+  try {
+    // Update all applications
+    const { error: updateError } = await supabase
+      .from('job_applications')
+      .update({ status: newStatus })
+      .in('id', applicationIds);
+      
+    if (updateError) throw updateError;
+    
+    // Create history entries for all applications
+    const historyEntries = applicationIds.map(id => ({
+      application_id: id,
+      status: newStatus,
+      updated_by: userId,
+      notes: notes || `Bulk update: status changed to ${newStatus}`
+    }));
+    
+    const { error: historyError } = await supabase
+      .from('application_status_history')
+      .insert(historyEntries);
+      
+    if (historyError) throw historyError;
+    
+    return { success: true, count: applicationIds.length };
+  } catch (error: any) {
+    console.error('Error performing bulk update:', error.message);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
 };
