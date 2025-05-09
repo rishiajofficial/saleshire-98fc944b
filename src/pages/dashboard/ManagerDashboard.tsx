@@ -1,7 +1,7 @@
+
 import React from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import DashboardStats from "@/components/dashboard/DashboardStats";
 import { ApplicationsList } from "@/components/dashboard/ApplicationsList";
 import RecentResultsList from "@/components/dashboard/RecentResultsList";
@@ -27,7 +27,7 @@ const ManagerDashboard = () => {
           <ApplicationsList 
             applications={applications || []} 
             isLoading={isLoadingApplications}
-            role={profile?.role || 'manager'}
+            userRole={profile?.role || 'manager'}
             userId={user?.id}
           />
           <RecentResultsList />

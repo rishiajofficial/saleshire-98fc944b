@@ -1,7 +1,7 @@
+
 import React from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import DashboardStats from "@/components/dashboard/DashboardStats";
 import { ApplicationsList } from "@/components/dashboard/ApplicationsList";
 import RecentResultsList from "@/components/dashboard/RecentResultsList";
@@ -38,7 +38,7 @@ const AdminDashboard = () => {
               <ApplicationsList 
                 applications={applications || []} 
                 isLoading={isLoadingApplications}
-                role={profile?.role || 'hr'}
+                userRole={profile?.role || 'hr'}
               />
             </TabsContent>
             <TabsContent value="jobs">

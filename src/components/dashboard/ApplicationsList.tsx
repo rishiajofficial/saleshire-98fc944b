@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Table,
@@ -271,7 +270,7 @@ export const ApplicationsList: React.FC<ApplicationsListProps> = ({
                     <DropdownMenuSeparator />
                     <DropdownMenuItem>
                       <a href={`/manager/job-application/${application.id}`} target="_blank" rel="noopener noreferrer">
-                        View Application <ExternalLinkIcon className="h-3.5 w-3.5 ml-1.5" />
+                        View Application <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
                       </a>
                     </DropdownMenuItem>
                   </DropdownMenuContent>

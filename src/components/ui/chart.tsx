@@ -24,77 +24,69 @@ interface ChartContainerProps {
   columns?: number;
 }
 
-const ChartContainer = React.forwardRef<
-  React.ElementRef<typeof ResponsiveContainer>,
-  ChartContainerProps
->(({ className, children, ...props }, ref) => (
+const ChartContainer = ({
+  className,
+  children,
+  ...props
+}: ChartContainerProps) => (
   <div className={cn("w-full h-full", className)}>
     <ResponsiveContainer width="100%" height="100%">
       {children}
     </ResponsiveContainer>
   </div>
-));
+);
 ChartContainer.displayName = "ChartContainer";
 
-const BarChart = React.forwardRef<
-  React.ElementRef<typeof RechartsBarChart>,
-  React.ComponentProps<typeof RechartsBarChart> & {
-    showTooltip?: boolean;
-    showXAxis?: boolean;
-    showYAxis?: boolean;
-    showLegend?: boolean;
-    showGrid?: boolean;
-    layout?: "horizontal" | "vertical";
-  }
->(
-  (
-    {
-      className,
-      showTooltip = true,
-      showXAxis = true,
-      showYAxis = true,
-      showLegend = false,
-      showGrid = false,
-      layout = "horizontal",
-      data,
-      ...props
-    },
-    ref
-  ) => (
-    <RechartsBarChart
-      ref={ref}
-      data={data}
-      layout={layout}
-      className={cn("w-full h-full", className)}
-      {...props}
-    >
-      {showGrid && <CartesianGrid strokeDasharray="3 3" vertical={false} />}
-      {showXAxis && (
-        <RechartsXAxis
-          dataKey={layout === "horizontal" ? "name" : undefined}
-          type={layout === "horizontal" ? "category" : "number"}
-          tick={{ transform: "translate(0, 8)" }}
-          tickLine={{ transform: "translate(0, 8)" }}
-          style={{ fontSize: 12 }}
-          interval={0}
-        />
-      )}
-      {showYAxis && (
-        <RechartsYAxis
-          dataKey={layout === "vertical" ? "name" : undefined}
-          type={layout === "vertical" ? "category" : "number"}
-          width={layout === "vertical" ? 120 : 35}
-          tick={{ transform: "translate(-3, 0)" }}
-          tickLine={{ transform: "translate(-3, 0)" }}
-          style={{ fontSize: 12 }}
-          interval={0}
-        />
-      )}
-      {showTooltip && <Tooltip cursor={false} content={<CustomTooltip />} />}
-      {showLegend && <Legend />}
-      {props.children}
-    </RechartsBarChart>
-  )
+const BarChart = ({
+  className,
+  showTooltip = true,
+  showXAxis = true,
+  showYAxis = true,
+  showLegend = false,
+  showGrid = false,
+  layout = "horizontal",
+  data,
+  ...props
+}: React.ComponentProps<typeof RechartsBarChart> & {
+  showTooltip?: boolean;
+  showXAxis?: boolean;
+  showYAxis?: boolean;
+  showLegend?: boolean;
+  showGrid?: boolean;
+  layout?: "horizontal" | "vertical";
+}) => (
+  <RechartsBarChart
+    data={data}
+    layout={layout}
+    className={cn("w-full h-full", className)}
+    {...props}
+  >
+    {showGrid && <CartesianGrid strokeDasharray="3 3" vertical={false} />}
+    {showXAxis && (
+      <RechartsXAxis
+        dataKey={layout === "horizontal" ? "name" : undefined}
+        type={layout === "horizontal" ? "category" : "number"}
+        tick={{ transform: "translate(0, 8)" }}
+        tickLine={{ transform: "translate(0, 8)" }}
+        style={{ fontSize: 12 }}
+        interval={0}
+      />
+    )}
+    {showYAxis && (
+      <RechartsYAxis
+        dataKey={layout === "vertical" ? "name" : undefined}
+        type={layout === "vertical" ? "category" : "number"}
+        width={layout === "vertical" ? 120 : 35}
+        tick={{ transform: "translate(-3, 0)" }}
+        tickLine={{ transform: "translate(-3, 0)" }}
+        style={{ fontSize: 12 }}
+        interval={0}
+      />
+    )}
+    {showTooltip && <Tooltip cursor={false} content={<CustomTooltip />} />}
+    {showLegend && <Legend />}
+    {props.children}
+  </RechartsBarChart>
 );
 BarChart.displayName = "BarChart";
 
@@ -128,29 +120,23 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   return null;
 };
 
-// Fix Bar component - remove forwardRef to avoid type issues
+// Fix Bar component to use a simple non-forwarded ref function
 const Bar = (props: React.ComponentProps<typeof RechartsBar>) => (
   <RechartsBar {...props} />
 );
 Bar.displayName = "Bar";
 
-const XAxis = React.forwardRef<
-  React.ElementRef<typeof RechartsXAxis>,
-  React.ComponentProps<typeof RechartsXAxis>
->(({ className, ...props }, ref) => (
+const XAxis = (props: React.ComponentProps<typeof RechartsXAxis>) => (
   <RechartsXAxis
     axisLine={false}
     tickLine={false}
     tick={{ fontSize: 12 }}
     {...props}
   />
-));
+);
 XAxis.displayName = "XAxis";
 
-const YAxis = React.forwardRef<
-  React.ElementRef<typeof RechartsYAxis>,
-  React.ComponentProps<typeof RechartsYAxis>
->(({ className, ...props }, ref) => (
+const YAxis = (props: React.ComponentProps<typeof RechartsYAxis>) => (
   <RechartsYAxis
     axisLine={false}
     tickLine={false}
@@ -158,26 +144,28 @@ const YAxis = React.forwardRef<
     width={80}
     {...props}
   />
-));
+);
 YAxis.displayName = "YAxis";
 
-// Fix Line component - remove forwardRef to avoid type issues
+// Fix Line component to use a simple non-forwarded ref function
 const Line = (props: React.ComponentProps<typeof RechartsLine>) => (
   <RechartsLine activeDot={{ r: 8 }} {...props} />
 );
 Line.displayName = "Line";
 
-const PieChart = React.forwardRef<
-  React.ElementRef<typeof RechartsPieChart>,
-  React.ComponentProps<typeof RechartsPieChart>
->(({ className, children, ...props }, ref) => (
-  <RechartsPieChart ref={ref} className={cn("w-full h-full", className)} {...props}>
-    {children}
-  </RechartsPieChart>
-));
+const LineChart = (
+  props: React.ComponentProps<typeof RechartsLineChart>
+) => <RechartsLineChart {...props} />;
+LineChart.displayName = "LineChart";
+
+const PieChart = (
+  props: React.ComponentProps<typeof RechartsPieChart>
+) => (
+  <RechartsPieChart className={cn("w-full h-full", props.className)} {...props} />
+);
 PieChart.displayName = "PieChart";
 
-// Fix Pie component - remove forwardRef to avoid type issues
+// Fix Pie component
 const Pie = (props: React.ComponentProps<typeof RechartsPie>) => (
   <RechartsPie {...props} />
 );
