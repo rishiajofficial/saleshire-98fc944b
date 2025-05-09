@@ -1,188 +1,148 @@
 
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
 import {
-  Timeline,
-  TimelineItem,
-  TimelineSeparator,
-  TimelineDot,
-  TimelineConnector,
-  TimelineContent,
-  TimelineOppositeContent,
-} from "@/components/ui/timeline";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { StatusBadge } from "@/components/candidates/StatusBadge";
 
-export interface StatusHistoryEntry {
+interface StatusHistoryEntry {
   id: string;
   application_id: string;
   status: string;
+  updated_by: string;
   notes?: string;
   created_at: string;
-  updated_by: string;
-  updated_by_user?: {
-    name: string;
-  };
+  updated_by_name?: string;
 }
 
 interface ApplicationStatusHistoryProps {
   applicationId: string;
 }
 
-export const ApplicationStatusHistory: React.FC<ApplicationStatusHistoryProps> = ({ applicationId }) => {
-  const [historyItems, setHistoryItems] = useState<StatusHistoryEntry[]>([]);
+export const ApplicationStatusHistory: React.FC<ApplicationStatusHistoryProps> = ({
+  applicationId,
+}) => {
+  const [history, setHistory] = useState<StatusHistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchHistory = async () => {
+      if (!applicationId) return;
+      
       setIsLoading(true);
+      
       try {
-        // Instead of fetching from application_status_history which doesn't exist yet,
-        // let's fetch from activity_logs which should already exist in our schema
+        // Since we don't have a dedicated status history table yet, we'll use activity logs
         const { data, error } = await supabase
           .from('activity_logs')
           .select(`
-            id,
-            action,
-            entity_id,
-            details,
-            created_at,
-            user_id
+            *,
+            updated_by_user:user_id(
+              name
+            )
           `)
           .eq('entity_type', 'job_application')
           .eq('entity_id', applicationId)
           .eq('action', 'status_change')
-          .order('created_at', { ascending: true });
+          .order('created_at', { ascending: false });
           
         if (error) throw error;
         
-        // If we got results from activity_logs, format them as StatusHistoryEntry
-        if (data && data.length > 0) {
-          const formattedHistory = data.map(item => ({
-            id: item.id,
-            application_id: item.entity_id,
-            status: item.details.new_status || 'unknown',
-            notes: item.details.notes || '',
-            created_at: item.created_at,
-            updated_by: item.user_id,
-            updated_by_user: { name: 'User' } // We don't join with profiles table here for simplicity
-          })) as StatusHistoryEntry[];
+        // Transform activity logs into status history entries
+        const formattedHistory: StatusHistoryEntry[] = data?.map(log => {
+          const details = typeof log.details === 'string' ? JSON.parse(log.details) : log.details;
           
-          setHistoryItems(formattedHistory);
-        } else {
-          // If we don't have real history, use mock data
-          const mockHistoryItems: StatusHistoryEntry[] = [
-            {
-              id: "1",
-              application_id: applicationId,
-              status: "applied",
-              notes: "Initial application",
-              created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-              updated_by: "system",
-              updated_by_user: { name: "System" }
-            },
-            {
-              id: "2",
-              application_id: applicationId,
-              status: "hr_review",
-              notes: "Application under review by HR",
-              created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-              updated_by: "system",
-              updated_by_user: { name: "HR Department" }
-            },
-            {
-              id: "3",
-              application_id: applicationId,
-              status: "manager_interview",
-              notes: "Scheduled for interview with the manager",
-              created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-              updated_by: "system",
-              updated_by_user: { name: "Scheduling Team" }
-            }
-          ];
-          
-          setHistoryItems(mockHistoryItems);
-        }
-      } catch (error) {
-        console.error("Error fetching application history:", error);
-        setHistoryItems([]);
+          return {
+            id: log.id,
+            application_id: log.entity_id,
+            status: details?.new_status || 'unknown',
+            updated_by: log.user_id,
+            notes: details?.notes || '',
+            created_at: log.created_at,
+            updated_by_name: log.updated_by_user?.name || 'System'
+          };
+        }) || [];
+        
+        setHistory(formattedHistory);
+      } catch (err) {
+        console.error("Error fetching application status history:", err);
       } finally {
         setIsLoading(false);
       }
     };
-
-    if (applicationId) {
-      fetchHistory();
-    }
+    
+    fetchHistory();
   }, [applicationId]);
-
-  const formatDate = (dateString: string) => {
-    try {
-      return format(new Date(dateString), "MMM d, yyyy 'at' h:mm a");
-    } catch (e) {
-      return dateString;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'applied':
-        return 'bg-blue-500';
-      case 'hr_review':
-      case 'screening':
-        return 'bg-yellow-500';
-      case 'hr_approved':
-        return 'bg-violet-500';
-      case 'manager_interview':
-      case 'interview':
-        return 'bg-green-500';
-      case 'hired':
-        return 'bg-emerald-500';
-      case 'rejected':
-        return 'bg-red-500';
-      case 'archived':
-        return 'bg-gray-500';
-      default:
-        return 'bg-primary';
-    }
-  };
-
+  
   if (isLoading) {
-    return <div className="text-sm text-center py-2">Loading history...</div>;
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Status History</CardTitle>
+          <CardDescription>Loading status history...</CardDescription>
+        </CardHeader>
+      </Card>
+    );
   }
-
-  if (historyItems.length === 0) {
-    return <div className="text-sm text-muted-foreground">No status history available</div>;
+  
+  if (history.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Status History</CardTitle>
+          <CardDescription>No status changes have been recorded yet.</CardDescription>
+        </CardHeader>
+      </Card>
+    );
   }
 
   return (
-    <div>
-      <h4 className="text-sm font-medium mb-2">Application History</h4>
-      <Timeline>
-        {historyItems.map((item) => (
-          <TimelineItem key={item.id}>
-            <TimelineOppositeContent className="text-xs text-muted-foreground">
-              {formatDate(item.created_at)}
-            </TimelineOppositeContent>
-            <TimelineSeparator>
-              <TimelineDot className={getStatusColor(item.status)} />
-              <TimelineConnector />
-            </TimelineSeparator>
-            <TimelineContent>
-              <div className="text-sm font-medium capitalize">
-                {item.status.replace('_', ' ')}
+    <Card>
+      <CardHeader>
+        <CardTitle>Status History</CardTitle>
+        <CardDescription>
+          Track the history of status changes for this application
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {history.map((entry, index) => (
+            <div key={entry.id} className="pb-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={entry.status} />
+                    <span className="text-sm font-medium">
+                      Changed by {entry.updated_by_name || "System"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {format(new Date(entry.created_at), "PPpp")}
+                  </p>
+                </div>
               </div>
-              {item.notes && (
-                <p className="text-xs text-muted-foreground mt-1">{item.notes}</p>
+              
+              {entry.notes && (
+                <div className="mt-2 text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
+                  {entry.notes}
+                </div>
               )}
-              <p className="text-xs mt-1">
-                {item.updated_by_user?.name ? `By ${item.updated_by_user.name}` : 'By system'}
-              </p>
-            </TimelineContent>
-          </TimelineItem>
-        ))}
-      </Timeline>
-    </div>
+              
+              {index < history.length - 1 && (
+                <Separator className="mt-4" />
+              )}
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 };
-
-export default ApplicationStatusHistory;
