@@ -26,7 +26,8 @@ export const useJobApplications = (userId?: string, role?: string) => {
               id,
               score,
               completed
-            )
+            ),
+            status
           )
         `)
         .order('created_at', { ascending: false });
@@ -58,13 +59,20 @@ export const useJobApplications = (userId?: string, role?: string) => {
           candidate_name: app.candidates?.profile?.name,
           candidate_email: app.candidates?.profile?.email,
           status: app.status,
+          candidate_status: app.candidates?.status,
           created_at: app.created_at,
           updated_at: app.updated_at,
           assessment_results
         };
       }) || [];
       
-      return formattedData as Application[];
+      // Filter out archived candidates
+      const filteredData = formattedData.filter(app => 
+        app.candidate_status !== 'archived' && 
+        app.candidate_status !== 'rejected'
+      );
+      
+      return filteredData as Application[];
     },
     enabled: !!userId
   });

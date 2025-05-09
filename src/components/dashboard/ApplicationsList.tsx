@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ export interface Application {
   candidate_name?: string;
   candidate_email?: string;
   status: string;
+  candidate_status?: string;
   created_at: string;
   updated_at: string;
   assessment_results?: any[];
