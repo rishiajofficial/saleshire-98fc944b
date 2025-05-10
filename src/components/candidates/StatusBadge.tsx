@@ -1,14 +1,30 @@
 
 import React from 'react';
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, Clock } from "lucide-react";
+import { CheckCircle, XCircle, Clock, User } from "lucide-react";
 
 interface StatusBadgeProps {
   status: string;
 }
 
 export const StatusBadge = ({ status }: StatusBadgeProps) => {
+  // Check if the status includes "Applied to job:" pattern
+  if (status?.toLowerCase().includes('applied to job:')) {
+    return (
+      <Badge className="bg-blue-100 text-blue-800 whitespace-normal">
+        {status}
+      </Badge>
+    );
+  }
+  
+  // Handle standard statuses
   switch (status?.toLowerCase()) {
+    case "profile_created":
+      return (
+        <Badge className="bg-gray-100 text-gray-800">
+          <User className="mr-1 h-3 w-3" /> Profile Created
+        </Badge>
+      );
     case "applied":
     case "application_in_progress":
       return (

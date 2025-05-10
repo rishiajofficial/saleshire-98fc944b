@@ -10,6 +10,7 @@ import ApplicationStepProfile from "@/components/candidate/ApplicationStepProfil
 import ApplicationStepUploads from "@/components/candidate/ApplicationStepUploads";
 import ApplicationStepAssessment from "@/components/candidate/ApplicationStepAssessment";
 import { AlertCircle } from "lucide-react";
+import { updateApplicationStatus } from "@/hooks/useDatabaseQuery";
 
 const steps = [
   { id: 1, label: "Profile Info" },
@@ -178,18 +179,14 @@ const Application = () => {
         
       if (fetchError) throw fetchError;
       
-      // Use the data from the database (not the local state) to ensure we have the most up-to-date files
-      const { error: candidateError } = await supabase
-        .from("candidates")
-        .update({
-          status: 'hr_review',
-          current_step: 2,
-          // No need to update resume, about_me_video, or sales_pitch_video here 
-          // as they are already saved during the upload process
-        })
-        .eq("id", user.id);
-
-      if (candidateError) throw candidateError;
+      // Update the candidate status with the job name
+      const jobTitle = jobDetails?.title || "Unknown Position";
+      const newStatus = `Applied to job: ${jobTitle}`;
+      
+      await updateApplicationStatus(user.id, {
+        status: newStatus,
+        job_title: jobTitle
+      });
       
       if (jobDetails?.id) {
         const { error: applicationError } = await supabase
@@ -234,7 +231,7 @@ const Application = () => {
 
   const showApplicationRequiredAlert = 
     candidateStatus && 
-    ["application_in_progress", "applied"].includes(candidateStatus.toLowerCase());
+    ["profile_created", "application_in_progress", "applied"].includes(candidateStatus.toLowerCase());
 
   const showApplicationSubmittedAlert = isSubmitted || 
     (candidateStatus && ["hr_review", "hr_approved", "training", "manager_interview", "paid_project"].includes(candidateStatus.toLowerCase()));

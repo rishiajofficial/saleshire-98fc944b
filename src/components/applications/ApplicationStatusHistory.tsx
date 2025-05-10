@@ -22,6 +22,7 @@ export interface StatusHistoryEntry {
   updated_by_user?: {
     name: string;
   };
+  job_title?: string;
 }
 
 interface ApplicationStatusHistoryProps {
@@ -59,15 +60,30 @@ export const ApplicationStatusHistory: React.FC<ApplicationStatusHistoryProps> =
         if (data && data.length > 0) {
           const formattedHistory = data.map(item => {
             // Safely access the details object with type checking
-            const details = item.details as Record<string, any> | null;
-            const newStatus = details && typeof details === 'object' ? details.new_status : 'unknown';
-            const notes = details && typeof details === 'object' ? details.notes || '' : '';
+            let newStatus = 'unknown';
+            let notes = '';
+            let jobTitle = '';
+            
+            if (item.details) {
+              const details = typeof item.details === 'object' 
+                ? item.details 
+                : typeof item.details === 'string' 
+                  ? JSON.parse(item.details) 
+                  : null;
+                  
+              if (details) {
+                newStatus = details.new_status || 'unknown';
+                notes = details.notes || '';
+                jobTitle = details.job_title || '';
+              }
+            }
             
             return {
               id: item.id,
               application_id: item.entity_id,
-              status: newStatus || 'unknown',
+              status: newStatus,
               notes: notes,
+              job_title: jobTitle,
               created_at: item.created_at,
               updated_by: item.user_id,
               updated_by_user: { name: 'User' } // We don't join with profiles table here for simplicity
@@ -81,8 +97,8 @@ export const ApplicationStatusHistory: React.FC<ApplicationStatusHistoryProps> =
             {
               id: "1",
               application_id: applicationId,
-              status: "applied",
-              notes: "Initial application",
+              status: "profile_created",
+              notes: "Initial profile creation",
               created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
               updated_by: "system",
               updated_by_user: { name: "System" }
@@ -90,20 +106,21 @@ export const ApplicationStatusHistory: React.FC<ApplicationStatusHistoryProps> =
             {
               id: "2",
               application_id: applicationId,
-              status: "hr_review",
-              notes: "Application under review by HR",
+              status: "applied",
+              notes: "Application submitted",
+              job_title: "Sales Executive",
               created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
               updated_by: "system",
-              updated_by_user: { name: "HR Department" }
+              updated_by_user: { name: "Candidate" }
             },
             {
               id: "3",
               application_id: applicationId,
-              status: "manager_interview",
-              notes: "Scheduled for interview with the manager",
+              status: "hr_review",
+              notes: "Application under review by HR",
               created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
               updated_by: "system",
-              updated_by_user: { name: "Scheduling Team" }
+              updated_by_user: { name: "HR Department" }
             }
           ];
           
@@ -132,6 +149,8 @@ export const ApplicationStatusHistory: React.FC<ApplicationStatusHistoryProps> =
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case 'profile_created':
+        return 'bg-gray-400';
       case 'applied':
         return 'bg-blue-500';
       case 'hr_review':
@@ -151,6 +170,15 @@ export const ApplicationStatusHistory: React.FC<ApplicationStatusHistoryProps> =
       default:
         return 'bg-primary';
     }
+  };
+
+  const formatStatusText = (entry: StatusHistoryEntry) => {
+    if (entry.status === 'applied' && entry.job_title) {
+      return `Applied to job: ${entry.job_title}`;
+    }
+    
+    const formattedStatus = entry.status.replace(/_/g, ' ');
+    return formattedStatus.charAt(0).toUpperCase() + formattedStatus.slice(1);
   };
 
   if (isLoading) {
@@ -175,8 +203,8 @@ export const ApplicationStatusHistory: React.FC<ApplicationStatusHistoryProps> =
               <TimelineConnector />
             </TimelineSeparator>
             <TimelineContent>
-              <div className="text-sm font-medium capitalize">
-                {item.status.replace('_', ' ')}
+              <div className="text-sm font-medium">
+                {formatStatusText(item)}
               </div>
               {item.notes && (
                 <p className="text-xs text-muted-foreground mt-1">{item.notes}</p>

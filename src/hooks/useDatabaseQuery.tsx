@@ -159,6 +159,8 @@ const getStepFromStatus = (status?: string): number | undefined => {
   if (!status) return undefined;
   const lowerStatus = status.toLowerCase();
   switch (lowerStatus) {
+    case "profile_created":
+      return 0;
     case "applied":
     case "application_in_progress":
       return 1;
@@ -189,6 +191,7 @@ export const updateApplicationStatus = async (
     resume?: string | null;
     about_me_video?: string | null;
     sales_pitch_video?: string | null;
+    job_title?: string | null;
   }
 ) => {
   try {
@@ -197,6 +200,7 @@ export const updateApplicationStatus = async (
     };
 
     const validStatuses = [
+      'profile_created',
       'applied',
       'hr_review', 
       'hr_approved', 
@@ -209,16 +213,23 @@ export const updateApplicationStatus = async (
       'archived'
     ];
     
+    // Handle special case for "Applied to job: [job name]"
+    let normalizedStatus = applicationData.status || '';
+    if (normalizedStatus.toLowerCase().startsWith('applied to job:')) {
+      normalizedStatus = 'applied';
+    } else {
+      normalizedStatus = normalizedStatus.toLowerCase();
+    }
+    
     if (applicationData.status) {
-      const normalizedStatus = applicationData.status.toLowerCase();
-      if (!validStatuses.includes(normalizedStatus)) {
+      if (!validStatuses.includes(normalizedStatus) && !normalizedStatus.startsWith('applied to job:')) {
         throw new Error(`Invalid status: ${applicationData.status}. Allowed statuses are: ${validStatuses.join(', ')}`);
       }
-      updatePayload.status = normalizedStatus;
+      updatePayload.status = applicationData.status;
     }
 
     if (updatePayload.status) {
-      const newStep = getStepFromStatus(updatePayload.status);
+      const newStep = getStepFromStatus(normalizedStatus);
       if (newStep) {
         updatePayload.current_step = newStep;
       }
@@ -239,6 +250,21 @@ export const updateApplicationStatus = async (
     
     if (!data || data.length === 0) {
       throw new Error('No candidate found with that ID');
+    }
+
+    // Log activity
+    if (updatePayload.status) {
+      await supabase.from('activity_logs').insert({
+        user_id: candidateId,
+        action: 'status_change',
+        entity_type: 'job_application',
+        entity_id: candidateId,
+        details: {
+          new_status: normalizedStatus,
+          job_title: applicationData.job_title || '',
+          notes: `Status updated to ${updatePayload.status}`
+        }
+      });
     }
 
     return { data: data[0], error: null };
