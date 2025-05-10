@@ -54,14 +54,19 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
   const [dialogOpen, setDialogOpen] = useState(false);
   const { modules, loading, fetchTrainingModules } = useTrainingModules();
 
+  // Fix: Only update the dialog state when externalIsOpen prop changes, not on every render
   useEffect(() => {
     if (externalIsOpen !== undefined) {
       setDialogOpen(externalIsOpen);
     }
-    if (externalIsOpen) {
+  }, [externalIsOpen]);
+
+  // Separate effect for fetching modules to avoid dependency issues
+  useEffect(() => {
+    if (dialogOpen) {
       fetchTrainingModules();
     }
-  }, [externalIsOpen, fetchTrainingModules]);
+  }, [dialogOpen, fetchTrainingModules]);
 
   const handleOpen = () => {
     setDialogOpen(true);
@@ -104,7 +109,10 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
   };
 
   return (
-    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+    <Dialog open={dialogOpen} onOpenChange={(open) => {
+      setDialogOpen(open);
+      if (!open && onClose) onClose();
+    }}>
       {!externalIsOpen && (
         <DialogTrigger asChild>
           <div>
@@ -112,7 +120,7 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
           </div>
         </DialogTrigger>
       )}
-      <DialogContent onEscapeKeyDown={handleClose} onInteractOutside={handleClose} className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent onEscapeKeyDown={handleClose} className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{getDialogTitle()}</DialogTitle>
           <DialogDescription>{getDialogDescription()}</DialogDescription>

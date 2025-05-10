@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,7 @@ const JobList: React.FC<JobListProps> = ({
   const [showDeleteDialog, setShowDeleteDialog] = useState<string | null>(null);
   const [filter, setFilter] = useState<"active" | "archived">("active");
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [dialogOpen, setDialogOpen] = useState<boolean>(false);
 
   const filteredJobs = jobs.filter(job => job.archived === (filter === "archived"));
 
@@ -102,11 +104,18 @@ const JobList: React.FC<JobListProps> = ({
       const enhancedJob = await fetchJobRelatedData(job);
       setSelectedJob(enhancedJob);
       setViewMode(mode);
+      setDialogOpen(true);
     } catch (error) {
       console.error("Error fetching job related data:", error);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const closeDialog = () => {
+    setDialogOpen(false);
+    setSelectedJob(null);
+    setViewMode(null);
   };
 
   const dummyOnJobCreated = () => {
@@ -184,7 +193,7 @@ const JobList: React.FC<JobListProps> = ({
         ))}
       </div>
 
-      {selectedJob && viewMode && !isLoading && (
+      {selectedJob && viewMode && (
         <JobCreationDialog
           mode={viewMode}
           editingJob={selectedJob}
@@ -192,11 +201,8 @@ const JobList: React.FC<JobListProps> = ({
           categories={categories}
           onJobCreated={dummyOnJobCreated}
           onJobUpdated={onJobUpdated}
-          isOpen={true}
-          onClose={() => {
-            setSelectedJob(null);
-            setViewMode(null);
-          }}
+          isOpen={dialogOpen}
+          onClose={closeDialog}
         />
       )}
 
