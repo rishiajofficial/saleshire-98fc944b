@@ -54,8 +54,8 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
   const [dialogOpen, setDialogOpen] = useState(false);
   const { modules, loading, fetchTrainingModules } = useTrainingModules();
 
-  // Fix: Only update the dialog state when externalIsOpen prop changes, not on every render
   useEffect(() => {
+    // Only run this effect when externalIsOpen changes
     if (externalIsOpen !== undefined) {
       setDialogOpen(externalIsOpen);
     }
@@ -109,10 +109,18 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
   };
 
   return (
-    <Dialog open={dialogOpen} onOpenChange={(open) => {
-      setDialogOpen(open);
-      if (!open && onClose) onClose();
-    }}>
+    <Dialog 
+      open={dialogOpen} 
+      onOpenChange={(open) => {
+        if (externalIsOpen !== undefined && !open) {
+          // Only handle close through the onClose prop if externally controlled
+          if (onClose) onClose();
+        } else {
+          // Direct state control if not externally controlled
+          setDialogOpen(open);
+        }
+      }}
+    >
       {!externalIsOpen && (
         <DialogTrigger asChild>
           <div>

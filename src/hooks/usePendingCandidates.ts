@@ -21,9 +21,9 @@ export function usePendingCandidates(userRole?: string) {
             email
           )
         `)
-        .or(`status.eq.profile_created,id.not.in.${
-          supabase.from("job_applications").select("candidate_id")
-        }`)
+        .or('status.eq.profile_created,id.not.in.(' + 
+          supabase.from('job_applications').select('candidate_id').toSql() + ')'
+        )
         .order("created_at", { ascending: false });
 
       if (error) {
