@@ -57,15 +57,22 @@ export const ApplicationStatusHistory: React.FC<ApplicationStatusHistoryProps> =
         
         // If we got results from activity_logs, format them as StatusHistoryEntry
         if (data && data.length > 0) {
-          const formattedHistory = data.map(item => ({
-            id: item.id,
-            application_id: item.entity_id,
-            status: item.details.new_status || 'unknown',
-            notes: item.details.notes || '',
-            created_at: item.created_at,
-            updated_by: item.user_id,
-            updated_by_user: { name: 'User' } // We don't join with profiles table here for simplicity
-          })) as StatusHistoryEntry[];
+          const formattedHistory = data.map(item => {
+            // Safely access the details object with type checking
+            const details = item.details as Record<string, any> | null;
+            const newStatus = details && typeof details === 'object' ? details.new_status : 'unknown';
+            const notes = details && typeof details === 'object' ? details.notes || '' : '';
+            
+            return {
+              id: item.id,
+              application_id: item.entity_id,
+              status: newStatus || 'unknown',
+              notes: notes,
+              created_at: item.created_at,
+              updated_by: item.user_id,
+              updated_by_user: { name: 'User' } // We don't join with profiles table here for simplicity
+            };
+          }) as StatusHistoryEntry[];
           
           setHistoryItems(formattedHistory);
         } else {
