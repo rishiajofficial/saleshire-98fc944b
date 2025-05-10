@@ -3,9 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Application } from "@/components/dashboard/ApplicationsList";
 
-export const useJobApplications = (userId?: string, role?: string) => {
+export const useJobApplications = (userId?: string, role?: string, includeArchived: boolean = false) => {
   return useQuery({
-    queryKey: ['job-applications', userId, role],
+    queryKey: ['job-applications', userId, role, includeArchived],
     queryFn: async () => {
       let query = supabase
         .from('job_applications')
@@ -56,12 +56,23 @@ export const useJobApplications = (userId?: string, role?: string) => {
         };
       }) || [];
       
-      // Filter out archived candidates and rejected applications
-      const filteredData = formattedData.filter(app => 
-        app.candidate_status !== 'archived' && 
-        app.status !== 'archived' &&
-        app.status !== 'rejected'
-      );
+      // Filter applications based on includeArchived flag
+      let filteredData;
+      if (includeArchived) {
+        // Show only archived and rejected applications
+        filteredData = formattedData.filter(app => 
+          app.status === 'archived' || 
+          app.status === 'rejected' ||
+          app.candidate_status === 'archived'
+        );
+      } else {
+        // Filter out archived candidates and rejected applications
+        filteredData = formattedData.filter(app => 
+          app.candidate_status !== 'archived' && 
+          app.status !== 'archived' &&
+          app.status !== 'rejected'
+        );
+      }
       
       return filteredData as Application[];
     },

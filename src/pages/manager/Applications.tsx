@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { useAuth } from "@/contexts/auth";
 import { useJobApplications } from "@/hooks/useJobApplications";
@@ -8,11 +8,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Applications = () => {
   const { user, profile } = useAuth();
+  const [showArchived, setShowArchived] = useState<boolean>(false);
   
   const { 
     data: applications, 
     isLoading: isLoadingApplications 
-  } = useJobApplications(user?.id, profile?.role);
+  } = useJobApplications(user?.id, profile?.role, showArchived);
 
   return (
     <MainLayout>
@@ -26,12 +27,28 @@ const Applications = () => {
           </div>
         </div>
 
-        <ApplicationsList 
-          applications={applications || []} 
-          isLoading={isLoadingApplications}
-          role={profile?.role || 'hr'}
-          userId={user?.id}
-        />
+        <Tabs defaultValue="active" onValueChange={(value) => setShowArchived(value === "archived")}>
+          <TabsList>
+            <TabsTrigger value="active">Active Applications</TabsTrigger>
+            <TabsTrigger value="archived">Archived & Rejected</TabsTrigger>
+          </TabsList>
+          <TabsContent value="active" className="mt-4">
+            <ApplicationsList 
+              applications={applications || []} 
+              isLoading={isLoadingApplications}
+              role={profile?.role || 'hr'}
+              userId={user?.id}
+            />
+          </TabsContent>
+          <TabsContent value="archived" className="mt-4">
+            <ApplicationsList 
+              applications={applications || []} 
+              isLoading={isLoadingApplications}
+              role={profile?.role || 'hr'}
+              userId={user?.id}
+            />
+          </TabsContent>
+        </Tabs>
       </div>
     </MainLayout>
   );
