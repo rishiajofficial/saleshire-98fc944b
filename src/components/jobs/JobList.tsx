@@ -100,6 +100,16 @@ const JobList: React.FC<JobListProps> = ({
 
   const handleViewOrEdit = async (job: Job, mode: "view" | "edit") => {
     try {
+      // Close any existing dialog
+      if (dialogOpen) {
+        setDialogOpen(false);
+        setSelectedJob(null);
+        setViewMode(null);
+        
+        // Small delay before opening new dialog to prevent flickering
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      
       setIsLoading(true);
       const enhancedJob = await fetchJobRelatedData(job);
       setSelectedJob(enhancedJob);
@@ -114,13 +124,14 @@ const JobList: React.FC<JobListProps> = ({
 
   const closeDialog = () => {
     setDialogOpen(false);
-    setSelectedJob(null);
-    setViewMode(null);
+    setTimeout(() => {
+      setSelectedJob(null);
+      setViewMode(null);
+    }, 100); // Small delay to prevent flickering
   };
 
-  const dummyOnJobCreated = () => {
-    console.log("This function is not used for view/edit dialogs");
-  };
+  // This function is not used for view/edit dialogs 
+  const dummyOnJobCreated = () => {};
 
   return (
     <div className="space-y-4">
@@ -193,7 +204,7 @@ const JobList: React.FC<JobListProps> = ({
         ))}
       </div>
 
-      {selectedJob && viewMode && (
+      {dialogOpen && selectedJob && viewMode && (
         <JobCreationDialog
           mode={viewMode}
           editingJob={selectedJob}

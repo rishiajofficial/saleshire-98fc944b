@@ -12,7 +12,6 @@ import { Loader2 } from "lucide-react";
 import JobForm from "./JobForm";
 import JobDialogTrigger from "./JobDialogTrigger";
 import { useTrainingModules } from "@/hooks/useTrainingModules";
-import { TrainingModuleProgress } from "@/types/training";
 
 interface EditingJob {
   id: string;
@@ -52,25 +51,34 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
   onClose
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [modulesLoaded, setModulesLoaded] = useState(false);
   const { modules, loading, fetchTrainingModules } = useTrainingModules();
-
+  
+  // Handle external control of dialog state
   useEffect(() => {
-    // Only run this effect when externalIsOpen changes
     if (externalIsOpen !== undefined) {
       setDialogOpen(externalIsOpen);
     }
   }, [externalIsOpen]);
 
-  // Separate effect for fetching modules to avoid dependency issues
+  // Fetch modules when dialog opens
   useEffect(() => {
-    if (dialogOpen) {
-      fetchTrainingModules();
+    if (dialogOpen && !modulesLoaded) {
+      fetchTrainingModules().then(() => {
+        setModulesLoaded(true);
+      });
     }
-  }, [dialogOpen, fetchTrainingModules]);
+  }, [dialogOpen, modulesLoaded, fetchTrainingModules]);
+
+  // Reset modules loaded state when dialog closes
+  useEffect(() => {
+    if (!dialogOpen) {
+      setModulesLoaded(false);
+    }
+  }, [dialogOpen]);
 
   const handleOpen = () => {
     setDialogOpen(true);
-    fetchTrainingModules();
   };
 
   const handleClose = () => {
@@ -112,41 +120,48 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
     <Dialog 
       open={dialogOpen} 
       onOpenChange={(open) => {
-        if (externalIsOpen !== undefined && !open) {
+        if (!open) {
           // Only handle close through the onClose prop if externally controlled
-          if (onClose) onClose();
-        } else {
-          // Direct state control if not externally controlled
-          setDialogOpen(open);
+          if (externalIsOpen !== undefined) {
+            if (onClose) onClose();
+          } else {
+            // Direct state control if not externally controlled
+            setDialogOpen(false);
+          }
+        } else if (externalIsOpen === undefined) {
+          // Only set to open if not externally controlled
+          setDialogOpen(true);
         }
       }}
     >
-      {!externalIsOpen && (
+      {externalIsOpen === undefined && (
         <DialogTrigger asChild>
-          <div>
-            <JobDialogTrigger mode={mode} onClick={handleOpen} />
+          <div onClick={handleOpen}>
+            <JobDialogTrigger mode={mode} onClick={() => {}} />
           </div>
         </DialogTrigger>
       )}
-      <DialogContent onEscapeKeyDown={handleClose} className="max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{getDialogTitle()}</DialogTitle>
-          <DialogDescription>{getDialogDescription()}</DialogDescription>
-        </DialogHeader>
-        {loading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : (
-          <JobForm
-            job={editingJob}
-            onSubmit={handleSubmit}
-            assessments={assessments}
-            modules={modules}
-            mode={mode}
-          />
-        )}
-      </DialogContent>
+      {dialogOpen && (
+        <DialogContent onEscapeKeyDown={handleClose} className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{getDialogTitle()}</DialogTitle>
+            <DialogDescription>{getDialogDescription()}</DialogDescription>
+          </DialogHeader>
+          {(loading && !modulesLoaded) ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <JobForm
+              job={editingJob}
+              onSubmit={handleSubmit}
+              assessments={assessments}
+              modules={modules}
+              mode={mode}
+            />
+          )}
+        </DialogContent>
+      )}
     </Dialog>
   );
 };
