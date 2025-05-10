@@ -230,7 +230,7 @@ export const updateApplicationStatus = async (
 
     if (updatePayload.status) {
       const newStep = getStepFromStatus(normalizedStatus);
-      if (newStep) {
+      if (newStep !== undefined) {
         updatePayload.current_step = newStep;
       }
     }

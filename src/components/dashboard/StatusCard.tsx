@@ -25,6 +25,7 @@ export const StatusCard = ({ currentStep, candidateStatus }: StatusCardProps) =>
       badgeClass = "bg-red-100 text-red-800";
     } else {
       switch (currentStep) {
+        case 0: statusText = "Profile Created"; badgeClass = "bg-gray-100 text-gray-800"; break;
         case 1: statusText = "Application in Progress"; badgeClass = "bg-blue-100 text-blue-800"; break;
         case 2: statusText = "HR Review Phase"; badgeClass = "bg-yellow-100 text-yellow-800"; break;
         case 3: statusText = "Training Phase"; badgeClass = "bg-purple-100 text-purple-800"; break;
