@@ -7,9 +7,11 @@ import DashboardStats from "@/components/dashboard/DashboardStats";
 import AssessmentList from "@/components/dashboard/AssessmentList";
 import JobListings from "@/components/dashboard/JobListings";
 import ApplicationsList from "@/components/dashboard/ApplicationsList";
+import PendingCandidatesList from "@/components/dashboard/PendingCandidatesList";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts/auth";
 import { useJobApplications } from "@/hooks/useJobApplications";
+import { usePendingCandidates } from "@/hooks/usePendingCandidates";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const DirectorDashboard = () => {
@@ -19,6 +21,11 @@ const DirectorDashboard = () => {
     data: applications, 
     isLoading: isLoadingApplications 
   } = useJobApplications(user?.id, profile?.role);
+  
+  const {
+    data: pendingCandidates,
+    isLoading: isLoadingPendingCandidates
+  } = usePendingCandidates(profile?.role);
   
   return (
     <MainLayout>
@@ -34,11 +41,18 @@ const DirectorDashboard = () => {
               <TabsTrigger value="assessments">Assessments</TabsTrigger>
             </TabsList>
             <TabsContent value="applications">
-              <ApplicationsList 
-                applications={applications || []} 
-                isLoading={isLoadingApplications}
-                role={profile?.role || 'director'}
-              />
+              <div className="space-y-8">
+                <ApplicationsList 
+                  applications={applications || []} 
+                  isLoading={isLoadingApplications}
+                  role={profile?.role || 'director'}
+                />
+                <PendingCandidatesList
+                  candidates={pendingCandidates || []}
+                  isLoading={isLoadingPendingCandidates}
+                  role={profile?.role || 'director'}
+                />
+              </div>
             </TabsContent>
             <TabsContent value="jobs">
               <JobListings />

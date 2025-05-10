@@ -7,10 +7,12 @@ import DashboardStats from "@/components/dashboard/DashboardStats";
 import JobListings from "@/components/dashboard/JobListings";
 import ApplicationsList from "@/components/dashboard/ApplicationsList";
 import RecentResultsList from "@/components/dashboard/RecentResultsList";
+import PendingCandidatesList from "@/components/dashboard/PendingCandidatesList";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import InterviewList from "@/components/dashboard/InterviewList";
 import { useAuth } from "@/contexts/auth";
 import { useJobApplications } from "@/hooks/useJobApplications";
+import { usePendingCandidates } from "@/hooks/usePendingCandidates";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const AdminDashboard = () => {
@@ -20,6 +22,11 @@ const AdminDashboard = () => {
     data: applications, 
     isLoading: isLoadingApplications 
   } = useJobApplications(user?.id, profile?.role);
+
+  const {
+    data: pendingCandidates,
+    isLoading: isLoadingPendingCandidates
+  } = usePendingCandidates(profile?.role);
 
   return (
     <MainLayout>
@@ -36,11 +43,18 @@ const AdminDashboard = () => {
               <TabsTrigger value="results">Test Results</TabsTrigger>
             </TabsList>
             <TabsContent value="applications">
-              <ApplicationsList 
-                applications={applications || []} 
-                isLoading={isLoadingApplications}
-                role={profile?.role || 'hr'}
-              />
+              <div className="space-y-8">
+                <ApplicationsList 
+                  applications={applications || []} 
+                  isLoading={isLoadingApplications}
+                  role={profile?.role || 'hr'}
+                />
+                <PendingCandidatesList
+                  candidates={pendingCandidates || []}
+                  isLoading={isLoadingPendingCandidates}
+                  role={profile?.role || 'hr'}
+                />
+              </div>
             </TabsContent>
             <TabsContent value="jobs">
               <JobListings />
