@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -379,7 +378,7 @@ const ApplicationsList: React.FC<ApplicationsListProps> = ({
               )}
               
               <Button size="sm" className="h-8" asChild>
-                <Link to="/candidates">View All</Link>
+                <Link to="/applications">View All</Link>
               </Button>
             </div>
           </div>

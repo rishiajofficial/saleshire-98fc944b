@@ -41,6 +41,7 @@ import { AuthProvider } from "./contexts/auth";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import ModuleView from "./pages/training/ModuleView";
 import Careers from "./pages/public/Careers";
+import Applications from "./pages/manager/Applications";
 
 const queryClient = new QueryClient();
 
@@ -89,7 +90,12 @@ const App = () => {
                 </ProtectedRoute>
               } />
               
-              {/* Application detail route */}
+              {/* Applications routes */}
+              <Route path="/applications" element={
+                <ProtectedRoute allowedRoles={['manager', 'admin', 'hr', 'director']}>
+                  <Applications />
+                </ProtectedRoute>
+              } />
               <Route path="/applications/:id" element={
                 <ProtectedRoute allowedRoles={['manager', 'admin', 'hr', 'director']}>
                   <JobApplicationDetail />

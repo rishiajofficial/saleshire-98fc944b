@@ -12,7 +12,7 @@ export const StatusBadge = ({ status }: StatusBadgeProps) => {
   if (status?.toLowerCase().includes('applied to job:')) {
     return (
       <Badge className="bg-blue-100 text-blue-800 whitespace-normal">
-        {status}
+        <Clock className="mr-1 h-3 w-3" /> {status}
       </Badge>
     );
   }
@@ -29,7 +29,7 @@ export const StatusBadge = ({ status }: StatusBadgeProps) => {
     case "application_in_progress":
       return (
         <Badge className="bg-blue-100 text-blue-800">
-          Application in Progress (Step 1)
+          <Clock className="mr-1 h-3 w-3" /> Application in Progress (Step 1)
         </Badge>
       );
     case "hr_review":
