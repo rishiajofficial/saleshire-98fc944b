@@ -7,23 +7,23 @@ const HiringProcessSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | nul
     {
       number: "01",
       title: "Application & Screening",
-      description: "Collect basic information, video pitches, and assess baseline knowledge through AI-powered analysis.",
+      description: "Collect comprehensive information, video pitches, and assess baseline knowledge through AI-powered analysis.",
       isPrimary: true,
       image: "https://images.unsplash.com/photo-1560264418-c4445382edbc?auto=format&fit=crop&w=800&q=80",
       icon: <Users className="h-6 w-6" />
     },
     {
       number: "02",
-      title: "Training & Quizzes",
-      description: "Provide intelligent training modules that adapt to individual learning patterns.",
+      title: "Training & Assessment",
+      description: "Provide intelligent training modules that adapt to individual learning patterns and role requirements.",
       isPrimary: false,
       image: "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=800&q=80",
       icon: <Lightbulb className="h-6 w-6" />
     },
     {
       number: "03",
-      title: "Live Sales Task",
-      description: "Evaluate real-world performance with AI-assisted feedback and coaching.",
+      title: "Practical Skills Evaluation",
+      description: "Evaluate real-world performance with AI-assisted feedback tailored to role-specific requirements.",
       isPrimary: false,
       image: "https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=800&q=80",
       icon: <Target className="h-6 w-6" />
@@ -31,7 +31,7 @@ const HiringProcessSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | nul
     {
       number: "04",
       title: "Final Interview & Hiring",
-      description: "Data-driven decisions based on comprehensive performance analytics.",
+      description: "Data-driven decisions based on comprehensive performance analytics across multiple dimensions.",
       isPrimary: false,
       image: "https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=800&q=80",
       icon: <Star className="h-6 w-6" />
@@ -52,7 +52,7 @@ const HiringProcessSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | nul
             A Data-Driven Hiring Process
           </h2>
           <p className="text-xl text-muted-foreground">
-            Our four-step approach evaluates candidates on both knowledge and practical skills through an engaging journey.
+            Our four-step approach evaluates candidates on both knowledge and practical skills through an engaging journey tailored to each role.
           </p>
         </div>
 
