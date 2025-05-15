@@ -1,74 +1,105 @@
 
 import React from 'react';
-import MainLayout from '@/components/layout/MainLayout';
-import DashboardStats from '@/components/dashboard/DashboardStats';
-import { JobsList } from '@/components/jobs/JobsList';
-import ApplicationsList from '@/components/dashboard/ApplicationsList';
-import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
-import { TrainingCard } from '@/components/dashboard/TrainingCard';
-import { NotificationsCard } from '@/components/dashboard/NotificationsCard';
 import { useAuth } from '@/contexts/auth';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
+import DashboardHeader from '@/components/dashboard/DashboardHeader';
+import DashboardStats from '@/components/dashboard/DashboardStats';
+import NotificationsCard from '@/components/dashboard/NotificationsCard';
+import JobsList from '@/components/jobs/JobsList';
+import ApplicationsList from '@/components/applications/ApplicationsList';
+import TrainingCard from '@/components/dashboard/TrainingCard';
+import { useJobApplications } from '@/hooks/useJobApplications';
+import { UserRole } from '@/types';
 
 const HRDashboard = () => {
   const { profile } = useAuth();
-  
+  const { applications, isLoading: applicationsLoading } = useJobApplications();
+
+  if (!profile) {
+    return <div>Loading...</div>;
+  }
+
+  // Mock data for demonstration purposes
+  const stats = [
+    { value: 12, label: 'Active Jobs', change: 2 },
+    { value: 48, label: 'Pending Applications', change: -5 },
+    { value: 8, label: 'Scheduled Interviews', change: 3 },
+    { value: 92, label: 'Hiring Rate %', change: 5 },
+  ];
+
+  // Mock data for activity logs
+  const activityLogs = [
+    { id: '1', action: 'job_created', details: {}, created_at: '2023-06-10T10:00:00Z', entity_id: '1', entity_type: 'jobs', user_id: '123' },
+    { id: '2', action: 'application_reviewed', details: {}, created_at: '2023-06-09T14:30:00Z', entity_id: '2', entity_type: 'applications', user_id: '123' },
+    { id: '3', action: 'interview_scheduled', details: {}, created_at: '2023-06-08T09:15:00Z', entity_id: '3', entity_type: 'interviews', user_id: '123' },
+  ];
+
+  // Format the activity logs to include display text
+  const formattedLogs = activityLogs.map(log => {
+    let displayText = '';
+    
+    switch(log.action) {
+      case 'job_created':
+        displayText = 'New job posting has been created';
+        break;
+      case 'application_reviewed':
+        displayText = 'Application has been reviewed';
+        break;
+      case 'interview_scheduled':
+        displayText = 'Interview has been scheduled';
+        break;
+      default:
+        displayText = 'Activity recorded';
+    }
+    
+    return {
+      ...log,
+      displayText
+    };
+  });
+
   return (
-    <MainLayout>
-      <DashboardHeader 
-        userName={profile?.name}
-        userRole={profile?.role}
-      />
-      
-      <DashboardStats />
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <TrainingCard 
-          canAccessTraining={true}
-          trainingModules={[]}
-          isLoadingTraining={false}
-        />
-        <NotificationsCard 
-          notifications={[
-            { id: '1', message: 'New application received', timestamp: new Date(), read: false },
-            { id: '2', message: 'Interview scheduled', timestamp: new Date(), read: true },
-            { id: '3', message: 'Assessment completed', timestamp: new Date(), read: false }
-          ]} 
-        />
-        <div className="bg-white rounded-lg shadow p-4">
-          <h3 className="font-medium text-lg mb-4">Quick Tasks</h3>
-          <ul className="space-y-2">
-            <li className="flex items-center space-x-2">
-              <span className="h-2 w-2 bg-green-500 rounded-full"></span>
-              <span>Review new applications</span>
-            </li>
-            <li className="flex items-center space-x-2">
-              <span className="h-2 w-2 bg-blue-500 rounded-full"></span>
-              <span>Schedule interviews</span>
-            </li>
-            <li className="flex items-center space-x-2">
-              <span className="h-2 w-2 bg-yellow-500 rounded-full"></span>
-              <span>Update job descriptions</span>
-            </li>
-          </ul>
+    <DashboardLayout>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold">HR Dashboard</h1>
+          <p className="text-muted-foreground">Manage job listings and applications</p>
+        </div>
+        
+        <DashboardStats stats={stats} />
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="md:col-span-2">
+            <NotificationsCard 
+              title="Recent Activity"
+              notifications={formattedLogs.map(log => ({
+                id: log.id,
+                title: log.action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                message: log.displayText,
+                time: new Date(log.created_at).toLocaleString(),
+              }))}
+            />
+          </div>
+          <div>
+            <TrainingCard />
+          </div>
+        </div>
+        
+        <div className="space-y-6">
+          <h2 className="text-xl font-semibold">Job Listings</h2>
+          <JobsList />
+        </div>
+        
+        <div className="space-y-6">
+          <h2 className="text-xl font-semibold">Recent Applications</h2>
+          <ApplicationsList 
+            applications={applications || []} 
+            isLoading={applicationsLoading}
+            role={UserRole.HR}
+          />
         </div>
       </div>
-      
-      <div className="mb-6">
-        <h2 className="text-xl font-medium mb-4">Active Job Listings</h2>
-        <JobsList 
-          jobs={[]}
-          userApplications={{}}
-          isLoading={false}
-          onApply={() => {}}
-          onWithdraw={() => {}}
-        />
-      </div>
-      
-      <div>
-        <h2 className="text-xl font-medium mb-4">Recent Applications</h2>
-        <ApplicationsList applications={[]} isLoading={false} role="hr" />
-      </div>
-    </MainLayout>
+    </DashboardLayout>
   );
 };
 

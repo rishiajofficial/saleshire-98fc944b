@@ -30,18 +30,15 @@ export const getUserProfiles = async (filters = {}) => {
       throw error;
     }
 
-    // Process profiles without recursive calls
+    // Process profiles without creating recursive structures
     return data.map(profile => {
-      // Create a safe copy without recursive parsing
-      const parsedProfile = {
+      return {
         ...profile,
         company: profile.companies ? {
           id: profile.companies.id,
           name: profile.companies.name
         } : null
       };
-      
-      return parsedProfile;
     });
   } catch (error) {
     console.error('Error fetching user profiles:', error);
@@ -72,7 +69,6 @@ export const getUserProfile = async (userId: string) => {
       throw error;
     }
 
-    // Use the parseProfile function without creating infinite recursion
     return parseProfile(data);
   } catch (error) {
     console.error('Error fetching user profile:', error);
@@ -138,7 +134,7 @@ export const getUserActivityLogs = async (userId: string, limit = 10) => {
   }
 };
 
-// Get user with company information
+// Get user with company information - avoid using parseProfile to prevent recursion
 export const getUserWithCompany = async (userId: string) => {
   try {
     const { data, error } = await supabase
@@ -156,10 +152,21 @@ export const getUserWithCompany = async (userId: string) => {
       .single();
 
     if (error) {
-      throw error;
+      console.error('Error fetching user with company:', error);
+      return null;
     }
     
-    return parseProfile(data);
+    // Manually construct the profile object without using parseProfile
+    return data ? {
+      ...data,
+      company: data.companies ? {
+        id: data.companies.id,
+        name: data.companies.name,
+        domain: data.companies.domain,
+        logo: data.companies.logo,
+      } : null,
+      isCompanyAdmin: false // Default value
+    } : null;
   } catch (error) {
     console.error('Error fetching user with company:', error);
     return null;
