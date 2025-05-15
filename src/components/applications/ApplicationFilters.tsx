@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ApplicationFilterValues } from './types';
 
@@ -32,13 +33,12 @@ import { cn } from "@/lib/utils"
 import { Calendar } from "@/components/ui/calendar"
 import { PopoverClose } from "@radix-ui/react-popover"
 import { format } from "date-fns"
-import { CalendarIcon, CaretSortIcon, Check, ChevronsUpDown } from "lucide-react"
+import { CalendarIcon, Check, ChevronDown } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { ApplicationStatus } from "@/types"
 import { DateRange } from "react-day-picker"
 
 const filterSchema = z.object({
@@ -90,7 +90,7 @@ const ApplicationFilters: React.FC<ApplicationFiltersProps> = ({ filters, onFilt
       status: filters.status,
       searchTerm: filters.searchTerm,
       sortBy: filters.sortBy,
-      dateRange: filters.dateRange,
+      dateRange: filters.dateRange as DateRange | undefined,
     },
     mode: "onChange",
   })
@@ -100,7 +100,7 @@ const ApplicationFilters: React.FC<ApplicationFiltersProps> = ({ filters, onFilt
       status: values.status || [],
       searchTerm: values.searchTerm,
       sortBy: values.sortBy,
-      dateRange: values.dateRange,
+      dateRange: values.dateRange as DateRange | undefined,
     })
   }
 
@@ -185,7 +185,7 @@ const ApplicationFilters: React.FC<ApplicationFiltersProps> = ({ filters, onFilt
                           )}
                         >
                           {sortOptions.find((option) => option.value === form.watch("sortBy"))?.label || "Sort by"}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-[200px] p-0">
@@ -248,12 +248,13 @@ const ApplicationFilters: React.FC<ApplicationFiltersProps> = ({ filters, onFilt
                         <Calendar
                           mode="range"
                           defaultMonth={field.value?.from ? field.value?.from : new Date()}
-                          selected={field.value}
+                          selected={field.value as DateRange}
                           onSelect={field.onChange}
                           disabled={(date) =>
                             date > new Date() || date < new Date("2020-01-01")
                           }
                           numberOfMonths={2}
+                          className="p-3 pointer-events-auto"
                         />
                         <PopoverClose>
                           <Button variant="secondary" className="w-full">
