@@ -1,32 +1,21 @@
-// Let's make sure our UserRole type is available globally
-export type UserRole = 'admin' | 'manager' | 'candidate' | 'hr' | 'director';
+export type UserRole = 'candidate' | 'manager' | 'admin' | 'hr' | 'director';
 
-// Add Region type that's being used in Register.tsx
-export type Region = 'north' | 'south' | 'east' | 'west' | 'central';
+export interface DateRange {
+  from: Date | null;
+  to: Date | null;
+}
 
-// Add Interview type that's being used in InterviewList.tsx and ManagerDashboard.tsx
-export type Interview = {
+export interface Application {
   id: string;
-  candidateId: string;
-  candidateName: string;
-  candidateEmail?: string;
-  managerId: string;
-  scheduledAt: string;
-  status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
-};
-
-// Add Assessment type used in AssessmentList.tsx and ManagerDashboard.tsx
-// Includes stats calculated in ManagerDashboard
-export type AssessmentWithStats = {
-  id: string;
-  title: string;
-  difficulty: string | null; // Matches Supabase type
+  job_id: string;
+  job_title?: string;
+  candidate_id: string;
+  candidate_name?: string;
+  candidate_email?: string;
+  status: string;
+  candidate_status?: string;
+  created_at: string;
   updated_at: string;
-  avgScore: number;
-  submissions: number;
-};
-
-export * from './job';
-export * from './common';
-export * from './candidate';
-export * from './training';
+  assessment_results?: any[];
+  tags?: string[];
+}

@@ -29,13 +29,13 @@ import {
   CheckSquare,
   Square,
 } from "lucide-react";
-import { ApplicationFilters, ApplicationFilterValues } from "@/components/applications/ApplicationFilters";
+import { ApplicationFilters } from "@/components/applications/ApplicationFilters";
 import { ApplicationsBulkActions } from "@/components/applications/ApplicationsBulkActions";
 import { EmailTemplates } from "@/components/applications/EmailTemplates";
 import { ApplicationStatusHistory } from "@/components/applications/ApplicationStatusHistory";
 import { CandidateTag } from "@/components/applications/CandidateTag";
 import { ApplicationAnalytics } from "@/components/applications/ApplicationAnalytics";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 import { startOfDay, subDays, subWeeks, subMonths, parseISO, isAfter } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import {
