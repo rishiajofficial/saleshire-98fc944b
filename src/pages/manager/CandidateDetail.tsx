@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
@@ -16,6 +17,7 @@ import { ManagerAssignment } from '@/components/candidates/ManagerAssignment';
 import { supabase } from '@/integrations/supabase/client';
 import { UserRole } from '@/types';
 import { useAuth } from '@/contexts/auth';
+import { format } from 'date-fns';
 
 const CandidateDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -23,6 +25,26 @@ const CandidateDetail = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [showHistory, setShowHistory] = useState<boolean>(false);
   const { profile } = useAuth();
+  
+  // State values for CandidateInfo props
+  const [phone, setPhone] = useState<string>('');
+  const [location, setLocation] = useState<string>('');
+  const [region, setRegion] = useState<string>('');
+  const [isUpdating, setIsUpdating] = useState<boolean>(false);
+  
+  // State values for ProjectStatusSection props
+  const [projectStatus, setProjectStatus] = useState<'not_started' | 'assigned' | 'completed_success' | 'rejected' | 'failed'>('not_started');
+  const [isUpdatingProject, setIsUpdatingProject] = useState<boolean>(false);
+  
+  // State values for StatusUpdateSection props
+  const [applicationStatus, setApplicationStatus] = useState<string>('');
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState<boolean>(false);
+  
+  // State for ManagerAssignment props
+  const [selectedManager, setSelectedManager] = useState<string>('');
+  const [managers, setManagers] = useState<{id: string, name: string}[]>([]);
+  const [isLoadingManagers, setIsLoadingManagers] = useState<boolean>(false);
+  const [isAssigningManager, setIsAssigningManager] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchCandidate = async () => {
@@ -44,6 +66,15 @@ const CandidateDetail = () => {
 
         if (error) throw error;
         setCandidate(data);
+        
+        // Initialize state values from candidate data
+        if (data) {
+          setPhone(data.phone || '');
+          setLocation(data.location || '');
+          setRegion(data.region || '');
+          setApplicationStatus(data.status || '');
+          setProjectStatus((data.project_status || 'not_started') as any);
+        }
       } catch (error: any) {
         console.error('Error fetching candidate details:', error.message);
       } finally {
@@ -53,6 +84,58 @@ const CandidateDetail = () => {
 
     fetchCandidate();
   }, [id]);
+
+  // Format date helper
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    return format(new Date(dateStr), 'MMM dd, yyyy');
+  };
+  
+  // Handlers for CandidateInfo
+  const handlePhoneChange = (value: string) => setPhone(value);
+  const handleLocationChange = (value: string) => setLocation(value);
+  const handleRegionChange = (value: string) => setRegion(value);
+  const handleUpdateInfo = async () => {
+    // Update candidate info implementation
+    setIsUpdating(true);
+    // Your update logic here
+    setIsUpdating(false);
+  };
+  
+  // Handlers for ProjectStatusSection
+  const handleAssignProject = async () => {
+    // Assign project implementation
+    setIsUpdatingProject(true);
+    // Your logic here
+    setProjectStatus('assigned');
+    setIsUpdatingProject(false);
+  };
+  
+  const handleUpdateProjectOutcome = async (outcome: 'completed_success' | 'rejected' | 'failed') => {
+    // Update project outcome implementation
+    setIsUpdatingProject(true);
+    // Your logic here
+    setProjectStatus(outcome);
+    setIsUpdatingProject(false);
+  };
+  
+  // Handlers for StatusUpdateSection
+  const handleStatusChange = (value: string) => setApplicationStatus(value);
+  const handleStatusUpdate = async () => {
+    // Status update implementation
+    setIsUpdatingStatus(true);
+    // Your logic here
+    setIsUpdatingStatus(false);
+  };
+  
+  // Handlers for ManagerAssignment
+  const handleManagerSelect = (managerId: string) => setSelectedManager(managerId);
+  const handleAssignManager = async () => {
+    // Manager assignment implementation
+    setIsAssigningManager(true);
+    // Your logic here
+    setIsAssigningManager(false);
+  };
 
   if (loading) {
     return (
@@ -92,7 +175,18 @@ const CandidateDetail = () => {
 
         <Card className="mb-8">
           <CardContent className="p-6">
-            <CandidateInfo candidate={candidate} />
+            <CandidateInfo 
+              candidate={candidate}
+              phone={phone}
+              location={location}
+              region={region}
+              isUpdating={isUpdating}
+              isLoading={loading}
+              onPhoneChange={handlePhoneChange}
+              onLocationChange={handleLocationChange}
+              onRegionChange={handleRegionChange}
+              onUpdateInfo={handleUpdateInfo}
+            />
           </CardContent>
         </Card>
 
@@ -105,31 +199,72 @@ const CandidateDetail = () => {
             {isUserManager && <TabsTrigger value="manager">Manager Assignment</TabsTrigger>}
           </TabsList>
           <TabsContent value="status" className="space-y-4">
-            <ProjectStatusSection candidate={candidate} />
-            {isUserManager && <StatusUpdateSection candidate={candidate} />}
+            <ProjectStatusSection 
+              candidate={candidate}
+              projectStatus={projectStatus}
+              isUpdatingProject={isUpdatingProject}
+              onAssignProject={handleAssignProject}
+              onUpdateProjectOutcome={handleUpdateProjectOutcome}
+            />
+            {isUserManager && (
+              <StatusUpdateSection 
+                applicationStatus={applicationStatus}
+                isUpdatingStatus={isUpdatingStatus}
+                candidateData={candidate}
+                onStatusChange={handleStatusChange}
+                onStatusUpdate={handleStatusUpdate}
+              />
+            )}
           </TabsContent>
           <TabsContent value="assessments">
-            <AssessmentResultsSection assessments={candidate.assessments} />
+            <AssessmentResultsSection 
+              assessmentResults={candidate.assessments} 
+              isLoadingResults={loading}
+              formatDate={formatDate}
+            />
           </TabsContent>
           <TabsContent value="videos">
-            <VideoDisplay videos={candidate.videos} />
+            <div className="space-y-4">
+              {candidate.videos && candidate.videos.map((video: any) => (
+                <VideoDisplay 
+                  key={video.id}
+                  url={video.url} 
+                  title={video.title || "Video"}
+                />
+              ))}
+              {(!candidate.videos || candidate.videos.length === 0) && (
+                <p>No videos available</p>
+              )}
+            </div>
           </TabsContent>
           {isUserManager && (
             <TabsContent value="interviews">
-              <InterviewScheduling candidateId={id} interviews={candidate.interviews} />
+              <InterviewScheduling 
+                interviews={candidate.interviews || []}
+              />
             </TabsContent>
           )}
           {isUserManager && (
             <TabsContent value="manager">
-              <ManagerAssignment candidate={candidate} />
+              <ManagerAssignment 
+                selectedManager={selectedManager}
+                managers={managers}
+                isLoadingManagers={isLoadingManagers}
+                isAssigningManager={isAssigningManager}
+                candidateAssignedManager={candidate.assigned_manager}
+                onManagerSelect={handleManagerSelect}
+                onAssignManager={handleAssignManager}
+              />
             </TabsContent>
           )}
         </Tabs>
 
         <CandidateHistoryDialog
-          open={showHistory}
+          isOpen={showHistory}
           onClose={() => setShowHistory(false)}
-          candidateId={id}
+          candidateName={candidate.profile?.name || "Candidate"}
+          isLoading={loading}
+          logs={[]}
         />
       </div>
     </MainLayout>

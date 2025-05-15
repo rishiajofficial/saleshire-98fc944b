@@ -25,7 +25,19 @@ export const AssessmentResultsSection = ({
   }
 
   if (!assessmentResults?.length) {
-    return null;
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Assessment Results</CardTitle>
+          <CardDescription>
+            No assessment results available
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p>This candidate has not completed any assessments yet.</p>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (

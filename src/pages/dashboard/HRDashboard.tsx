@@ -29,9 +29,9 @@ const HRDashboard = () => {
         />
         <NotificationsCard 
           notifications={[
-            { id: '1', content: 'New application received', timestamp: new Date(), read: false },
-            { id: '2', content: 'Interview scheduled', timestamp: new Date(), read: true },
-            { id: '3', content: 'Assessment completed', timestamp: new Date(), read: false }
+            { id: '1', message: 'New application received', timestamp: new Date(), read: false },
+            { id: '2', message: 'Interview scheduled', timestamp: new Date(), read: true },
+            { id: '3', message: 'Assessment completed', timestamp: new Date(), read: false }
           ]} 
         />
         <div className="bg-white rounded-lg shadow p-4">
@@ -57,7 +57,7 @@ const HRDashboard = () => {
         <h2 className="text-xl font-medium mb-4">Active Job Listings</h2>
         <JobsList 
           jobs={[]}
-          userApplications={[]}
+          userApplications={{}}
           isLoading={false}
           onApply={() => {}}
           onWithdraw={() => {}}
@@ -66,7 +66,7 @@ const HRDashboard = () => {
       
       <div>
         <h2 className="text-xl font-medium mb-4">Recent Applications</h2>
-        <ApplicationsList applications={[]} isLoading={false} />
+        <ApplicationsList applications={[]} isLoading={false} role="hr" />
       </div>
     </MainLayout>
   );
