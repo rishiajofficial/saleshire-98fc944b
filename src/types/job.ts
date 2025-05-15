@@ -12,6 +12,7 @@ export interface Job {
   created_by?: string;
   updated_at?: string;
   archived?: boolean;
+  is_public?: boolean;
   // These might be used in the application but are not part of the DB schema
   selectedAssessment?: string | null;
   selectedModules?: string[] | null;

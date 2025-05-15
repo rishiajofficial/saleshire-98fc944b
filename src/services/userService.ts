@@ -11,6 +11,7 @@ export type UserData = {
   password?: string;
   role: UserRole;
   region?: string;
+  company_id?: string;
 };
 
 // User management service
@@ -71,16 +72,47 @@ export const UserService = {
       
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select(`
+          *,
+          companies:company_id (
+            id,
+            name,
+            domain,
+            logo
+          )
+        `)
         .eq('id', userId)
         .single();
       
       if (error) throw error;
       if (!data) throw new Error('User not found');
       
+      // Rename companies to company for easier access
+      if (data.companies) {
+        data.company = data.companies;
+        delete data.companies;
+      }
+      
       return { success: true, data };
     } catch (error: any) {
       console.error('Error getting user details:', error.message);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Get users by company
+  async getUsersByCompany(companyId: string): Promise<ServiceResponse> {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('company_id', companyId);
+      
+      if (error) throw error;
+      
+      return { success: true, data };
+    } catch (error: any) {
+      console.error('Error getting company users:', error.message);
       return { success: false, error: error.message };
     }
   }

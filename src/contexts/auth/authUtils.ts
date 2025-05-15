@@ -1,68 +1,68 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-/**
- * Cleans up authentication state from local and session storage
- * to prevent auth issues and state conflicts
- */
+// Helper function to clean up auth state
 export const cleanupAuthState = () => {
-  // Clear any stored session data
-  sessionStorage.clear();
-  
-  // Clean up localStorage items related to auth to prevent stale data
-  Object.keys(localStorage).forEach(key => {
+  // Remove all Supabase auth keys from localStorage
+  Object.keys(localStorage).forEach((key) => {
     if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
       localStorage.removeItem(key);
     }
   });
+  
+  // Remove from sessionStorage if in use
+  Object.keys(sessionStorage || {}).forEach((key) => {
+    if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+      sessionStorage.removeItem(key);
+    }
+  });
 };
 
-/**
- * Fetches user profile data from Supabase
- */
+// Fetch user profile including company information if available
 export const fetchUserProfile = async (userId: string) => {
   try {
-    const { data, error } = await supabase
+    const { data: profile, error } = await supabase
       .from('profiles')
-      .select('*')
+      .select(`
+        id, 
+        name, 
+        email, 
+        role, 
+        company_id,
+        companies:company_id (
+          id,
+          name,
+          domain,
+          logo
+        )
+      `)
       .eq('id', userId)
       .single();
     
     if (error) {
-      throw error;
-    }
-
-    if (!data) {
+      console.error('Error fetching profile:', error.message);
       return null;
     }
     
-    // Now fetch additional role-specific data
-    let additionalData = null;
-    if (data.role === 'candidate') {
-      const { data: candidateData, error: candidateError } = await supabase
-        .from('candidates')
-        .select('*')
-        .eq('id', userId)
-        .single();
-        
-      if (!candidateError && candidateData) {
-        additionalData = { candidateData };
-      }
-    } else if (data.role === 'manager') {
-      const { data: managerData, error: managerError } = await supabase
-        .from('managers')
-        .select('*')
-        .eq('id', userId)
-        .single();
-        
-      if (!managerError && managerData) {
-        additionalData = { managerData };
-      }
+    // Check if user is a company admin
+    if (profile.company_id) {
+      const { data: isAdmin } = await supabase.rpc('is_company_admin', {
+        company_uuid: profile.company_id,
+        user_uuid: userId
+      });
+      
+      profile.isCompanyAdmin = isAdmin;
     }
     
-    return additionalData ? { ...data, ...additionalData } : data;
+    // Format the returned data for easier access
+    if (profile.companies) {
+      profile.company = profile.companies;
+      delete profile.companies;
+    }
+    
+    return profile;
   } catch (error: any) {
-    console.error('Error fetching profile:', error.message);
+    console.error('Error in fetchUserProfile:', error.message);
     return null;
   }
 };
