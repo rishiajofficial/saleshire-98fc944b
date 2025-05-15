@@ -2,7 +2,6 @@
 import React from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import DashboardStats from "@/components/dashboard/DashboardStats";
 import AssessmentList from "@/components/dashboard/AssessmentList";
 import JobListings from "@/components/dashboard/JobListings";
@@ -27,12 +26,20 @@ const DirectorDashboard = () => {
     isLoading: isLoadingPendingCandidates
   } = usePendingCandidates(profile?.role);
   
+  // Director-specific stats
+  const directorStats = [
+    { value: 42, label: 'Total Positions', change: 7 },
+    { value: 248, label: 'Total Candidates', change: 15 },
+    { value: 76, label: 'Successful Hires', change: 12 },
+    { value: 94, label: 'Department Score', change: 3 },
+  ];
+  
   return (
     <MainLayout>
       <TooltipProvider>
         <div className="container mx-auto px-4 py-8 space-y-8">
           <DashboardHeader userName={profile?.name} userRole={profile?.role} />
-          <DashboardStats />
+          <DashboardStats stats={directorStats} />
 
           <Tabs defaultValue="applications" className="w-full">
             <TabsList className="mb-4">

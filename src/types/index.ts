@@ -1,11 +1,9 @@
-// Add ApplicationStatus if it doesn't exist
-export enum ApplicationStatus {
-  APPLIED = 'applied',
-  INTERVIEWING = 'interviewing',
-  OFFER = 'offer',
-  HIRED = 'hired',
-  REJECTED = 'rejected',
-  ARCHIVED = 'archived'
-}
 
-export type UserRole = 'hr' | 'manager' | 'candidate' | 'admin';
+export * from './common';
+export * from './job';
+export * from './candidate';
+export * from './training';
+export * from './training-progress';
+
+// Add or update UserRole type to include 'director'
+export type UserRole = 'candidate' | 'manager' | 'hr' | 'admin' | 'director';

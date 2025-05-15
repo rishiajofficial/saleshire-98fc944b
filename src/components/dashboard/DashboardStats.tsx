@@ -10,13 +10,23 @@ interface StatItem {
 }
 
 export interface DashboardStatsProps {
-  stats: StatItem[];
+  stats?: StatItem[];
 }
 
 const DashboardStats: React.FC<DashboardStatsProps> = ({ stats }) => {
+  // Default stats data when no stats are provided
+  const defaultStats: StatItem[] = [
+    { value: 12, label: 'Active Jobs', change: 2 },
+    { value: 48, label: 'Applications', change: -5 },
+    { value: 8, label: 'Interviews', change: 3 },
+    { value: 92, label: 'Completion Rate', change: 5 },
+  ];
+
+  const displayStats = stats || defaultStats;
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      {stats.map((stat, index) => (
+      {displayStats.map((stat, index) => (
         <Card key={index}>
           <CardContent className="p-4 flex flex-col">
             <div className="flex items-center justify-between">
