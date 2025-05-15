@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Zap, Users, BarChart3, Briefcase } from "lucide-react";
+import { ArrowRight, Users, BarChart3, Zap, Briefcase } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import { useNavigate } from "react-router-dom";
 
@@ -73,11 +73,11 @@ const HeroSection = () => {
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl mb-6 animate-fade-in">
             <span className="block">AI-Powered</span>
-            <span className="block text-gradient bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Sales Talent Platform</span>
+            <span className="block text-gradient bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Talent Acquisition Platform</span>
           </h1>
           <p className="mt-6 text-xl text-muted-foreground max-w-3xl mx-auto animate-fade-in" style={{ animationDelay: "0.1s" }}>
-            Revolutionize your sales recruitment process with our AI-driven platform that helps you 
-            identify, train, and retain top sales performers with unprecedented accuracy.
+            Revolutionize your recruitment process with our AI-driven platform that helps you 
+            identify, train, and retain top talent across all roles with unprecedented accuracy.
           </p>
           <div className="mt-10">
             {renderAuthButtons()}
@@ -128,12 +128,12 @@ const HeroSection = () => {
                 </div>
               </div>
               <img 
-                src="https://images.unsplash.com/photo-1557426272-fc759fdf7a8d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80" 
-                alt="Sales team in action" 
+                src="https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1470&q=80" 
+                alt="Team collaboration" 
                 className="w-full h-full object-cover brightness-75"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
-                  target.src = "https://images.unsplash.com/photo-1557426272-fc759fdf7a8d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80";
+                  target.src = "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1470&q=80";
                 }}
               />
             </div>

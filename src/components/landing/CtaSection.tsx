@@ -13,10 +13,10 @@ const CtaSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | null, index: 
       <div className="container px-4 sm:px-6 lg:px-8 mx-auto">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
-            Ready to Transform Your Sales Hiring?
+            Ready to Transform Your Hiring Process?
           </h2>
           <p className="text-xl text-white/80 mb-8">
-            Join the next generation of smart recruitment platforms and start hiring top sales talent today.
+            Join the next generation of smart recruitment platforms and start building your dream team today.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Button asChild size="lg" variant="secondary" className="rounded-md px-8 py-6 text-lg bg-white text-indigo-600 hover:bg-gray-100 shadow-lg hover:shadow-xl transition-all">

@@ -4,9 +4,17 @@ import { Link } from "react-router-dom";
 
 interface AuthLayoutProps {
   children: React.ReactNode;
+  title?: string; // Added title as optional prop
 }
 
-const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
+const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title }) => {
+  // Set document title if provided
+  React.useEffect(() => {
+    if (title) {
+      document.title = `${title} | WorkForce`;
+    }
+  }, [title]);
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="py-4 border-b border-border/30">
@@ -26,7 +34,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
         <div className="container px-4 sm:px-6 lg:px-8 mx-auto">
           <div className="flex flex-col sm:flex-row items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} WorkForce - Sales Hiring & Training System
+              © {new Date().getFullYear()} WorkForce - Talent Acquisition & Training Platform
             </p>
             <div className="flex items-center space-x-4 mt-4 sm:mt-0">
               <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">

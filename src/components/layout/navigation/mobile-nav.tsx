@@ -59,21 +59,21 @@ export const MobileNav = ({
             <nav className="grid gap-1 px-2">
               {navItems.map((item) => {
                 const isActive = item.href === pathname;
-                const isDropdownActive = activeDropdowns.includes(item.label);
-                const hasSubitems = item.subitems && item.subitems.length > 0;
+                const isDropdownActive = activeDropdowns.includes(item.title);
+                const hasSubitems = item.submenu && item.submenu.length > 0;
 
                 if (hasSubitems) {
                   return (
-                    <div key={item.label}>
+                    <div key={item.title}>
                       <Button
                         variant="ghost"
                         className={`w-full justify-start ${
                           isDropdownActive ? "bg-muted" : ""
                         }`}
-                        onClick={() => toggleDropdown(item.label)}
+                        onClick={() => toggleDropdown(item.title)}
                       >
-                        {item.icon}
-                        <span className="ml-2">{item.label}</span>
+                        {React.createElement(item.icon, { className: "h-4 w-4 mr-2" })}
+                        <span className="ml-2">{item.title}</span>
                         <div className="ml-auto">
                           {isDropdownActive ? (
                             <ChevronDown className="h-4 w-4" />
@@ -82,13 +82,13 @@ export const MobileNav = ({
                           )}
                         </div>
                       </Button>
-                      {isDropdownActive && item.subitems && (
+                      {isDropdownActive && item.submenu && (
                         <div className="pl-4 mt-1 grid gap-1">
-                          {item.subitems.map((subitem) => {
+                          {item.submenu.map((subitem) => {
                             const isSubitemActive = subitem.href === pathname;
                             return (
                               <Button
-                                key={subitem.label}
+                                key={subitem.title}
                                 variant={isSubitemActive ? "secondary" : "ghost"}
                                 className="w-full justify-start"
                                 onClick={() => {
@@ -96,8 +96,8 @@ export const MobileNav = ({
                                   setIsOpen(false);
                                 }}
                               >
-                                {subitem.icon}
-                                <span className="ml-2">{subitem.label}</span>
+                                {React.createElement(subitem.icon, { className: "h-4 w-4 mr-2" })}
+                                <span className="ml-2">{subitem.title}</span>
                               </Button>
                             );
                           })}
@@ -109,7 +109,7 @@ export const MobileNav = ({
 
                 return (
                   <Button
-                    key={item.label}
+                    key={item.title}
                     variant={isActive ? "secondary" : "ghost"}
                     className="w-full justify-start"
                     onClick={() => {
@@ -117,8 +117,8 @@ export const MobileNav = ({
                       setIsOpen(false);
                     }}
                   >
-                    {item.icon}
-                    <span className="ml-2">{item.label}</span>
+                    {React.createElement(item.icon, { className: "h-4 w-4 mr-2" })}
+                    <span className="ml-2">{item.title}</span>
                   </Button>
                 );
               })}

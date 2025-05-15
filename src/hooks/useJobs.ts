@@ -17,6 +17,7 @@ export interface Job {
   created_at: string;
   updated_at: string;
   archived: boolean;
+  is_public: boolean;
   selectedAssessment?: string | null;
   selectedModules?: string[];
 }
@@ -25,22 +26,36 @@ export const useJobs = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   const fetchJobs = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const { data, error: jobsError } = await supabase
+      let query = supabase
         .from("jobs")
-        .select("*")
-        .order("created_at", { ascending: false });
+        .select("*");
+      
+      // If we have a company ID, filter jobs by the company's users
+      if (profile?.company_id) {
+        const { data: companyUsers } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('company_id', profile.company_id);
+          
+        if (companyUsers && companyUsers.length > 0) {
+          const userIds = companyUsers.map(user => user.id);
+          query = query.in('created_by', userIds);
+        }
+      }
+
+      const { data: jobsData, error: jobsError } = await query.order("created_at", { ascending: false });
 
       if (jobsError) throw jobsError;
 
       // Get assessments for each job
-      const jobIds = data?.map((job) => job.id) || [];
+      const jobIds = jobsData?.map((job) => job.id) || [];
       let jobAssessments: Record<string, string> = {};
       let jobModules: Record<string, string[]> = {};
 
@@ -76,7 +91,7 @@ export const useJobs = () => {
       }
 
       // Enhance jobs with assessments and modules
-      const enhancedJobs: Job[] = data!.map((job) => ({
+      const enhancedJobs: Job[] = jobsData!.map((job) => ({
         ...job,
         selectedAssessment: jobAssessments[job.id] || null,
         selectedModules: jobModules[job.id] || [],
@@ -104,7 +119,11 @@ export const useJobs = () => {
       // Create job record
       const { data, error } = await supabase
         .from("jobs")
-        .insert([{ ...jobDetails, created_by: user.id }])
+        .insert([{ 
+          ...jobDetails, 
+          created_by: user.id,
+          is_public: jobDetails.is_public || false 
+        }])
         .select()
         .single();
 
@@ -158,7 +177,10 @@ export const useJobs = () => {
       // Update job record
       const { error } = await supabase
         .from("jobs")
-        .update(jobDetails)
+        .update({
+          ...jobDetails,
+          is_public: jobDetails.is_public || false
+        })
         .eq("id", id);
 
       if (error) throw error;
@@ -222,8 +244,6 @@ export const useJobs = () => {
       if (jobTrainingError) {
         console.error("Error deleting job training:", jobTrainingError);
       }
-
-      // Remove reference to job_categories table which no longer exists
       
       const { error: jobAppsError } = await supabase
         .from("job_applications")
@@ -256,7 +276,7 @@ export const useJobs = () => {
 
   useEffect(() => {
     fetchJobs();
-  }, []);
+  }, [profile?.company_id]);
 
   return {
     jobs,

@@ -24,18 +24,18 @@ const DemoSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | null, index:
 
   const demoScreens = [
     {
-      title: "AI-Powered Candidate Dashboard",
-      description: "Real-time performance tracking with AI-generated recommendations and personalized growth paths.",
+      title: "AI-Powered Recruitment Dashboard",
+      description: "Real-time performance tracking with AI-generated recommendations for roles across your organization.",
       image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1470&q=80"
     },
     {
       title: "Smart Assessment Engine",
-      description: "Adaptive questioning that adjusts difficulty based on candidate responses and provides instant feedback.",
+      description: "Adaptive questioning that adjusts difficulty based on candidate responses and specific job requirements.",
       image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1470&q=80"
     },
     {
-      title: "Performance Analytics",
-      description: "Comprehensive metrics and predictive insights help identify top performers early in the process.",
+      title: "Comprehensive Analytics",
+      description: "Detailed metrics and predictive insights help identify top performers early in the process for any role.",
       image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1470&q=80"
     }
   ];
@@ -54,7 +54,7 @@ const DemoSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | null, index:
             See Our Platform in Action
           </h2>
           <p className="text-xl text-muted-foreground">
-            Experience how our AI-powered tools transform the hiring process from start to finish
+            Experience how our AI-powered tools transform the hiring process from start to finish for any role
           </p>
         </div>
 

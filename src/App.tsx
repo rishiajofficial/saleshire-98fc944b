@@ -1,253 +1,352 @@
+import { Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "sonner";
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import Login from "./pages/auth/Login";
-import Register from "./pages/auth/Register";
-import ForgotPassword from "./pages/auth/ForgotPassword";
-import ResetPassword from "./pages/auth/ResetPassword";
-import Application from "./pages/candidate/Application";
-import StorageTest from "./pages/candidate/StorageTest";
-import CandidateDashboard from "./pages/dashboard/CandidateDashboard";
-import ManagerDashboard from "./pages/dashboard/ManagerDashboard";
-import AdminDashboard from "./pages/dashboard/AdminDashboard";
-import DirectorDashboard from "./pages/dashboard/DirectorDashboard";
-import Training from "./pages/training/Training";
-import Quiz from "./pages/training/Quiz";
-import AssessmentQuiz from "./pages/training/AssessmentQuiz";
-import VideoPlayer from "./pages/training/VideoPlayer";
-import Candidates from "./pages/manager/Candidates";
-import CandidateDetail from "./pages/manager/CandidateDetail";
-import JobApplicationDetail from "./pages/manager/JobApplicationDetail";
-import Assessments from "./pages/manager/Assessments";
-import Analytics from "./pages/manager/Analytics";
-import Interviews from "./pages/manager/Interviews";
-import Profile from "./pages/common/Profile";
-import UserManagement from "./pages/admin/UserManagement";
-import ActivityLog from "./pages/admin/ActivityLog";
-import TrainingManagement from "./pages/admin/TrainingManagement";
-import AssessmentDetails from "./pages/admin/AssessmentDetails";
-import AssessmentResultDetails from "./pages/admin/AssessmentResultDetails";
-import AssessmentSectionDetails from "./pages/admin/AssessmentSectionDetails";
-import TrainingModuleDetails from "./pages/admin/TrainingModuleDetails";
-import QuestionDetails from "./pages/admin/QuestionDetails";
-import JobOpenings from "./pages/candidate/JobOpenings";
-import JobManagement from "./pages/hr/JobManagement";
-import { AuthProvider } from "./contexts/auth";
-import ProtectedRoute from "./components/auth/ProtectedRoute";
-import ModuleView from "./pages/training/ModuleView";
-import Careers from "./pages/public/Careers";
-import Applications from "./pages/manager/Applications";
+// Auth-related imports
+import { AuthProvider } from "@/contexts/auth";
+import Login from "@/pages/auth/Login";
+import Register from "@/pages/auth/Register";
+import ForgotPassword from "@/pages/auth/ForgotPassword";
+import ResetPassword from "@/pages/auth/ResetPassword";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
-const queryClient = new QueryClient();
+// Public pages
+import Index from "@/pages/Index";
+import NotFound from "@/pages/NotFound";
+import Careers from "@/pages/public/Careers";
 
-const App = () => {
+// Dashboard pages
+import AdminDashboard from "@/pages/dashboard/AdminDashboard";
+import ManagerDashboard from "@/pages/dashboard/ManagerDashboard";
+import HRDashboard from "@/pages/dashboard/HRDashboard";
+import CandidateDashboard from "@/pages/dashboard/CandidateDashboard";
+import DirectorDashboard from "@/pages/dashboard/DirectorDashboard";
+
+// Manager pages
+import Candidates from "@/pages/manager/Candidates";
+import CandidateDetail from "@/pages/manager/CandidateDetail";
+import Applications from "@/pages/manager/Applications";
+import JobApplicationDetail from "@/pages/manager/JobApplicationDetail";
+import Interviews from "@/pages/manager/Interviews";
+import Assessments from "@/pages/manager/Assessments";
+import Analytics from "@/pages/manager/Analytics";
+
+// HR pages
+import JobManagement from "@/pages/hr/JobManagement";
+
+// Candidate pages
+import Application from "@/pages/candidate/Application";
+import JobOpenings from "@/pages/candidate/JobOpenings";
+import StorageTest from "@/pages/candidate/StorageTest";
+
+// Admin pages
+import UserManagement from "@/pages/admin/UserManagement";
+import CompanyManagement from "@/pages/admin/CompanyManagement";
+import TrainingManagement from "@/pages/admin/TrainingManagement";
+import ActivityLog from "@/pages/admin/ActivityLog";
+import TrainingModuleDetails from "@/pages/admin/TrainingModuleDetails";
+
+// Training pages
+import Training from "@/pages/training/Training";
+import ModuleView from "@/pages/training/ModuleView";
+import VideoPlayer from "@/pages/training/VideoPlayer";
+import Quiz from "@/pages/training/Quiz";
+import AssessmentQuiz from "@/pages/training/AssessmentQuiz";
+
+// Common pages
+import Profile from "@/pages/common/Profile";
+
+// Assessment pages
+import AssessmentDetails from "@/pages/admin/AssessmentDetails";
+import AssessmentSectionDetails from "@/pages/admin/AssessmentSectionDetails";
+import AssessmentResultDetails from "@/pages/admin/AssessmentResultDetails";
+import QuestionDetails from "@/pages/admin/QuestionDetails";
+
+import "./App.css";
+
+function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <TooltipProvider>
-          <AuthProvider>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/careers" element={<Careers />} />
-              <Route path="/application" element={
-                <ProtectedRoute allowedRoles={['candidate']}>
-                  <Application />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/dashboard/candidate" element={
-                <ProtectedRoute allowedRoles={['candidate']}>
-                  <CandidateDashboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/dashboard/manager" element={
-                <ProtectedRoute allowedRoles={['manager']}>
-                  <ManagerDashboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/dashboard/director" element={
-                <ProtectedRoute allowedRoles={['director']}>
-                  <DirectorDashboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/dashboard/hr" element={
-                <ProtectedRoute allowedRoles={['hr']}>
-                  <ManagerDashboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/dashboard/admin" element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              } />
-              
-              {/* Applications routes */}
-              <Route path="/applications" element={
-                <ProtectedRoute allowedRoles={['manager', 'admin', 'hr', 'director']}>
-                  <Applications />
-                </ProtectedRoute>
-              } />
-              <Route path="/applications/:id" element={
-                <ProtectedRoute allowedRoles={['manager', 'admin', 'hr', 'director']}>
-                  <JobApplicationDetail />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/training" element={
-                <ProtectedRoute allowedRoles={['candidate']}>
-                  <Training />
-                </ProtectedRoute>
-              } />
-              <Route path="/training/quiz/:moduleId" element={
-                <ProtectedRoute allowedRoles={['candidate']}>
-                  <Quiz />
-                </ProtectedRoute>
-              } />
-              <Route path="/training/assessment/:assessmentId" element={
-                <ProtectedRoute allowedRoles={['candidate']}>
-                  <AssessmentQuiz />
-                </ProtectedRoute>
-              } />
-              <Route path="/training/video/:moduleId/:videoId" element={
-                <ProtectedRoute allowedRoles={['candidate']}>
-                  <VideoPlayer />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/candidates" element={
-                <ProtectedRoute allowedRoles={['manager', 'admin', 'hr', 'director']}>
-                  <Candidates />
-                </ProtectedRoute>
-              } />
-              <Route path="/candidates/:id" element={
-                <ProtectedRoute allowedRoles={['manager', 'admin', 'hr', 'director']}>
-                  <CandidateDetail />
-                </ProtectedRoute>
-              } />
-              <Route path="/interviews" element={
-                <ProtectedRoute allowedRoles={['manager', 'admin', 'hr', 'director']}>
-                  <Interviews />
-                </ProtectedRoute>
-              } />
-              <Route path="/assessments" element={
-                <ProtectedRoute allowedRoles={['manager', 'admin', 'hr', 'director']}>
-                  <Assessments />
-                </ProtectedRoute>
-              } />
-              <Route path="/analytics" element={
-                <ProtectedRoute allowedRoles={['manager', 'admin', 'hr', 'director']}>
-                  <Analytics />
-                </ProtectedRoute>
-              } />
+    <AuthProvider>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<Index />} />
+        <Route path="/careers" element={<Careers />} />
+        
+        {/* Auth Routes */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
-              <Route path="/users" element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <UserManagement />
-                </ProtectedRoute>
-              } />
-              <Route path="/activity-log" element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <ActivityLog />
-                </ProtectedRoute>
-              } />
-              <Route path="/training-management" element={
-                <ProtectedRoute allowedRoles={['admin', 'hr']}>
-                  <TrainingManagement />
-                </ProtectedRoute>
-              } />
-              
-              {/* Assessment management routes */}
-              <Route path="/training-management/assessments/create" element={
-                <ProtectedRoute allowedRoles={['admin', 'hr']}>
-                  <AssessmentDetails />
-                </ProtectedRoute>
-              } />
-              <Route path="/training-management/assessments/:assessmentId" element={
-                <ProtectedRoute allowedRoles={['admin', 'hr']}>
-                  <AssessmentDetails />
-                </ProtectedRoute>
-              } />
-              <Route path="/training-management/assessments/:assessmentId/edit" element={
-                <ProtectedRoute allowedRoles={['admin', 'hr']}>
-                  <AssessmentDetails />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/assessments/results/:resultId" element={
-                <ProtectedRoute allowedRoles={['admin', 'hr', 'director']}>
-                  <AssessmentResultDetails />
-                </ProtectedRoute>
-              } />
-              <Route path="/assessments/:assessmentId" element={
-                <ProtectedRoute allowedRoles={['admin', 'hr', 'director']}>
-                  <AssessmentDetails />
-                </ProtectedRoute>
-              } />
-              <Route path="/assessments/:assessmentId/edit" element={
-                <ProtectedRoute allowedRoles={['admin', 'hr', 'director']}>
-                  <AssessmentDetails />
-                </ProtectedRoute>
-              } />
-              <Route path="/assessments/sections/new" element={
-                <ProtectedRoute allowedRoles={['admin', 'hr', 'director']}>
-                  <AssessmentSectionDetails />
-                </ProtectedRoute>
-              } />
-              <Route path="/assessments/sections/:sectionId" element={
-                <ProtectedRoute allowedRoles={['admin', 'hr', 'director']}>
-                  <AssessmentSectionDetails />
-                </ProtectedRoute>
-              } />
-              <Route path="/questions/:questionId" element={
-                <ProtectedRoute allowedRoles={['admin', 'hr', 'director']}>
-                  <QuestionDetails />
-                </ProtectedRoute>
-              } />
-              <Route path="/training-management/:moduleId" element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <TrainingModuleDetails />
-                </ProtectedRoute>
-              } />
+        {/* Admin Routes */}
+        <Route
+          path="/dashboard/admin"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <UserManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/companies"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <CompanyManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/activity-log"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <ActivityLog />
+            </ProtectedRoute>
+          }
+        />
 
-              <Route path="/profile" element={
-                <ProtectedRoute allowedRoles={['candidate', 'manager', 'admin', 'hr', 'director']}>
-                  <Profile />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/job-openings" element={
-                <ProtectedRoute allowedRoles={['candidate']}>
-                  <JobOpenings />
-                </ProtectedRoute>
-              } />
-              <Route path="/hr/job-management" element={
-                <ProtectedRoute allowedRoles={['hr', 'director']}>
-                  <JobManagement />
-                </ProtectedRoute>
-              } />
-              <Route path="/training/module/:moduleId" element={
-                <ProtectedRoute allowedRoles={['candidate']}>
-                  <ModuleView />
-                </ProtectedRoute>
-              } />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            <Sonner />
-            <Toaster />
-          </AuthProvider>
-        </TooltipProvider>
-      </BrowserRouter>
-    </QueryClientProvider>
+        {/* Manager Routes */}
+        <Route
+          path="/dashboard/manager"
+          element={
+            <ProtectedRoute allowedRoles={["manager"]}>
+              <ManagerDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/candidates"
+          element={
+            <ProtectedRoute allowedRoles={["manager"]}>
+              <Candidates />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/candidates/:id"
+          element={
+            <ProtectedRoute allowedRoles={["manager"]}>
+              <CandidateDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/applications"
+          element={
+            <ProtectedRoute allowedRoles={["manager"]}>
+              <Applications />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/applications/:id"
+          element={
+            <ProtectedRoute allowedRoles={["manager"]}>
+              <JobApplicationDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/interviews"
+          element={
+            <ProtectedRoute allowedRoles={["manager"]}>
+              <Interviews />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/assessments"
+          element={
+            <ProtectedRoute allowedRoles={["manager"]}>
+              <Assessments />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/analytics"
+          element={
+            <ProtectedRoute allowedRoles={["manager"]}>
+              <Analytics />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* HR Routes */}
+        <Route
+          path="/dashboard/hr"
+          element={
+            <ProtectedRoute allowedRoles={["hr"]}>
+              <HRDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/hr/jobs"
+          element={
+            <ProtectedRoute allowedRoles={["hr", "admin"]}>
+              <JobManagement />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Director Routes */}
+        <Route
+          path="/dashboard/director"
+          element={
+            <ProtectedRoute allowedRoles={["director"]}>
+              <DirectorDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Training Routes - Available to all roles */}
+        <Route
+          path="/training"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "hr", "manager", "candidate", "director"]}>
+              <Training />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/training/module/:id"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "hr", "manager", "candidate", "director"]}>
+              <ModuleView />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/training/video/:id"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "hr", "manager", "candidate", "director"]}>
+              <VideoPlayer />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/training/quiz/:moduleId"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "hr", "manager", "candidate", "director"]}>
+              <Quiz />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/training/assessment/:assessmentId"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "hr", "manager", "candidate", "director"]}>
+              <AssessmentQuiz />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Training Management */}
+        <Route
+          path="/admin/training"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "hr"]}>
+              <TrainingManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/training/module/:id"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "hr"]}>
+              <TrainingModuleDetails />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/assessments/:id"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "hr"]}>
+              <AssessmentDetails />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/assessments/:assessmentId/sections/:sectionId"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "hr"]}>
+              <AssessmentSectionDetails />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/assessments/:assessmentId/results/:resultId"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "hr"]}>
+              <AssessmentResultDetails />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/questions/:id"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "hr"]}>
+              <QuestionDetails />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Candidate Routes */}
+        <Route
+          path="/dashboard/candidate"
+          element={
+            <ProtectedRoute allowedRoles={["candidate"]}>
+              <CandidateDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/application"
+          element={
+            <ProtectedRoute allowedRoles={["candidate"]}>
+              <Application />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/openings"
+          element={
+            <ProtectedRoute allowedRoles={["candidate"]}>
+              <JobOpenings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/test-storage"
+          element={
+            <ProtectedRoute allowedRoles={["candidate"]}>
+              <StorageTest />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Common Routes */}
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "hr", "manager", "candidate", "director"]}>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Not Found */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      <Toaster position="top-right" richColors />
+    </AuthProvider>
   );
-};
+}
 
 export default App;

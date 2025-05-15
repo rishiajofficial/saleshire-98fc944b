@@ -1,89 +1,174 @@
 
-import { supabase } from "@/integrations/supabase/client";
-import { BaseService, ServiceResponse } from "./baseService";
+import { supabase } from '@/integrations/supabase/client';
+import { parseProfile } from '@/contexts/auth/authUtils';
 
-export type UserRole = 'admin' | 'manager' | 'candidate' | 'hr' | 'director';
+// Get all user profiles
+export const getUserProfiles = async (filters = {}) => {
+  try {
+    let query = supabase
+      .from('profiles')
+      .select(`
+        *,
+        companies:company_id (
+          id,
+          name
+        )
+      `);
 
-export type UserData = {
-  id?: string;
-  name: string;
-  email: string;
-  password?: string;
-  role: UserRole;
-  region?: string;
-};
+    // Apply filters if provided
+    if (Object.keys(filters).length > 0) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value) {
+          query = query.eq(key, value);
+        }
+      });
+    }
 
-// User management service
-export const UserService = {
-  // Create new user
-  async createUser(userData: UserData): Promise<ServiceResponse> {
-    try {
-      console.log('Creating user:', userData);
-      
-      return await BaseService.invokeFunction("admin-operations", {
-        operation: "createUser",
-        data: userData
-      });
-    } catch (error: any) {
-      console.error('Error creating user:', error.message);
-      return { success: false, error: error.message };
+    const { data, error } = await query;
+
+    if (error) {
+      throw error;
     }
-  },
-  
-  // Update existing user
-  async updateUser(userData: UserData): Promise<ServiceResponse> {
-    try {
-      console.log('Updating user:', userData);
-      
-      if (!userData.id) {
-        throw new Error('User ID is required for update');
-      }
-      
-      return await BaseService.invokeFunction("admin-operations", {
-        operation: "updateUser",
-        data: userData
-      });
-    } catch (error: any) {
-      console.error('Error updating user:', error.message);
-      return { success: false, error: error.message };
-    }
-  },
-  
-  // Delete user
-  async deleteUser(userId: string): Promise<ServiceResponse> {
-    try {
-      console.log('Deleting user:', userId);
-      
-      return await BaseService.invokeFunction("admin-operations", {
-        operation: "deleteUser",
-        data: { userId }
-      });
-    } catch (error: any) {
-      console.error('Error deleting user:', error.message);
-      return { success: false, error: error.message };
-    }
-  },
-  
-  // Get user details
-  async getUser(userId: string): Promise<ServiceResponse> {
-    try {
-      console.log('Getting user details:', userId);
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      
-      if (error) throw error;
-      if (!data) throw new Error('User not found');
-      
-      return { success: true, data };
-    } catch (error: any) {
-      console.error('Error getting user details:', error.message);
-      return { success: false, error: error.message };
-    }
+
+    // Process profiles without creating recursive structures
+    return data.map(profile => {
+      return {
+        ...profile,
+        company: profile.companies ? {
+          id: profile.companies.id,
+          name: profile.companies.name
+        } : null
+      };
+    });
+  } catch (error) {
+    console.error('Error fetching user profiles:', error);
+    throw error;
   }
 };
 
-export default UserService;
+// Get user profile by ID
+export const getUserProfile = async (userId: string) => {
+  if (!userId) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select(`
+        *,
+        companies:company_id (
+          id,
+          name,
+          domain,
+          logo
+        )
+      `)
+      .eq('id', userId)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return parseProfile(data);
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    throw error;
+  }
+};
+
+// Update user profile
+export const updateUserProfile = async (userId: string, updates: any) => {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', userId);
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    throw error;
+  }
+};
+
+// Create user profile (typically called after auth signup)
+export const createUserProfile = async (userData: any) => {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .insert([userData]);
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error creating user profile:', error);
+    throw error;
+  }
+};
+
+// Get activity logs for a user
+export const getUserActivityLogs = async (userId: string, limit = 10) => {
+  try {
+    const { data, error } = await supabase
+      .from('activity_logs')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error fetching user activity logs:', error);
+    throw error;
+  }
+};
+
+// Get user with company information - avoid using parseProfile to prevent recursion
+export const getUserWithCompany = async (userId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select(`
+        *,
+        companies:company_id (
+          id,
+          name,
+          domain,
+          logo
+        )
+      `)
+      .eq('id', userId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching user with company:', error);
+      return null;
+    }
+    
+    // Manually construct the profile object without using parseProfile
+    return data ? {
+      ...data,
+      company: data.companies ? {
+        id: data.companies.id,
+        name: data.companies.name,
+        domain: data.companies.domain,
+        logo: data.companies.logo,
+      } : null,
+      isCompanyAdmin: false // Default value
+    } : null;
+  } catch (error) {
+    console.error('Error fetching user with company:', error);
+    return null;
+  }
+};

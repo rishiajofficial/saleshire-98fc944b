@@ -1,263 +1,390 @@
 
-import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Check, Loader2, Sparkles } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { TrainingModuleProgress } from "@/types/training";
+} from '@/components/ui/select';
+import { useAuth } from '@/contexts/auth';
+import { supabase } from '@/integrations/supabase/client';
+import { Label } from '@/components/ui/label';
+import { Job } from '@/types/job';
 
-interface JobFormValues {
-  title: string;
-  description: string;
-  department: string;
-  location: string;
-  employment_type: string;
-  salary_range: string;
-  selectedAssessment: string;
-  selectedModules: string[];
-  id?: string;
-  status?: string;
-  archived?: boolean;
-  created_at?: string;
-  updated_at?: string;
-  created_by?: string;
-}
+// Form schema with validation
+const formSchema = z.object({
+  title: z.string().min(2, {
+    message: "Job title must be at least 2 characters.",
+  }),
+  description: z.string().min(20, {
+    message: "Description must be at least 20 characters.",
+  }),
+  department: z.string().optional(),
+  location: z.string().optional(),
+  employment_type: z.string().optional(),
+  salary_range: z.string().optional(),
+  status: z.string().default("active"),
+  selectedAssessment: z.string().nullable().optional(),
+  selectedModules: z.array(z.string()).optional(),
+  is_public: z.boolean().default(false),
+});
 
 interface JobFormProps {
-  job?: any;
-  onSubmit: (values: JobFormValues) => void;
-  assessments: { id: string; title: string }[];
-  modules: TrainingModuleProgress[];
-  mode: 'create' | 'edit' | 'view';
+  onSubmit: (data: any) => void;
+  job?: Job;
+  isSubmitting?: boolean;
+  assessments?: { id: string; title: string }[];
+  modules?: any[];
+  mode?: "view" | "create" | "edit";
 }
 
-const JobForm: React.FC<JobFormProps> = ({
-  job,
-  onSubmit,
-  assessments,
-  modules,
-  mode
-}) => {
-  const [form, setForm] = useState<JobFormValues>({
-    title: job?.title || "",
-    description: job?.description || "",
-    department: job?.department || "",
-    location: job?.location || "",
-    employment_type: job?.employment_type || "",
-    salary_range: job?.salary_range || "",
-    selectedAssessment: job?.selectedAssessment || "none",
-    selectedModules: job?.selectedModules || []
+export default function JobForm({ onSubmit, job, isSubmitting = false, assessments = [], modules = [], mode = "create" }: JobFormProps) {
+  const { profile } = useAuth();
+  const [loading, setLoading] = useState(true);
+
+  // Set up form with default values
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      title: job?.title || "",
+      description: job?.description || "",
+      department: job?.department || "",
+      location: job?.location || "",
+      employment_type: job?.employment_type || "",
+      salary_range: job?.salary_range || "",
+      status: job?.status || "active",
+      selectedAssessment: job?.selectedAssessment || null,
+      selectedModules: job?.selectedModules || [],
+      is_public: job?.is_public || false,
+    },
   });
-  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
 
+  // Fetch assessments and training modules
   useEffect(() => {
-    if (job) {
-      setForm({
-        title: job.title || "",
-        description: job.description || "",
-        department: job.department || "",
-        location: job.location || "",
-        employment_type: job.employment_type || "",
-        salary_range: job.salary_range || "",
-        selectedAssessment: job.selectedAssessment || "none",
-        selectedModules: job.selectedModules || []
-      });
-    }
-  }, [job]);
+    async function fetchData() {
+      try {
+        setLoading(true);
+        
+        // If assessments and modules are provided as props, we don't need to fetch them
+        if ((assessments && assessments.length > 0) || (modules && modules.length > 0)) {
+          setLoading(false);
+          return;
+        }
 
-  const isView = mode === "view";
-
-  const handleGenerateDescription = async () => {
-    if (!form.title.trim()) {
-      toast.error("Please enter a job title first");
-      return;
-    }
-
-    try {
-      setIsGeneratingDescription(true);
-      const response = await supabase.functions.invoke("generate-job-description", {
-        body: { title: form.title },
-      });
-
-      if (response.error) {
-        throw new Error(response.error.message || "Failed to generate job description");
+        let assessmentsQuery = supabase
+          .from('assessments')
+          .select('id, title')
+          .eq('archived', false);
+        
+        let modulesQuery = supabase
+          .from('training_modules')
+          .select('id, title')
+          .eq('archived', false);
+          
+        // If we have a company profile, filter by company members
+        if (profile?.company_id) {
+          const { data: companyUsers } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('company_id', profile.company_id);
+            
+          if (companyUsers && companyUsers.length > 0) {
+            const userIds = companyUsers.map(user => user.id);
+            assessmentsQuery = assessmentsQuery.in('created_by', userIds);
+            modulesQuery = modulesQuery.in('created_by', userIds);
+          }
+        }
+        
+        // Execute queries
+        const [assessmentsResult, modulesResult] = await Promise.all([
+          assessmentsQuery,
+          modulesQuery
+        ]);
+        
+        if (assessmentsResult.error) throw assessmentsResult.error;
+        if (modulesResult.error) throw modulesResult.error;
+        
+        // Skip since we're using props
+      } catch (error) {
+        console.error('Failed to load form data:', error);
+      } finally {
+        setLoading(false);
       }
-
-      if (!response.data?.description) {
-        throw new Error("No description was generated");
-      }
-
-      setForm({ ...form, description: response.data.description });
-      toast.success("Job description generated successfully!");
-    } catch (error: any) {
-      console.error("Error generating description:", error);
-      toast.error(`Failed to generate description: ${error.message}`);
-    } finally {
-      setIsGeneratingDescription(false);
     }
+    
+    fetchData();
+  }, [profile?.company_id, assessments, modules]);
+
+  const handleSubmit = (values: z.infer<typeof formSchema>) => {
+    onSubmit({
+      ...values,
+      id: job?.id,
+    });
   };
 
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!isView) onSubmit(form);
-      }}
-      className="grid gap-4 py-2"
-    >
-      <div>
-        <Label htmlFor="title">Job Title</Label>
-        <Input
-          id="title"
-          value={form.title}
-          disabled={isView}
-          onChange={(e) => setForm({ ...form, title: e.target.value })}
-        />
-      </div>
-      <div>
-        <Label htmlFor="description" className="flex items-center justify-between">
-          Description
-          {!isView && (
-            <Button 
-              type="button" 
-              size="sm" 
-              variant="outline" 
-              onClick={handleGenerateDescription}
-              disabled={isGeneratingDescription || !form.title.trim()}
-              className="flex items-center gap-1 text-xs"
-            >
-              {isGeneratingDescription ? (
-                <>
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-3 w-3" />
-                  Generate with AI
-                </>
-              )}
-            </Button>
-          )}
-        </Label>
-        <Textarea
-          id="description"
-          value={form.description}
-          disabled={isView || isGeneratingDescription}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
-          className="min-h-[150px]"
-        />
-      </div>
-      <div>
-        <Label htmlFor="department">Department</Label>
-        <Input
-          id="department"
-          value={form.department}
-          disabled={isView}
-          onChange={(e) => setForm({ ...form, department: e.target.value })}
-        />
-      </div>
-      <div>
-        <Label htmlFor="location">Location</Label>
-        <Input
-          id="location"
-          value={form.location}
-          disabled={isView}
-          onChange={(e) => setForm({ ...form, location: e.target.value })}
-        />
-      </div>
-      <div>
-        <Label htmlFor="employment_type">Employment Type</Label>
-        <Select
-          value={form.employment_type}
-          disabled={isView}
-          onValueChange={(value) => setForm({ ...form, employment_type: value })}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select employment type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Full-Time">Full-Time</SelectItem>
-            <SelectItem value="Part-Time">Part-Time</SelectItem>
-            <SelectItem value="Contract">Contract</SelectItem>
-            <SelectItem value="Internship">Internship</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div>
-        <Label htmlFor="salary_range">Salary Range</Label>
-        <Input
-          id="salary_range"
-          value={form.salary_range}
-          disabled={isView}
-          onChange={(e) => setForm({ ...form, salary_range: e.target.value })}
-        />
-      </div>
-      <div>
-        <Label htmlFor="assessment">Required Initial Assessment</Label>
-        <Select
-          value={form.selectedAssessment}
-          disabled={isView}
-          onValueChange={(value) => setForm({ ...form, selectedAssessment: value })}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select an assessment" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">None</SelectItem>
-            {assessments.map((assessment) => (
-              <SelectItem key={assessment.id} value={assessment.id}>
-                {assessment.title}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div>
-        <Label htmlFor="modules">Training Modules</Label>
-        <div className="flex flex-wrap gap-2 mt-2">
-          {modules.map((module) => (
-            <Button
-              key={module.id}
-              type="button"
-              variant={form.selectedModules.includes(module.id) ? "default" : "outline"}
-              size="sm"
-              onClick={() => {
-                if (isView) return;
-                setForm(prev => ({
-                  ...prev,
-                  selectedModules: prev.selectedModules.includes(module.id)
-                    ? prev.selectedModules.filter(id => id !== module.id)
-                    : [...prev.selectedModules, module.id]
-                }));
-              }}
-              disabled={isView}
-            >
-              {module.title}
-              {form.selectedModules.includes(module.id) && (
-                <Check className="ml-2 h-4 w-4" />
-              )}
-            </Button>
-          ))}
-        </div>
-      </div>
-      {!isView && (
-        <Button className="mt-2" type="submit">
-          {mode === "edit" ? "Update Job" : "Create Job"}
-        </Button>
-      )}
-    </form>
-  );
-};
+  const isViewOnly = mode === "view";
 
-export default JobForm;
+  // Turn off form controls if in view-only mode
+  const formReadonly = isViewOnly;
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            control={form.control}
+            name="title"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Job Title *</FormLabel>
+                <FormControl>
+                  <Input placeholder="Sales Representative" {...field} disabled={formReadonly} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="department"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Department</FormLabel>
+                <FormControl>
+                  <Input placeholder="Sales" {...field} disabled={formReadonly} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            control={form.control}
+            name="location"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Location</FormLabel>
+                <FormControl>
+                  <Input placeholder="Remote, New York, etc." {...field} disabled={formReadonly} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="employment_type"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Employment Type</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                  disabled={formReadonly}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select employment type" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="full-time">Full-time</SelectItem>
+                    <SelectItem value="part-time">Part-time</SelectItem>
+                    <SelectItem value="contract">Contract</SelectItem>
+                    <SelectItem value="temporary">Temporary</SelectItem>
+                    <SelectItem value="internship">Internship</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            control={form.control}
+            name="salary_range"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Salary Range</FormLabel>
+                <FormControl>
+                  <Input placeholder="$60,000 - $80,000" {...field} disabled={formReadonly} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="status"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Status</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                  disabled={formReadonly}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description *</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Job description and responsibilities"
+                  className="min-h-[200px]"
+                  {...field}
+                  disabled={formReadonly}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="selectedAssessment"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Assessment</FormLabel>
+              <Select
+                onValueChange={field.onChange}
+                value={field.value || undefined}
+                disabled={formReadonly}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select an assessment" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {assessments.map((assessment) => (
+                    <SelectItem key={assessment.id} value={assessment.id}>
+                      {assessment.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormDescription>
+                Optional: Select an assessment for candidates to complete
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="selectedModules"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Training Modules</FormLabel>
+              <div className="flex flex-col space-y-2 mt-2">
+                {modules.map((module) => (
+                  <div key={module.id} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id={`module-${module.id}`}
+                      value={module.id}
+                      checked={field.value?.includes(module.id) || false}
+                      onChange={(e) => {
+                        if (formReadonly) return;
+                        if (e.target.checked) {
+                          field.onChange([...(field.value || []), module.id]);
+                        } else {
+                          field.onChange(
+                            (field.value || []).filter((id) => id !== module.id)
+                          );
+                        }
+                      }}
+                      disabled={formReadonly}
+                      className="rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <Label htmlFor={`module-${module.id}`}>{module.title}</Label>
+                  </div>
+                ))}
+              </div>
+              <FormDescription>
+                Optional: Select training modules for this job
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="is_public"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <FormLabel className="text-base">Public Job Listing</FormLabel>
+                <FormDescription>
+                  Make this job visible on the public careers page
+                </FormDescription>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  disabled={formReadonly}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        {!isViewOnly && (
+          <Button type="submit" className="w-full" disabled={isSubmitting || formReadonly}>
+            {isSubmitting ? "Saving..." : job ? "Update Job" : "Create Job"}
+          </Button>
+        )}
+      </form>
+    </Form>
+  );
+}

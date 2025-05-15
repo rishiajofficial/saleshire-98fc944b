@@ -12,30 +12,14 @@ import { Loader2 } from "lucide-react";
 import JobForm from "./JobForm";
 import JobDialogTrigger from "./JobDialogTrigger";
 import { useTrainingModules } from "@/hooks/useTrainingModules";
-
-interface EditingJob {
-  id: string;
-  title: string;
-  description: string;
-  department: string;
-  location: string;
-  employment_type: string;
-  salary_range: string;
-  selectedAssessment: string;
-  selectedModules: string[];
-  status?: string;
-  archived?: boolean;
-  created_at?: string;
-  updated_at?: string;
-  created_by?: string;
-}
+import { Job } from "@/types/job";
 
 interface JobCreationDialogProps {
   onJobCreated?: (job: any) => void;
-  onJobUpdated?: (job: EditingJob) => void;
+  onJobUpdated?: (job: Job) => void;
   assessments: { id: string; title: string }[];
   categories?: Array<{ id: string; name: string }>;
-  editingJob?: EditingJob;
+  editingJob?: Job;
   mode?: "create" | "edit" | "view";
   isOpen?: boolean;
   onClose?: () => void;
@@ -88,16 +72,18 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
 
   const handleSubmit = (form: any) => {
     if (mode === "edit" && onJobUpdated && editingJob) {
-      const updatedJob: EditingJob = { 
+      const updatedJob: Job = { 
         ...editingJob, 
         ...form,
-        selectedAssessment: form.selectedAssessment === "none" ? null : form.selectedAssessment
+        selectedAssessment: form.selectedAssessment === "none" ? null : form.selectedAssessment,
+        status: form.status || "active" // Ensure status is always defined
       };
       onJobUpdated(updatedJob);
     } else if (onJobCreated) {
       const processedForm = {
         ...form,
-        selectedAssessment: form.selectedAssessment === "none" ? null : form.selectedAssessment
+        selectedAssessment: form.selectedAssessment === "none" ? null : form.selectedAssessment,
+        status: form.status || "active" // Ensure status is always defined when creating
       };
       onJobCreated(processedForm);
     }
