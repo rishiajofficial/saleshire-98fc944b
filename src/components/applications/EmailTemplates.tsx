@@ -1,23 +1,22 @@
 
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter
 } from "@/components/ui/dialog";
+import { 
+  Tabs, 
+  TabsList, 
+  TabsTrigger, 
+  TabsContent 
+} from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 
 interface EmailTemplatesProps {
   isOpen: boolean;
@@ -26,160 +25,155 @@ interface EmailTemplatesProps {
   recipientNames: string[];
 }
 
-const EMAIL_TEMPLATES = [
-  {
-    id: "interview-invite",
-    name: "Interview Invitation",
-    subject: "Interview Invitation from ABC Company",
-    body: `Dear {{candidateName}},
+export const EmailTemplates = ({ 
+  isOpen, 
+  onClose, 
+  recipientEmails, 
+  recipientNames 
+}: EmailTemplatesProps) => {
+  const [selectedTab, setSelectedTab] = useState('interview');
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailContent, setEmailContent] = useState('');
+  
+  // Get email templates
+  const templates = {
+    interview: {
+      subject: "Interview Invitation - [Company Name]",
+      body: `Dear ${recipientNames.length === 1 ? recipientNames[0] : 'Candidate'},
 
-We are pleased to inform you that your application has progressed to the next stage of our hiring process. We would like to invite you for an interview.
+We're pleased to invite you for an interview for the [Job Position] role at [Company Name]. 
 
-Please let us know your availability for the coming week, and we will schedule a time that works for both parties.
+Interview Details:
+- Date: [Date]
+- Time: [Time]
+- Location: [Location/Video Link]
 
-Best regards,
-HR Team
-ABC Company`
-  },
-  {
-    id: "application-received",
-    name: "Application Received",
-    subject: "We've received your application",
-    body: `Dear {{candidateName}},
+Please confirm your availability by replying to this email.
 
-Thank you for submitting your application to ABC Company. We have received your application and are currently reviewing it.
-
-We will contact you if your qualifications match our requirements.
-
-Best regards,
-HR Team
-ABC Company`
-  },
-  {
-    id: "assessment-invitation",
-    name: "Assessment Invitation",
-    subject: "Complete your skills assessment",
-    body: `Dear {{candidateName}},
-
-As part of our selection process, we'd like to invite you to complete a skills assessment. This will help us better understand your abilities and how they align with the position.
-
-Please click the link below to start your assessment:
-[Assessment Link]
+Looking forward to speaking with you!
 
 Best regards,
-HR Team
-ABC Company`
-  }
-];
+[Your Name]
+[Company Name]`
+    },
+    rejection: {
+      subject: "Application Status Update - [Company Name]",
+      body: `Dear ${recipientNames.length === 1 ? recipientNames[0] : 'Candidate'},
 
-export const EmailTemplates: React.FC<EmailTemplatesProps> = ({
-  isOpen,
-  onClose,
-  recipientEmails,
-  recipientNames,
-}) => {
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("interview-invite");
-  const [emailSubject, setEmailSubject] = useState<string>("");
-  const [emailBody, setEmailBody] = useState<string>("");
-  const [isSending, setIsSending] = useState(false);
+Thank you for your interest in the [Job Position] role and for the time you've invested in applying.
 
-  // Load template when template id changes
-  React.useEffect(() => {
-    const template = EMAIL_TEMPLATES.find(t => t.id === selectedTemplateId);
-    if (template) {
-      setEmailSubject(template.subject);
-      
-      // Replace placeholders with actual data for the first recipient
-      let processedBody = template.body;
-      if (recipientNames && recipientNames.length > 0) {
-        processedBody = processedBody.replace(/{{candidateName}}/g, recipientNames[0]);
-        
-        // Add note about multiple recipients
-        if (recipientEmails.length > 1) {
-          processedBody += "\n\nNote: This email will be sent to multiple recipients.";
-        }
-      }
-      
-      setEmailBody(processedBody);
-    }
-  }, [selectedTemplateId, recipientEmails, recipientNames]);
+After careful consideration, we have decided to move forward with other candidates whose qualifications better match our current needs.
 
-  const handleSendEmail = async () => {
-    setIsSending(true);
-    
-    try {
-      // This would connect to a backend service to send the emails
-      // Since this is just a UI mockup, we'll simulate success
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      toast.success(`Email${recipientEmails.length > 1 ? 's' : ''} sent successfully!`);
-      onClose();
-    } catch (error) {
-      toast.error("Failed to send email. Please try again.");
-    } finally {
-      setIsSending(false);
+We appreciate your interest in joining our team and wish you the best in your job search.
+
+Best regards,
+[Your Name]
+[Company Name]`
+    },
+    assessment: {
+      subject: "Skills Assessment - [Company Name]",
+      body: `Dear ${recipientNames.length === 1 ? recipientNames[0] : 'Candidate'},
+
+As part of our evaluation process for the [Job Position] role, we'd like to invite you to complete a skills assessment.
+
+Assessment Details:
+- Access Link: [Assessment URL]
+- Duration: [Time] minutes
+- Deadline: [Date]
+
+This assessment will help us understand your skills better. Please complete it at your earliest convenience but before the deadline.
+
+If you have any questions, don't hesitate to reach out.
+
+Best regards,
+[Your Name]
+[Company Name]`
+    },
+    custom: {
+      subject: "",
+      body: ""
     }
   };
-
+  
+  // Set email content when tab changes
+  React.useEffect(() => {
+    if (selectedTab === 'custom') {
+      setEmailSubject('');
+      setEmailContent('');
+    } else {
+      const template = templates[selectedTab as keyof typeof templates];
+      setEmailSubject(template.subject);
+      setEmailContent(template.body);
+    }
+  }, [selectedTab, recipientNames]);
+  
+  const handleSendEmail = () => {
+    // In a real app, you would send the email via your backend
+    toast({
+      title: "Email sent",
+      description: `Email sent to ${recipientEmails.length} recipients`
+    });
+    onClose();
+  };
+  
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Send Email to Candidates</DialogTitle>
+          <DialogTitle>Email Templates</DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">To:</label>
-            <div className="bg-muted/50 p-2 rounded-md text-sm">
-              {recipientEmails.join(", ")}
-              <div className="text-xs text-muted-foreground mt-1">
-                {recipientEmails.length} recipient{recipientEmails.length !== 1 && "s"}
+        <div className="space-y-6 pt-2">
+          <div className="bg-muted p-3 rounded-md">
+            <p className="text-sm">
+              <span className="font-medium">To:</span> {recipientEmails.join(', ')}
+            </p>
+          </div>
+          
+          <Tabs value={selectedTab} onValueChange={setSelectedTab}>
+            <TabsList className="grid grid-cols-4 mb-4">
+              <TabsTrigger value="interview">Interview</TabsTrigger>
+              <TabsTrigger value="rejection">Rejection</TabsTrigger>
+              <TabsTrigger value="assessment">Assessment</TabsTrigger>
+              <TabsTrigger value="custom">Custom</TabsTrigger>
+            </TabsList>
+            
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="subject" className="text-sm font-medium mb-1 block">
+                  Subject
+                </label>
+                <Input
+                  id="subject"
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                  placeholder="Email subject"
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="content" className="text-sm font-medium mb-1 block">
+                  Content
+                </label>
+                <Textarea
+                  id="content"
+                  value={emailContent}
+                  onChange={(e) => setEmailContent(e.target.value)}
+                  placeholder="Email content"
+                  rows={12}
+                />
+              </div>
+              
+              <div className="text-sm text-muted-foreground">
+                <p>Note: Replace placeholders like [Company Name], [Job Position], etc. with actual values before sending.</p>
               </div>
             </div>
-          </div>
-          
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Template:</label>
-            <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a template" />
-              </SelectTrigger>
-              <SelectContent>
-                {EMAIL_TEMPLATES.map(template => (
-                  <SelectItem key={template.id} value={template.id}>
-                    {template.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Subject:</label>
-            <Input 
-              value={emailSubject} 
-              onChange={e => setEmailSubject(e.target.value)} 
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Message:</label>
-            <Textarea 
-              value={emailBody} 
-              onChange={e => setEmailBody(e.target.value)}
-              rows={10} 
-            />
-          </div>
+          </Tabs>
         </div>
         
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isSending}>
-            Cancel
-          </Button>
-          <Button onClick={handleSendEmail} disabled={isSending}>
-            {isSending ? "Sending..." : "Send Email"}
-          </Button>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleSendEmail}>Send Email</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

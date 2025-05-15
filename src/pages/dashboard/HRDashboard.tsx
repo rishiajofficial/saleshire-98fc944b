@@ -1,19 +1,19 @@
 
 import React from 'react';
 import { useAuth } from '@/contexts/auth';
-import DashboardLayout from '@/components/dashboard/DashboardLayout';
-import DashboardHeader from '@/components/dashboard/DashboardHeader';
+import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import DashboardStats from '@/components/dashboard/DashboardStats';
-import NotificationsCard from '@/components/dashboard/NotificationsCard';
-import JobsList from '@/components/jobs/JobsList';
-import ApplicationsList from '@/components/applications/ApplicationsList';
-import TrainingCard from '@/components/dashboard/TrainingCard';
+import { NotificationsCard } from '@/components/dashboard/NotificationsCard';
+import { JobsList } from '@/components/jobs/JobsList';
+import { ApplicationsList } from '@/components/applications/ApplicationsList';
+import { TrainingCard } from '@/components/dashboard/TrainingCard';
 import { useJobApplications } from '@/hooks/useJobApplications';
 import { UserRole } from '@/types';
 
 const HRDashboard = () => {
   const { profile } = useAuth();
-  const { applications, isLoading: applicationsLoading } = useJobApplications();
+  const { data: applications, isLoading: applicationsLoading } = useJobApplications();
 
   if (!profile) {
     return <div>Loading...</div>;
@@ -59,7 +59,7 @@ const HRDashboard = () => {
   });
 
   return (
-    <DashboardLayout>
+    <DashboardLayout sideContent={<TrainingCard />}>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-semibold">HR Dashboard</h1>
@@ -69,19 +69,18 @@ const HRDashboard = () => {
         <DashboardStats stats={stats} />
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2">
+          <div className="md:col-span-3">
             <NotificationsCard 
-              title="Recent Activity"
               notifications={formattedLogs.map(log => ({
                 id: log.id,
-                title: log.action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                message: log.displayText,
-                time: new Date(log.created_at).toLocaleString(),
+                action: log.action.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+                details: log.details,
+                created_at: log.created_at,
+                entity_id: log.entity_id,
+                entity_type: log.entity_type,
+                user_id: log.user_id
               }))}
             />
-          </div>
-          <div>
-            <TrainingCard />
           </div>
         </div>
         
@@ -94,8 +93,8 @@ const HRDashboard = () => {
           <h2 className="text-xl font-semibold">Recent Applications</h2>
           <ApplicationsList 
             applications={applications || []} 
-            isLoading={applicationsLoading}
-            role={UserRole.HR}
+            isLoading={applicationsLoading || false}
+            role="HR"
           />
         </div>
       </div>

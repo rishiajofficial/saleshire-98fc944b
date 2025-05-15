@@ -3,7 +3,7 @@ import React from 'react';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
-  sideContent: React.ReactNode;
+  sideContent?: React.ReactNode;
 }
 
 export const DashboardLayout = ({ children, sideContent }: DashboardLayoutProps) => {
@@ -12,9 +12,11 @@ export const DashboardLayout = ({ children, sideContent }: DashboardLayoutProps)
       <div className="md:col-span-8 space-y-6">
         {children}
       </div>
-      <div className="md:col-span-4 space-y-6">
-        {sideContent}
-      </div>
+      {sideContent && (
+        <div className="md:col-span-4 space-y-6">
+          {sideContent}
+        </div>
+      )}
     </div>
   );
 };
