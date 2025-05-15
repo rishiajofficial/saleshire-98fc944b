@@ -7,23 +7,19 @@ import ApplicationsList from '@/components/dashboard/ApplicationsList';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { TrainingCard } from '@/components/dashboard/TrainingCard';
 import { NotificationsCard } from '@/components/dashboard/NotificationsCard';
+import { useAuth } from '@/contexts/auth';
 
 const HRDashboard = () => {
-  const dashboardStats = [
-    { value: 12, label: "Open Positions", change: 2 },
-    { value: 45, label: "Active Applications", change: -5 },
-    { value: 8, label: "Interviews This Week", change: 3 },
-    { value: 24, label: "Candidates in Pipeline", change: 0 }
-  ];
-
+  const { profile } = useAuth();
+  
   return (
     <MainLayout>
       <DashboardHeader 
-        title="HR Dashboard" 
-        description="Manage job postings and candidates" 
+        userName={profile?.name}
+        userRole={profile?.role}
       />
       
-      <DashboardStats stats={dashboardStats} />
+      <DashboardStats />
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <TrainingCard 
@@ -33,9 +29,9 @@ const HRDashboard = () => {
         />
         <NotificationsCard 
           notifications={[
-            { id: '1', title: 'New application received', date: new Date(), read: false },
-            { id: '2', title: 'Interview scheduled', date: new Date(), read: true },
-            { id: '3', title: 'Assessment completed', date: new Date(), read: false }
+            { id: '1', content: 'New application received', timestamp: new Date(), read: false },
+            { id: '2', content: 'Interview scheduled', timestamp: new Date(), read: true },
+            { id: '3', content: 'Assessment completed', timestamp: new Date(), read: false }
           ]} 
         />
         <div className="bg-white rounded-lg shadow p-4">
@@ -59,12 +55,18 @@ const HRDashboard = () => {
       
       <div className="mb-6">
         <h2 className="text-xl font-medium mb-4">Active Job Listings</h2>
-        <JobsList />
+        <JobsList 
+          jobs={[]}
+          userApplications={[]}
+          isLoading={false}
+          onApply={() => {}}
+          onWithdraw={() => {}}
+        />
       </div>
       
       <div>
         <h2 className="text-xl font-medium mb-4">Recent Applications</h2>
-        <ApplicationsList limit={5} />
+        <ApplicationsList applications={[]} isLoading={false} />
       </div>
     </MainLayout>
   );

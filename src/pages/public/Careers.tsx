@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import MainLayout from '@/components/layout/MainLayout';
 
 const Careers = () => {
-  const { jobs, isLoading, error } = useJobOpenings();
+  const { jobs, isLoading } = useJobOpenings();
 
   if (isLoading) {
     return (
@@ -19,15 +19,7 @@ const Careers = () => {
     );
   }
 
-  if (error) {
-    return (
-      <MainLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <p className="text-red-500">Error loading job openings. Please try again later.</p>
-        </div>
-      </MainLayout>
-    );
-  }
+  // Remove the error check since error property doesn't exist in the hook return type
 
   return (
     <MainLayout>

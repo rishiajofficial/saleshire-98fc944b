@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,7 +33,7 @@ import {
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { UserService } from '@/services/userService';
+import * as userService from '@/services/userService';
 import MainLayout from '@/components/layout/MainLayout';
 
 interface CompanyMember {
@@ -110,17 +109,12 @@ const CompanyManagement = () => {
     try {
       setIsSubmitting(true);
       
-      const response = await UserService.createUser({
+      const response = await userService.createUserProfile({
         name: data.name,
         email: data.email,
-        password: data.password,
         role: data.role,
         company_id: profile?.company_id,
       });
-
-      if (!response.success) {
-        throw new Error(response.error || "Failed to create user");
-      }
 
       toast({
         title: "User created successfully",

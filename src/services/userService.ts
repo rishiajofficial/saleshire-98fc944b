@@ -39,7 +39,7 @@ export const getUserProfiles = async (filters = {}) => {
 };
 
 // Get user profile by ID
-export const getUserProfile = async (userId) => {
+export const getUserProfile = async (userId: string) => {
   if (!userId) return null;
 
   try {
@@ -69,7 +69,7 @@ export const getUserProfile = async (userId) => {
 };
 
 // Update user profile
-export const updateUserProfile = async (userId, updates) => {
+export const updateUserProfile = async (userId: string, updates: any) => {
   try {
     const { data, error } = await supabase
       .from('profiles')
@@ -88,7 +88,7 @@ export const updateUserProfile = async (userId, updates) => {
 };
 
 // Create user profile (typically called after auth signup)
-export const createUserProfile = async (userData) => {
+export const createUserProfile = async (userData: any) => {
   try {
     const { data, error } = await supabase
       .from('profiles')
@@ -106,7 +106,7 @@ export const createUserProfile = async (userData) => {
 };
 
 // Get activity logs for a user
-export const getUserActivityLogs = async (userId, limit = 10) => {
+export const getUserActivityLogs = async (userId: string, limit = 10) => {
   try {
     const { data, error } = await supabase
       .from('activity_logs')
@@ -127,7 +127,7 @@ export const getUserActivityLogs = async (userId, limit = 10) => {
 };
 
 // Get user with company information
-export const getUserWithCompany = async (userId) => {
+export const getUserWithCompany = async (userId: string) => {
   try {
     const { data, error } = await supabase
       .from('profiles')
@@ -146,10 +146,8 @@ export const getUserWithCompany = async (userId) => {
     if (error) {
       throw error;
     }
-
-    const normalizedProfile = parseProfile(data);
     
-    return normalizedProfile;
+    return parseProfile(data);
   } catch (error) {
     console.error('Error fetching user with company:', error);
     return null;

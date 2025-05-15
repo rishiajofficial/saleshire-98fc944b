@@ -57,13 +57,8 @@ export const fetchUserProfile = async (userId: string) => {
         isCompanyAdmin: isAdmin 
       };
       
-      // Convert companies to company for easier access
-      if (enhancedProfile.companies) {
-        enhancedProfile.company = enhancedProfile.companies;
-        delete enhancedProfile.companies;
-      }
-      
-      return enhancedProfile;
+      // Parse the profile to normalize companies to company
+      return parseProfile(enhancedProfile);
     }
     
     // For users without company, normalize and return
