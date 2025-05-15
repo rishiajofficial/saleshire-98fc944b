@@ -1,6 +1,49 @@
-import React, { useState } from 'react';
-import ApplicationFilters from '@/components/applications/ApplicationFilters';
-import { ApplicationFilterValues } from '@/components/applications/types';
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  CheckCircle,
+  XCircle,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  User,
+  Mail,
+  BarChart2,
+  CheckSquare,
+  Square,
+} from "lucide-react";
+import { ApplicationFilters, ApplicationFilterValues } from "@/components/applications/ApplicationFilters";
+import { ApplicationsBulkActions } from "@/components/applications/ApplicationsBulkActions";
+import { EmailTemplates } from "@/components/applications/EmailTemplates";
+import { ApplicationStatusHistory } from "@/components/applications/ApplicationStatusHistory";
+import { CandidateTag } from "@/components/applications/CandidateTag";
+import { ApplicationAnalytics } from "@/components/applications/ApplicationAnalytics";
+import { toast } from "sonner";
+import { startOfDay, subDays, subWeeks, subMonths, parseISO, isAfter } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 
 export interface Application {
   id: string;

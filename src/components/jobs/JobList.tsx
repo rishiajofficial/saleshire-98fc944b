@@ -10,10 +10,27 @@ import { DeleteJobDialog } from "./DeleteJobDialog";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { supabase } from "@/integrations/supabase/client";
 
+interface EditingJob {
+  id: string;
+  title: string;
+  description: string;
+  department: string;
+  location: string;
+  employment_type: string;
+  salary_range: string;
+  selectedAssessment: string;
+  selectedModules: string[];
+  status?: string;
+  archived?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  created_by?: string;
+}
+
 interface JobListProps {
   jobs: Job[];
   onJobDeleted: (jobId: string) => void;
-  onJobUpdated: (job: Job) => void;
+  onJobUpdated: (job: any) => void;
   onJobArchived: (jobId: string, archived: boolean) => void;
   assessments: { id: string; title: string }[];
   categories: { id: string; name: string }[];
@@ -27,7 +44,7 @@ const JobList: React.FC<JobListProps> = ({
   assessments,
   categories
 }) => {
-  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [selectedJob, setSelectedJob] = useState<EditingJob | null>(null);
   const [viewMode, setViewMode] = useState<"view" | "edit" | null>(null);
   const [showApplications, setShowApplications] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState<string | null>(null);
@@ -37,7 +54,7 @@ const JobList: React.FC<JobListProps> = ({
 
   const filteredJobs = jobs.filter(job => job.archived === (filter === "archived"));
 
-  const fetchJobRelatedData = async (job: Job): Promise<Job> => {
+  const fetchJobRelatedData = async (job: Job): Promise<EditingJob> => {
     try {
       setIsLoading(true);
       

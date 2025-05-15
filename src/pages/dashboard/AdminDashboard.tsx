@@ -2,6 +2,7 @@
 import React from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import DashboardStats from "@/components/dashboard/DashboardStats";
 import JobListings from "@/components/dashboard/JobListings";
 import ApplicationsList from "@/components/dashboard/ApplicationsList";
@@ -13,7 +14,6 @@ import { useAuth } from "@/contexts/auth";
 import { useJobApplications } from "@/hooks/useJobApplications";
 import { usePendingCandidates } from "@/hooks/usePendingCandidates";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserRole } from "@/types";
 
 const AdminDashboard = () => {
   const { user, profile } = useAuth();
@@ -27,21 +27,13 @@ const AdminDashboard = () => {
     data: pendingCandidates,
     isLoading: isLoadingPendingCandidates
   } = usePendingCandidates(profile?.role);
-  
-  // Admin dashboard stats
-  const dashboardStats = [
-    { value: 24, label: 'Total Jobs', change: 8 },
-    { value: 156, label: 'Total Applications', change: 12 },
-    { value: 32, label: 'Scheduled Interviews', change: -3 },
-    { value: 87, label: 'Overall Success Rate', change: 5 },
-  ];
 
   return (
     <MainLayout>
       <TooltipProvider>
         <div className="container mx-auto px-4 py-8 space-y-8">
-          <DashboardHeader userName={profile?.name} userRole={profile?.role as UserRole} />
-          <DashboardStats stats={dashboardStats} />
+          <DashboardHeader userName={profile?.name} userRole={profile?.role} />
+          <DashboardStats />
 
           <Tabs defaultValue="applications" className="w-full">
             <TabsList className="mb-4">

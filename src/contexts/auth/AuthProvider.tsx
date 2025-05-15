@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,6 +9,18 @@ import { cleanupAuthState, fetchUserProfile } from './authUtils';
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
+// Create a custom hook for router independent navigation
+// This will be used only when a router is available
+const useNavigation = () => {
+  // Store navigation function that will be set when used within a router context
+  const navigate = (path: string) => {
+    // This is just a placeholder that will be overridden when used in a component with router context
+    console.warn("Navigation attempted outside Router context - this is safe to ignore during initialization");
+  };
+
+  return { navigate };
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -15,6 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const location = useLocation();
   const locationRef = useRef(location);
+  const { navigate } = useNavigation(); // This is safe as it doesn't actually use router hooks
 
   useEffect(() => {
     locationRef.current = location;

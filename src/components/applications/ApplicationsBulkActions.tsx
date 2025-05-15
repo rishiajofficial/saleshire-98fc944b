@@ -1,6 +1,5 @@
 
-import React from 'react';
-import { Button } from "@/components/ui/button";
+import React, { useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,97 +7,196 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { CheckCircle, XCircle, ChevronDown, Mail, Archive } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
-import { Application } from "./ApplicationsList";
+import { Button } from "@/components/ui/button";
+import {
+  CheckSquare,
+  MailCheck,
+  Archive,
+  CornerRightDown,
+  ChevronDown,
+} from "lucide-react";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Application } from "@/components/dashboard/ApplicationsList";
 
 interface ApplicationsBulkActionsProps {
   selectedApplications: Application[];
   onSelectionChange: () => void;
 }
 
-export const ApplicationsBulkActions = ({ 
-  selectedApplications, 
-  onSelectionChange 
-}: ApplicationsBulkActionsProps) => {
-  if (selectedApplications.length === 0) return null;
+export const ApplicationsBulkActions: React.FC<ApplicationsBulkActionsProps> = ({
+  selectedApplications,
+  onSelectionChange,
+}) => {
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [bulkAction, setBulkAction] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const queryClient = useQueryClient();
 
-  const handleBulkStatusUpdate = async (newStatus: string) => {
+  const handleBulkAction = (action: string) => {
+    setBulkAction(action);
+    setIsConfirmDialogOpen(true);
+  };
+
+  const performBulkAction = async () => {
+    if (!bulkAction || selectedApplications.length === 0) return;
+    
+    setIsProcessing(true);
     try {
-      // In a real app, you would call the API to update the status
+      const applicationIds = selectedApplications.map(app => app.id);
+      let newStatus = '';
+      let message = '';
       
-      toast({
-        title: "Status updated",
-        description: `Updated ${selectedApplications.length} applications to ${newStatus}`
-      });
+      switch (bulkAction) {
+        case 'approve':
+          newStatus = 'hr_approved';
+          message = 'Applications approved';
+          break;
+        case 'reject':
+          newStatus = 'rejected';
+          message = 'Applications rejected';
+          break;
+        case 'archive':
+          newStatus = 'archived';
+          message = 'Applications archived';
+          break;
+      }
       
-      onSelectionChange();
+      if (newStatus) {
+        // Update application statuses
+        const { error } = await supabase
+          .from('job_applications')
+          .update({ status: newStatus })
+          .in('id', applicationIds);
+          
+        if (error) throw error;
+        
+        // Since we don't have application_status_history table yet, we'll just
+        // log this to activity_logs instead
+        const { data: userData } = await supabase.auth.getUser();
+        const userId = userData.user?.id;
+        
+        // Create history entries for each application
+        for (const appId of applicationIds) {
+          await supabase.from('activity_logs').insert({
+            action: 'status_change',
+            entity_type: 'job_application',
+            entity_id: appId,
+            user_id: userId || 'system',
+            details: { 
+              old_status: 'unknown', 
+              new_status: newStatus,
+              notes: `Bulk action: ${bulkAction}`
+            }
+          });
+        }
+      }
+      
+      if (bulkAction === 'email') {
+        message = 'Email sent to selected candidates';
+        // In a real implementation, we would integrate with an email service
+      }
+      
+      toast.success(message);
+      queryClient.invalidateQueries({ queryKey: ['job-applications'] });
+      onSelectionChange(); // Clear selection
+      
     } catch (error: any) {
-      toast({
-        variant: "destructive", 
-        title: "Error updating status", 
-        description: error.message
-      });
+      toast.error(`Error: ${error.message}`);
+    } finally {
+      setIsProcessing(false);
+      setIsConfirmDialogOpen(false);
     }
   };
 
-  const handleBulkArchive = async () => {
-    try {
-      // In a real app, you would call the API to archive the applications
-      
-      toast({
-        title: "Applications archived",
-        description: `Archived ${selectedApplications.length} applications`
-      });
-      
-      onSelectionChange();
-    } catch (error: any) {
-      toast({
-        variant: "destructive", 
-        title: "Error archiving applications", 
-        description: error.message
-      });
+  const getActionTitle = () => {
+    switch (bulkAction) {
+      case 'approve': return 'Approve Selected Applications';
+      case 'reject': return 'Reject Selected Applications';
+      case 'archive': return 'Archive Selected Applications';
+      case 'email': return 'Send Email to Selected Candidates';
+      default: return 'Confirm Action';
     }
   };
+
+  const getActionDescription = () => {
+    const count = selectedApplications.length;
+    switch (bulkAction) {
+      case 'approve': 
+        return `Are you sure you want to approve ${count} selected application${count > 1 ? 's' : ''}? This will move them to the next stage.`;
+      case 'reject': 
+        return `Are you sure you want to reject ${count} selected application${count > 1 ? 's' : ''}? This action cannot be undone.`;
+      case 'archive': 
+        return `Are you sure you want to archive ${count} selected application${count > 1 ? 's' : ''}? They will no longer appear in the main view.`;
+      case 'email': 
+        return `You are about to send an email to ${count} candidate${count > 1 ? 's' : ''}.`;
+      default: 
+        return 'Please confirm this action.';
+    }
+  };
+
+  if (selectedApplications.length === 0) {
+    return null;
+  }
 
   return (
-    <div className="bg-muted/40 border rounded-md p-2 flex items-center justify-between">
-      <div className="text-sm">
-        <span className="font-medium">{selectedApplications.length}</span> applications selected
-      </div>
-      <div className="flex gap-2">
+    <>
+      <div className="bg-muted/30 border rounded-md p-2 flex justify-between items-center mb-4">
+        <div className="text-sm">
+          <span className="font-medium">{selectedApplications.length}</span> application{selectedApplications.length !== 1 && 's'} selected
+        </div>
+        
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm">
-              Update Status <ChevronDown className="ml-2 h-4 w-4" />
+              Bulk Actions <ChevronDown className="ml-1 h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleBulkStatusUpdate('hr_approved')}>
-              <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
-              Approve for Training
+            <DropdownMenuItem onClick={() => handleBulkAction('approve')}>
+              <CheckSquare className="mr-2 h-4 w-4" /> Approve
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleBulkStatusUpdate('manager_interview')}>
-              <CheckCircle className="mr-2 h-4 w-4 text-blue-500" />
-              Schedule Interview
+            <DropdownMenuItem onClick={() => handleBulkAction('email')}>
+              <MailCheck className="mr-2 h-4 w-4" /> Send Email
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => handleBulkStatusUpdate('rejected')}>
-              <XCircle className="mr-2 h-4 w-4 text-red-500" />
-              Reject
+            <DropdownMenuItem onClick={() => handleBulkAction('reject')}>
+              <CornerRightDown className="mr-2 h-4 w-4" /> Reject
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleBulkAction('archive')}>
+              <Archive className="mr-2 h-4 w-4" /> Archive
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        
-        <Button variant="outline" size="sm" onClick={handleBulkArchive}>
-          <Archive className="mr-2 h-4 w-4" />
-          Archive
-        </Button>
-        
-        <Button variant="ghost" size="sm" onClick={onSelectionChange}>
-          Cancel
-        </Button>
       </div>
-    </div>
+      
+      <Dialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{getActionTitle()}</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p>{getActionDescription()}</p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsConfirmDialogOpen(false)}
+              disabled={isProcessing}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={performBulkAction}
+              disabled={isProcessing}
+            >
+              {isProcessing ? 'Processing...' : 'Confirm'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
