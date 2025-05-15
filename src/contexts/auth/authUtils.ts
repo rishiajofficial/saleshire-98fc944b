@@ -83,8 +83,8 @@ export const parseProfile = (profile: any) => {
   let normalizedProfile = { ...profile };
   
   // If companies property exists, assign to company property
-  if (profile.companies) {
-    normalizedProfile.company = profile.companies;
+  if (normalizedProfile.companies) {
+    normalizedProfile.company = normalizedProfile.companies;
     delete normalizedProfile.companies;
   }
 
