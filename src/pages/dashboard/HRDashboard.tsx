@@ -6,7 +6,7 @@ import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import DashboardStats from '@/components/dashboard/DashboardStats';
 import NotificationsCard from '@/components/dashboard/NotificationsCard';
 import JobsList from '@/components/jobs/JobsList';
-import ApplicationsList from '@/components/applications/ApplicationsList';
+import ApplicationsList from '@/components/dashboard/ApplicationsList';
 import TrainingCard from '@/components/dashboard/TrainingCard';
 import { useJobApplications } from '@/hooks/useJobApplications';
 import { UserRole } from '@/types';
