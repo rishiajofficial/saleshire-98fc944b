@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -50,12 +51,13 @@ interface JobFormProps {
   onSubmit: (data: any) => void;
   job?: Job;
   isSubmitting?: boolean;
+  assessments?: { id: string; title: string }[];
+  modules?: any[];
+  mode?: "view" | "create" | "edit";
 }
 
-export default function JobForm({ onSubmit, job, isSubmitting = false }: JobFormProps) {
+export default function JobForm({ onSubmit, job, isSubmitting = false, assessments = [], modules = [], mode = "create" }: JobFormProps) {
   const { profile } = useAuth();
-  const [assessments, setAssessments] = useState<any[]>([]);
-  const [trainingModules, setTrainingModules] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Set up form with default values
@@ -81,6 +83,12 @@ export default function JobForm({ onSubmit, job, isSubmitting = false }: JobForm
       try {
         setLoading(true);
         
+        // If assessments and modules are provided as props, we don't need to fetch them
+        if ((assessments && assessments.length > 0) || (modules && modules.length > 0)) {
+          setLoading(false);
+          return;
+        }
+
         let assessmentsQuery = supabase
           .from('assessments')
           .select('id, title')
@@ -114,8 +122,7 @@ export default function JobForm({ onSubmit, job, isSubmitting = false }: JobForm
         if (assessmentsResult.error) throw assessmentsResult.error;
         if (modulesResult.error) throw modulesResult.error;
         
-        setAssessments(assessmentsResult.data || []);
-        setTrainingModules(modulesResult.data || []);
+        // Skip since we're using props
       } catch (error) {
         console.error('Failed to load form data:', error);
       } finally {
@@ -124,7 +131,7 @@ export default function JobForm({ onSubmit, job, isSubmitting = false }: JobForm
     }
     
     fetchData();
-  }, [profile?.company_id]);
+  }, [profile?.company_id, assessments, modules]);
 
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
     onSubmit({
@@ -132,6 +139,11 @@ export default function JobForm({ onSubmit, job, isSubmitting = false }: JobForm
       id: job?.id,
     });
   };
+
+  const isViewOnly = mode === "view";
+
+  // Turn off form controls if in view-only mode
+  const formReadonly = isViewOnly;
 
   return (
     <Form {...form}>
@@ -144,7 +156,7 @@ export default function JobForm({ onSubmit, job, isSubmitting = false }: JobForm
               <FormItem>
                 <FormLabel>Job Title *</FormLabel>
                 <FormControl>
-                  <Input placeholder="Sales Representative" {...field} />
+                  <Input placeholder="Sales Representative" {...field} disabled={formReadonly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -158,7 +170,7 @@ export default function JobForm({ onSubmit, job, isSubmitting = false }: JobForm
               <FormItem>
                 <FormLabel>Department</FormLabel>
                 <FormControl>
-                  <Input placeholder="Sales" {...field} />
+                  <Input placeholder="Sales" {...field} disabled={formReadonly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -174,7 +186,7 @@ export default function JobForm({ onSubmit, job, isSubmitting = false }: JobForm
               <FormItem>
                 <FormLabel>Location</FormLabel>
                 <FormControl>
-                  <Input placeholder="Remote, New York, etc." {...field} />
+                  <Input placeholder="Remote, New York, etc." {...field} disabled={formReadonly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -190,6 +202,7 @@ export default function JobForm({ onSubmit, job, isSubmitting = false }: JobForm
                 <Select
                   onValueChange={field.onChange}
                   defaultValue={field.value}
+                  disabled={formReadonly}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -218,7 +231,7 @@ export default function JobForm({ onSubmit, job, isSubmitting = false }: JobForm
               <FormItem>
                 <FormLabel>Salary Range</FormLabel>
                 <FormControl>
-                  <Input placeholder="$60,000 - $80,000" {...field} />
+                  <Input placeholder="$60,000 - $80,000" {...field} disabled={formReadonly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -234,6 +247,7 @@ export default function JobForm({ onSubmit, job, isSubmitting = false }: JobForm
                 <Select
                   onValueChange={field.onChange}
                   defaultValue={field.value}
+                  disabled={formReadonly}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -263,6 +277,7 @@ export default function JobForm({ onSubmit, job, isSubmitting = false }: JobForm
                   placeholder="Job description and responsibilities"
                   className="min-h-[200px]"
                   {...field}
+                  disabled={formReadonly}
                 />
               </FormControl>
               <FormMessage />
@@ -279,6 +294,7 @@ export default function JobForm({ onSubmit, job, isSubmitting = false }: JobForm
               <Select
                 onValueChange={field.onChange}
                 value={field.value || undefined}
+                disabled={formReadonly}
               >
                 <FormControl>
                   <SelectTrigger>
@@ -309,7 +325,7 @@ export default function JobForm({ onSubmit, job, isSubmitting = false }: JobForm
             <FormItem>
               <FormLabel>Training Modules</FormLabel>
               <div className="flex flex-col space-y-2 mt-2">
-                {trainingModules.map((module) => (
+                {modules.map((module) => (
                   <div key={module.id} className="flex items-center space-x-2">
                     <input
                       type="checkbox"
@@ -317,6 +333,7 @@ export default function JobForm({ onSubmit, job, isSubmitting = false }: JobForm
                       value={module.id}
                       checked={field.value?.includes(module.id) || false}
                       onChange={(e) => {
+                        if (formReadonly) return;
                         if (e.target.checked) {
                           field.onChange([...(field.value || []), module.id]);
                         } else {
@@ -325,6 +342,7 @@ export default function JobForm({ onSubmit, job, isSubmitting = false }: JobForm
                           );
                         }
                       }}
+                      disabled={formReadonly}
                       className="rounded border-gray-300 text-primary focus:ring-primary"
                     />
                     <Label htmlFor={`module-${module.id}`}>{module.title}</Label>
@@ -354,15 +372,18 @@ export default function JobForm({ onSubmit, job, isSubmitting = false }: JobForm
                 <Switch
                   checked={field.value}
                   onCheckedChange={field.onChange}
+                  disabled={formReadonly}
                 />
               </FormControl>
             </FormItem>
           )}
         />
 
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
-          {isSubmitting ? "Saving..." : job ? "Update Job" : "Create Job"}
-        </Button>
+        {!isViewOnly && (
+          <Button type="submit" className="w-full" disabled={isSubmitting || formReadonly}>
+            {isSubmitting ? "Saving..." : job ? "Update Job" : "Create Job"}
+          </Button>
+        )}
       </form>
     </Form>
   );

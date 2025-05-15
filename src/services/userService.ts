@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { BaseService, ServiceResponse } from "./baseService";
 
@@ -87,12 +88,13 @@ export const UserService = {
       if (!data) throw new Error('User not found');
       
       // Normalize companies to company for easier access
-      if (data.companies) {
-        data.company = data.companies;
-        delete data.companies;
+      const normalizedData = { ...data };
+      if (normalizedData.companies) {
+        normalizedData.company = normalizedData.companies;
+        delete normalizedData.companies;
       }
       
-      return { success: true, data };
+      return { success: true, data: normalizedData };
     } catch (error: any) {
       console.error('Error getting user details:', error.message);
       return { success: false, error: error.message };

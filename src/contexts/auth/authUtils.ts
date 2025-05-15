@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 // Helper function to clean up auth state
@@ -50,16 +51,20 @@ export const fetchUserProfile = async (userId: string) => {
         user_uuid: userId
       });
       
-      profile.isCompanyAdmin = isAdmin;
+      // Add isCompanyAdmin flag to the profile object
+      const enhancedProfile = { ...profile, isCompanyAdmin: isAdmin };
+      
+      // Format the returned data for easier access
+      if (enhancedProfile.companies) {
+        enhancedProfile.company = enhancedProfile.companies;
+        delete enhancedProfile.companies;
+      }
+      
+      return enhancedProfile;
     }
     
-    // Format the returned data for easier access
-    if (profile.companies) {
-      profile.company = profile.companies;
-      delete profile.companies;
-    }
-    
-    return profile;
+    // For users without company, normalize and return
+    return parseProfile(profile);
   } catch (error: any) {
     console.error('Error in fetchUserProfile:', error.message);
     return null;
@@ -80,8 +85,10 @@ export const parseProfile = (profile: any) => {
     delete normalizedProfile.companies;
   }
 
-  // Add isCompanyAdmin flag if the user is an admin for a company
-  normalizedProfile.isCompanyAdmin = !!normalizedProfile.company;
+  // Add isCompanyAdmin flag if not already set
+  if (normalizedProfile.isCompanyAdmin === undefined) {
+    normalizedProfile.isCompanyAdmin = false;
+  }
   
   return normalizedProfile;
 };

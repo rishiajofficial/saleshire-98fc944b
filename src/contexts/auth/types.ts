@@ -4,7 +4,7 @@ import { Session, User } from '@supabase/supabase-js';
 export interface AuthContextProps {
   session: Session | null;
   user: User | null;
-  profile: any;
+  profile: UserProfile | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, userData: any) => Promise<void>;
@@ -26,4 +26,5 @@ export interface UserProfile {
   role: string;
   company_id: string | null;
   company?: CompanyProfile;
+  isCompanyAdmin?: boolean;
 }

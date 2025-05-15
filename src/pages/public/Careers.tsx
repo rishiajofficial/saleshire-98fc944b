@@ -1,10 +1,11 @@
+
 import React from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { useJobOpenings } from "@/hooks/useJobOpenings";
 import PublicJobListings from "@/components/public/PublicJobListings";
 
 export default function Careers() {
-  const { jobs, loading } = useJobOpenings();
+  const { jobs, isLoading } = useJobOpenings();
   
   return (
     <MainLayout title="Careers">
@@ -19,7 +20,7 @@ export default function Careers() {
         <div className="max-w-4xl mx-auto">
           <PublicJobListings 
             jobs={jobs} 
-            isLoading={loading}  // Changed prop name from loading to isLoading
+            isLoading={isLoading}
           />
         </div>
       </div>
