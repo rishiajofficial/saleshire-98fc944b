@@ -1,38 +1,36 @@
 
-import { toast as sonnerToast, Toast } from "sonner";
+import { toast as sonnerToast, type ToastT } from "sonner";
 
-export interface ToastProps {
+type ToastProps = {
   title?: string;
   description?: string;
-  variant?: "default" | "destructive" | "success";
+  variant?: "default" | "destructive";
   duration?: number;
-}
+};
 
-export const toast = {
-  toast: ({ title, description, variant, duration }: ToastProps): string | number => {
-    if (variant === "destructive") {
-      return sonnerToast.error(title, {
-        description,
-        duration: duration || 3000,
-      });
-    }
+export type Toast = ToastT;
 
-    if (variant === "success") {
-      return sonnerToast.success(title, {
-        description,
-        duration: duration || 3000,
-      });
-    }
-
-    return sonnerToast(title, {
-      description,
-      duration: duration || 3000,
-    });
-  },
-  // Add empty array for toast.toasts to fix type error
-  toasts: [] as Toast[],
+const toast = ({
+  title,
+  description,
+  variant = "default",
+  duration = 3000,
+}: ToastProps) => {
+  return sonnerToast(title || "", {
+    description,
+    duration,
+    className: variant === "destructive" ? "destructive" : "",
+  });
 };
 
 export const useToast = () => {
-  return { toast };
+  return {
+    toast,
+    // This is just to maintain compatibility with existing code
+    // that expects a toasts property
+    toasts: [] as Toast[],
+  };
 };
+
+// For direct imports
+export { toast };
