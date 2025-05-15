@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { BaseService, ServiceResponse } from "./baseService";
 
@@ -120,3 +119,18 @@ export const UserService = {
 };
 
 export default UserService;
+
+export const normalizeProfile = (profileData: any) => {
+  if (!profileData) return null;
+  
+  // Create a normalized copy of the profile data
+  const normalized = { ...profileData };
+  
+  // Convert companies field to company for consistency
+  if (profileData.companies && !profileData.company) {
+    normalized.company = profileData.companies;
+    delete normalized.companies;
+  }
+  
+  return normalized;
+};

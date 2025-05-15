@@ -14,6 +14,7 @@ import { useAuth } from "@/contexts/auth";
 import { useJobApplications } from "@/hooks/useJobApplications";
 import { usePendingCandidates } from "@/hooks/usePendingCandidates";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { UserRole } from "@/types";
 
 const AdminDashboard = () => {
   const { user, profile } = useAuth();
@@ -32,7 +33,7 @@ const AdminDashboard = () => {
     <MainLayout>
       <TooltipProvider>
         <div className="container mx-auto px-4 py-8 space-y-8">
-          <DashboardHeader userName={profile?.name} userRole={profile?.role} />
+          <DashboardHeader userName={profile?.name} userRole={profile?.role as UserRole} />
           <DashboardStats />
 
           <Tabs defaultValue="applications" className="w-full">

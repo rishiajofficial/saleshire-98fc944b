@@ -8,6 +8,7 @@ import { TrainingCard } from "@/components/dashboard/TrainingCard";
 import { NotificationsCard } from "@/components/dashboard/NotificationsCard";
 import { useAuth } from "@/contexts/auth";
 import { supabase } from "@/integrations/supabase/client";
+import { UserRole } from "@/types";
 
 const HRDashboard = () => {
   const { profile } = useAuth();
@@ -60,7 +61,7 @@ const HRDashboard = () => {
 
   return (
     <MainLayout title="HR Dashboard">
-      <DashboardHeader userName={profile?.name} userRole={profile?.role} />
+      <DashboardHeader userName={profile?.name} userRole={profile?.role as UserRole} />
       <div className="grid gap-6 mt-8">
         <DashboardStats />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

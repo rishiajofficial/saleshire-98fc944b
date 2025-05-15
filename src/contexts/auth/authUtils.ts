@@ -51,10 +51,13 @@ export const fetchUserProfile = async (userId: string) => {
         user_uuid: userId
       });
       
-      // Add isCompanyAdmin flag to the profile object
-      const enhancedProfile = { ...profile, isCompanyAdmin: isAdmin };
-      
       // Format the returned data for easier access
+      const enhancedProfile = { 
+        ...profile, 
+        isCompanyAdmin: isAdmin 
+      };
+      
+      // Convert companies to company for easier access
       if (enhancedProfile.companies) {
         enhancedProfile.company = enhancedProfile.companies;
         delete enhancedProfile.companies;

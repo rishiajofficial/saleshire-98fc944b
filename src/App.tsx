@@ -1,5 +1,4 @@
-
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 
 // Auth-related imports
@@ -67,287 +66,285 @@ import "./App.css";
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<Index />} />
-          <Route path="/careers" element={<Careers />} />
-          
-          {/* Auth Routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<Index />} />
+        <Route path="/careers" element={<Careers />} />
+        
+        {/* Auth Routes */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
-          {/* Admin Routes */}
-          <Route
-            path="/dashboard/admin"
-            element={
-              <ProtectedRoute allowedRoles={["admin"]}>
-                <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/users"
-            element={
-              <ProtectedRoute allowedRoles={["admin"]}>
-                <UserManagement />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/companies"
-            element={
-              <ProtectedRoute allowedRoles={["admin"]}>
-                <CompanyManagement />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/activity-log"
-            element={
-              <ProtectedRoute allowedRoles={["admin"]}>
-                <ActivityLog />
-              </ProtectedRoute>
-            }
-          />
+        {/* Admin Routes */}
+        <Route
+          path="/dashboard/admin"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <UserManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/companies"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <CompanyManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/activity-log"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <ActivityLog />
+            </ProtectedRoute>
+          }
+        />
 
-          {/* Manager Routes */}
-          <Route
-            path="/dashboard/manager"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <ManagerDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/candidates"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <Candidates />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/candidates/:id"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <CandidateDetail />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/applications"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <Applications />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/applications/:id"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <JobApplicationDetail />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/interviews"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <Interviews />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/assessments"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <Assessments />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/analytics"
-            element={
-              <ProtectedRoute allowedRoles={["manager"]}>
-                <Analytics />
-              </ProtectedRoute>
-            }
-          />
+        {/* Manager Routes */}
+        <Route
+          path="/dashboard/manager"
+          element={
+            <ProtectedRoute allowedRoles={["manager"]}>
+              <ManagerDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/candidates"
+          element={
+            <ProtectedRoute allowedRoles={["manager"]}>
+              <Candidates />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/candidates/:id"
+          element={
+            <ProtectedRoute allowedRoles={["manager"]}>
+              <CandidateDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/applications"
+          element={
+            <ProtectedRoute allowedRoles={["manager"]}>
+              <Applications />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/applications/:id"
+          element={
+            <ProtectedRoute allowedRoles={["manager"]}>
+              <JobApplicationDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/interviews"
+          element={
+            <ProtectedRoute allowedRoles={["manager"]}>
+              <Interviews />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/assessments"
+          element={
+            <ProtectedRoute allowedRoles={["manager"]}>
+              <Assessments />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/analytics"
+          element={
+            <ProtectedRoute allowedRoles={["manager"]}>
+              <Analytics />
+            </ProtectedRoute>
+          }
+        />
 
-          {/* HR Routes */}
-          <Route
-            path="/dashboard/hr"
-            element={
-              <ProtectedRoute allowedRoles={["hr"]}>
-                <HRDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/hr/jobs"
-            element={
-              <ProtectedRoute allowedRoles={["hr", "admin"]}>
-                <JobManagement />
-              </ProtectedRoute>
-            }
-          />
+        {/* HR Routes */}
+        <Route
+          path="/dashboard/hr"
+          element={
+            <ProtectedRoute allowedRoles={["hr"]}>
+              <HRDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/hr/jobs"
+          element={
+            <ProtectedRoute allowedRoles={["hr", "admin"]}>
+              <JobManagement />
+            </ProtectedRoute>
+          }
+        />
 
-          {/* Director Routes */}
-          <Route
-            path="/dashboard/director"
-            element={
-              <ProtectedRoute allowedRoles={["director"]}>
-                <DirectorDashboard />
-              </ProtectedRoute>
-            }
-          />
+        {/* Director Routes */}
+        <Route
+          path="/dashboard/director"
+          element={
+            <ProtectedRoute allowedRoles={["director"]}>
+              <DirectorDashboard />
+            </ProtectedRoute>
+          }
+        />
 
-          {/* Training Routes - Available to all roles */}
-          <Route
-            path="/training"
-            element={
-              <ProtectedRoute allowedRoles={["admin", "hr", "manager", "candidate", "director"]}>
-                <Training />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/training/module/:id"
-            element={
-              <ProtectedRoute allowedRoles={["admin", "hr", "manager", "candidate", "director"]}>
-                <ModuleView />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/training/video/:id"
-            element={
-              <ProtectedRoute allowedRoles={["admin", "hr", "manager", "candidate", "director"]}>
-                <VideoPlayer />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/training/quiz/:moduleId"
-            element={
-              <ProtectedRoute allowedRoles={["admin", "hr", "manager", "candidate", "director"]}>
-                <Quiz />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/training/assessment/:assessmentId"
-            element={
-              <ProtectedRoute allowedRoles={["admin", "hr", "manager", "candidate", "director"]}>
-                <AssessmentQuiz />
-              </ProtectedRoute>
-            }
-          />
+        {/* Training Routes - Available to all roles */}
+        <Route
+          path="/training"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "hr", "manager", "candidate", "director"]}>
+              <Training />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/training/module/:id"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "hr", "manager", "candidate", "director"]}>
+              <ModuleView />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/training/video/:id"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "hr", "manager", "candidate", "director"]}>
+              <VideoPlayer />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/training/quiz/:moduleId"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "hr", "manager", "candidate", "director"]}>
+              <Quiz />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/training/assessment/:assessmentId"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "hr", "manager", "candidate", "director"]}>
+              <AssessmentQuiz />
+            </ProtectedRoute>
+          }
+        />
 
-          {/* Training Management */}
-          <Route
-            path="/admin/training"
-            element={
-              <ProtectedRoute allowedRoles={["admin", "hr"]}>
-                <TrainingManagement />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/training/module/:id"
-            element={
-              <ProtectedRoute allowedRoles={["admin", "hr"]}>
-                <TrainingModuleDetails />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/assessments/:id"
-            element={
-              <ProtectedRoute allowedRoles={["admin", "hr"]}>
-                <AssessmentDetails />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/assessments/:assessmentId/sections/:sectionId"
-            element={
-              <ProtectedRoute allowedRoles={["admin", "hr"]}>
-                <AssessmentSectionDetails />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/assessments/:assessmentId/results/:resultId"
-            element={
-              <ProtectedRoute allowedRoles={["admin", "hr"]}>
-                <AssessmentResultDetails />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/questions/:id"
-            element={
-              <ProtectedRoute allowedRoles={["admin", "hr"]}>
-                <QuestionDetails />
-              </ProtectedRoute>
-            }
-          />
+        {/* Training Management */}
+        <Route
+          path="/admin/training"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "hr"]}>
+              <TrainingManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/training/module/:id"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "hr"]}>
+              <TrainingModuleDetails />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/assessments/:id"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "hr"]}>
+              <AssessmentDetails />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/assessments/:assessmentId/sections/:sectionId"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "hr"]}>
+              <AssessmentSectionDetails />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/assessments/:assessmentId/results/:resultId"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "hr"]}>
+              <AssessmentResultDetails />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/questions/:id"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "hr"]}>
+              <QuestionDetails />
+            </ProtectedRoute>
+          }
+        />
 
-          {/* Candidate Routes */}
-          <Route
-            path="/dashboard/candidate"
-            element={
-              <ProtectedRoute allowedRoles={["candidate"]}>
-                <CandidateDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/application"
-            element={
-              <ProtectedRoute allowedRoles={["candidate"]}>
-                <Application />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/openings"
-            element={
-              <ProtectedRoute allowedRoles={["candidate"]}>
-                <JobOpenings />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/test-storage"
-            element={
-              <ProtectedRoute allowedRoles={["candidate"]}>
-                <StorageTest />
-              </ProtectedRoute>
-            }
-          />
+        {/* Candidate Routes */}
+        <Route
+          path="/dashboard/candidate"
+          element={
+            <ProtectedRoute allowedRoles={["candidate"]}>
+              <CandidateDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/application"
+          element={
+            <ProtectedRoute allowedRoles={["candidate"]}>
+              <Application />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/openings"
+          element={
+            <ProtectedRoute allowedRoles={["candidate"]}>
+              <JobOpenings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/test-storage"
+          element={
+            <ProtectedRoute allowedRoles={["candidate"]}>
+              <StorageTest />
+            </ProtectedRoute>
+          }
+        />
 
-          {/* Common Routes */}
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute allowedRoles={["admin", "hr", "manager", "candidate", "director"]}>
-                <Profile />
-              </ProtectedRoute>
-            }
-          />
+        {/* Common Routes */}
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "hr", "manager", "candidate", "director"]}>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
 
-          {/* Not Found */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-        <Toaster position="top-right" richColors />
-      </Router>
+        {/* Not Found */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      <Toaster position="top-right" richColors />
     </AuthProvider>
   );
 }
