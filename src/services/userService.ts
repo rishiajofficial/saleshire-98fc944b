@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { BaseService, ServiceResponse } from "./baseService";
 
@@ -87,7 +86,7 @@ export const UserService = {
       if (error) throw error;
       if (!data) throw new Error('User not found');
       
-      // Rename companies to company for easier access
+      // Normalize companies to company for easier access
       if (data.companies) {
         data.company = data.companies;
         delete data.companies;
@@ -99,7 +98,7 @@ export const UserService = {
       return { success: false, error: error.message };
     }
   },
-
+  
   // Get users by company
   async getUsersByCompany(companyId: string): Promise<ServiceResponse> {
     try {

@@ -21,7 +21,7 @@ import {
 export interface NavItem {
   title: string;
   href: string;
-  icon: LucideIcon;
+  icon: React.ElementType;
   role: string[];
   submenu?: NavItem[];
 }

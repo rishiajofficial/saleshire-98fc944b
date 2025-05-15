@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -23,7 +22,7 @@ interface EditingJob {
   salary_range: string;
   selectedAssessment: string;
   selectedModules: string[];
-  status?: string;
+  status: string; // Changed from optional to required
   archived?: boolean;
   created_at?: string;
   updated_at?: string;
@@ -91,13 +90,15 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
       const updatedJob: EditingJob = { 
         ...editingJob, 
         ...form,
-        selectedAssessment: form.selectedAssessment === "none" ? null : form.selectedAssessment
+        selectedAssessment: form.selectedAssessment === "none" ? null : form.selectedAssessment,
+        status: form.status || "active" // Ensure status is always defined
       };
       onJobUpdated(updatedJob);
     } else if (onJobCreated) {
       const processedForm = {
         ...form,
-        selectedAssessment: form.selectedAssessment === "none" ? null : form.selectedAssessment
+        selectedAssessment: form.selectedAssessment === "none" ? null : form.selectedAssessment,
+        status: form.status || "active" // Ensure status is always defined when creating
       };
       onJobCreated(processedForm);
     }

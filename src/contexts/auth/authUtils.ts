@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 // Helper function to clean up auth state
@@ -65,4 +64,24 @@ export const fetchUserProfile = async (userId: string) => {
     console.error('Error in fetchUserProfile:', error.message);
     return null;
   }
+};
+
+export const parseProfile = (profile: any) => {
+  if (!profile) {
+    return null;
+  }
+
+  // Normalize companies to company for easier access
+  let normalizedProfile = { ...profile };
+  
+  // If companies property exists, assign to company property
+  if (profile.companies) {
+    normalizedProfile.company = profile.companies;
+    delete normalizedProfile.companies;
+  }
+
+  // Add isCompanyAdmin flag if the user is an admin for a company
+  normalizedProfile.isCompanyAdmin = !!normalizedProfile.company;
+  
+  return normalizedProfile;
 };
