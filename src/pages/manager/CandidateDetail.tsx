@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
@@ -20,7 +21,7 @@ interface CandidateDetailParams {
 }
 
 const CandidateDetail: React.FC = () => {
-  const { id } = useParams<CandidateDetailParams>();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -28,6 +29,20 @@ const CandidateDetail: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  
+  // State for candidate info
+  const [phone, setPhone] = useState('');
+  const [location, setLocation] = useState('');
+  const [region, setRegion] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
+  
+  // State for status section
+  const [applicationStatus, setApplicationStatus] = useState('');
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  
+  // State for project section
+  const [projectStatus, setProjectStatus] = useState<'not_started' | 'assigned' | 'completed_success' | 'rejected' | 'failed'>('not_started');
+  const [isUpdatingProject, setIsUpdatingProject] = useState(false);
 
   useEffect(() => {
     const fetchCandidate = async () => {
@@ -41,6 +56,12 @@ const CandidateDetail: React.FC = () => {
         }
         const data = await response.json();
         setCandidate(data);
+        // Initialize state values from data
+        setPhone(data.phone || '');
+        setLocation(data.location || '');
+        setRegion(data.region || '');
+        setApplicationStatus(data.status || '');
+        setProjectStatus(data.project_status || 'not_started');
       } catch (e: any) {
         setError(e.message);
         toast({
@@ -53,8 +74,83 @@ const CandidateDetail: React.FC = () => {
       }
     };
 
-    fetchCandidate();
+    if (id) {
+      fetchCandidate();
+    }
   }, [id, toast]);
+
+  const handleGoBack = () => {
+    navigate('/manager/candidates');
+  };
+
+  // Sample assessment results for testing
+  const mockAssessmentResults = [
+    { id: "1", score: 85, completed_at: "2023-05-15T14:30:00Z", assessment: { title: "Sales Assessment" } },
+    { id: "2", score: 92, completed_at: "2023-05-10T09:15:00Z", assessment: { title: "Communication Skills" } },
+  ];
+
+  // Helper function to format dates
+  const formatDate = (date: string) => {
+    if (!date) return '';
+    return new Date(date).toLocaleDateString();
+  };
+
+  // Handlers for candidate info section
+  const handleUpdateCandidateInfo = () => {
+    setIsUpdating(true);
+    // Implement your update logic here
+    setTimeout(() => {
+      setIsUpdating(false);
+      toast({
+        title: "Success",
+        description: "Candidate information updated.",
+      });
+    }, 1000);
+  };
+
+  // Handlers for status section
+  const handleStatusChange = (value: string) => {
+    setApplicationStatus(value);
+  };
+
+  const handleStatusUpdate = () => {
+    setIsUpdatingStatus(true);
+    // Implement your update logic here
+    setTimeout(() => {
+      setIsUpdatingStatus(false);
+      toast({
+        title: "Success",
+        description: "Status updated successfully.",
+      });
+    }, 1000);
+  };
+
+  // Handlers for project section
+  const handleAssignProject = () => {
+    setIsUpdatingProject(true);
+    // Implement your logic here
+    setTimeout(() => {
+      setProjectStatus('assigned');
+      setIsUpdatingProject(false);
+      toast({
+        title: "Success",
+        description: "Project assigned to candidate.",
+      });
+    }, 1000);
+  };
+
+  const handleUpdateProjectOutcome = (outcome: 'completed_success' | 'rejected' | 'failed') => {
+    setIsUpdatingProject(true);
+    // Implement your logic here
+    setTimeout(() => {
+      setProjectStatus(outcome);
+      setIsUpdatingProject(false);
+      toast({
+        title: "Success",
+        description: `Project marked as ${outcome.replace('_', ' ')}.`,
+      });
+    }, 1000);
+  };
 
   if (isLoading) {
     return <div>Loading candidate details...</div>;
@@ -68,63 +164,122 @@ const CandidateDetail: React.FC = () => {
     return <div>Candidate not found.</div>;
   }
 
-  const handleGoBack = () => {
-    navigate('/manager/candidates');
-  };
+  // Sample interviews for testing
+  const mockInterviews = [
+    {
+      id: "1",
+      scheduled_at: "2023-06-15T10:00:00Z",
+      status: "scheduled",
+      notes: "Initial interview with sales manager",
+    }
+  ];
+
+  // Sample managers for testing
+  const mockManagers = [
+    { id: "1", name: "John Smith" },
+    { id: "2", name: "Jane Doe" },
+  ];
 
   return (
     <MainLayout>
-      <DashboardLayout>
-        <div className="container mx-auto mt-8">
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle>Candidate Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CandidateInfo candidate={candidate} />
-            </CardContent>
-          </Card>
+      <DashboardLayout
+        children={
+          <div className="container mx-auto mt-8">
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle>Candidate Details</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CandidateInfo 
+                  candidate={candidate}
+                  phone={phone}
+                  location={location}
+                  region={region}
+                  isUpdating={isUpdating}
+                  isLoading={isLoading}
+                  onPhoneChange={setPhone}
+                  onLocationChange={setLocation}
+                  onRegionChange={setRegion}
+                  onUpdateInfo={handleUpdateCandidateInfo}
+                />
+              </CardContent>
+            </Card>
 
-          <Tabs defaultValue="status" className="w-full">
-            <TabsList>
-              <TabsTrigger value="status">Status Update</TabsTrigger>
-              <TabsTrigger value="project">Project Status</TabsTrigger>
-              <TabsTrigger value="assessment">Assessment Results</TabsTrigger>
-              <TabsTrigger value="video">Video Display</TabsTrigger>
-              <TabsTrigger value="interview">Interview Scheduling</TabsTrigger>
-              <TabsTrigger value="manager">Manager Assignment</TabsTrigger>
-            </TabsList>
-            <TabsContent value="status">
-              <StatusUpdateSection candidate={candidate} />
-            </TabsContent>
-            <TabsContent value="project">
-              <ProjectStatusSection candidate={candidate} />
-            </TabsContent>
-            <TabsContent value="assessment">
-              <AssessmentResultsSection candidate={candidate} />
-            </TabsContent>
-            <TabsContent value="video">
-              <VideoDisplay candidate={candidate} />
-            </TabsContent>
-            <TabsContent value="interview">
-              <InterviewScheduling candidate={candidate} />
-            </TabsContent>
-            <TabsContent value="manager">
-              <ManagerAssignment candidate={candidate} />
-            </TabsContent>
-          </Tabs>
+            <Tabs defaultValue="status" className="w-full">
+              <TabsList>
+                <TabsTrigger value="status">Status Update</TabsTrigger>
+                <TabsTrigger value="project">Project Status</TabsTrigger>
+                <TabsTrigger value="assessment">Assessment Results</TabsTrigger>
+                <TabsTrigger value="video">Video Display</TabsTrigger>
+                <TabsTrigger value="interview">Interview Scheduling</TabsTrigger>
+                <TabsTrigger value="manager">Manager Assignment</TabsTrigger>
+              </TabsList>
+              <TabsContent value="status">
+                <StatusUpdateSection 
+                  applicationStatus={applicationStatus}
+                  isUpdatingStatus={isUpdatingStatus}
+                  candidateData={candidate}
+                  onStatusChange={handleStatusChange}
+                  onStatusUpdate={handleStatusUpdate}
+                />
+              </TabsContent>
+              <TabsContent value="project">
+                <ProjectStatusSection 
+                  candidate={candidate}
+                  projectStatus={projectStatus}
+                  isUpdatingProject={isUpdatingProject}
+                  onAssignProject={handleAssignProject}
+                  onUpdateProjectOutcome={handleUpdateProjectOutcome}
+                />
+              </TabsContent>
+              <TabsContent value="assessment">
+                <AssessmentResultsSection 
+                  assessmentResults={mockAssessmentResults}
+                  isLoadingResults={isLoading}
+                  formatDate={formatDate}
+                />
+              </TabsContent>
+              <TabsContent value="video">
+                <VideoDisplay 
+                  url={candidate.about_me_video || ""}
+                  title="About Me Video"
+                />
+              </TabsContent>
+              <TabsContent value="interview">
+                <InterviewScheduling 
+                  interviews={mockInterviews}
+                />
+              </TabsContent>
+              <TabsContent value="manager">
+                <ManagerAssignment 
+                  selectedManager=""
+                  managers={mockManagers}
+                  isLoadingManagers={false}
+                  isAssigningManager={false}
+                  candidateAssignedManager={candidate.assigned_manager}
+                  onManagerSelect={() => {}}
+                  onAssignManager={() => {}}
+                />
+              </TabsContent>
+            </Tabs>
 
-          <div className="flex justify-between mt-4">
-            <Button variant="outline" onClick={handleGoBack}>
-              Back to Candidates
-            </Button>
-            <Button onClick={() => setIsHistoryOpen(true)}>
-              View History
-            </Button>
+            <div className="flex justify-between mt-4">
+              <Button variant="outline" onClick={handleGoBack}>
+                Back to Candidates
+              </Button>
+              <Button onClick={() => setIsHistoryOpen(true)}>
+                View History
+              </Button>
+            </div>
           </div>
-        </div>
-      </DashboardLayout>
-      <CandidateHistoryDialog isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} candidateId={id} />
+        }
+        sideContent={<div></div>}
+      />
+      <CandidateHistoryDialog 
+        isOpen={isHistoryOpen} 
+        onClose={() => setIsHistoryOpen(false)} 
+        applicationId={id || ""} 
+      />
     </MainLayout>
   );
 };

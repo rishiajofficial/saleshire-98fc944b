@@ -2,11 +2,10 @@
 import React from 'react';
 import { useAuth } from '@/contexts/auth';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import DashboardStats from '@/components/dashboard/DashboardStats';
 import { NotificationsCard } from '@/components/dashboard/NotificationsCard';
 import { JobsList } from '@/components/jobs/JobsList';
-import { ApplicationsList } from '@/components/dashboard/ApplicationsList';
+import ApplicationsList from '@/components/dashboard/ApplicationsList';
 import { TrainingCard } from '@/components/dashboard/TrainingCard';
 import { useJobApplications } from '@/hooks/useJobApplications';
 import { UserRole } from '@/types';
@@ -58,6 +57,12 @@ const HRDashboard = () => {
     };
   });
 
+  // Mock training data for the TrainingCard
+  const mockTrainingModules = [
+    { id: '1', title: 'Onboarding', progress: 75 },
+    { id: '2', title: 'Sales Training', progress: 30 },
+  ];
+
   return (
     <DashboardLayout
       children={
@@ -73,22 +78,27 @@ const HRDashboard = () => {
             <div className="md:col-span-2">
               <NotificationsCard 
                 title="Recent Activity"
-                notifications={formattedLogs.map(log => ({
-                  id: log.id,
-                  title: log.action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                  message: log.displayText,
-                  time: new Date(log.created_at).toLocaleString(),
-                }))}
+                notifications={activityLogs}
               />
             </div>
             <div>
-              <TrainingCard />
+              <TrainingCard 
+                canAccessTraining={true}
+                trainingModules={mockTrainingModules}
+                isLoadingTraining={false}
+              />
             </div>
           </div>
           
           <div className="space-y-6">
             <h2 className="text-xl font-semibold">Job Listings</h2>
-            <JobsList />
+            <JobsList 
+              jobs={[]}
+              userApplications={[]}
+              isLoading={false}
+              onApply={() => {}}
+              onWithdraw={() => {}}
+            />
           </div>
           
           <div className="space-y-6">

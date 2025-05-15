@@ -69,7 +69,20 @@ export const getUserProfile = async (userId: string) => {
       throw error;
     }
 
-    return parseProfile(data);
+    // Use a more direct approach to avoid recursive parsing
+    if (data) {
+      return {
+        ...data,
+        company: data.companies ? {
+          id: data.companies.id,
+          name: data.companies.name,
+          domain: data.companies.domain,
+          logo: data.companies.logo,
+        } : null
+      };
+    }
+    
+    return null;
   } catch (error) {
     console.error('Error fetching user profile:', error);
     throw error;
