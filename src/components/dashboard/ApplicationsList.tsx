@@ -29,7 +29,7 @@ import {
   CheckSquare,
   Square,
 } from "lucide-react";
-import { ApplicationFilters } from "@/components/applications/ApplicationFilters";
+import { ApplicationFilters, ApplicationFilterValues } from "@/components/applications/ApplicationFilters";
 import { ApplicationsBulkActions } from "@/components/applications/ApplicationsBulkActions";
 import { EmailTemplates } from "@/components/applications/EmailTemplates";
 import { ApplicationStatusHistory } from "@/components/applications/ApplicationStatusHistory";
