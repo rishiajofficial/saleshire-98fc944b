@@ -6,25 +6,25 @@ const AIFeaturesSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | null, 
   const aiFeatures = [
     {
       title: "AI-Powered Candidate Matching",
-      description: "Our algorithms analyze candidate profiles against job requirements, identifying the best matches based on skills, experience, and cultural fit across any role.",
+      description: "Our algorithms analyze candidate profiles against job requirements, identifying the best matches based on skills, experience, and cultural fit.",
       icon: <BrainCircuit className="h-12 w-12 text-purple-500" />,
       color: "bg-gradient-to-br from-purple-100 to-purple-50"
     },
     {
       title: "Smart Skill Assessment",
-      description: "Automatically evaluate candidates' skills through tailored assessments that adapt to their responses and the specific role requirements.",
+      description: "Automatically evaluate candidates' skills through tailored assessments that adapt to their responses in real-time.",
       icon: <SquareCode className="h-12 w-12 text-indigo-500" />,
       color: "bg-gradient-to-br from-indigo-100 to-indigo-50"
     },
     {
       title: "Interview Intelligence",
-      description: "Generate role-specific interview questions and analyze responses to provide data-driven hiring recommendations across all departments.",
+      description: "Generate personalized interview questions and analyze responses to provide data-driven hiring recommendations.",
       icon: <MessageSquareMore className="h-12 w-12 text-blue-500" />,
       color: "bg-gradient-to-br from-blue-100 to-blue-50"
     },
     {
       title: "Predictive Performance Analytics",
-      description: "Forecast candidate success potential for any position based on historical data and performance patterns from your top performers.",
+      description: "Forecast candidate success potential based on historical data and performance patterns from your top performers.",
       icon: <DatabaseZap className="h-12 w-12 text-emerald-500" />,
       color: "bg-gradient-to-br from-emerald-100 to-emerald-50"
     }
@@ -44,7 +44,7 @@ const AIFeaturesSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | null, 
             Smart Technology, Smarter Hiring
           </h2>
           <p className="text-xl text-muted-foreground">
-            Our advanced AI enhances every aspect of your recruitment process, from candidate matching to performance prediction for any role.
+            Our advanced AI enhances every aspect of your recruitment process, from candidate matching to performance prediction.
           </p>
         </div>
 

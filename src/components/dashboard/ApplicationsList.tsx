@@ -35,7 +35,7 @@ import { EmailTemplates } from "@/components/applications/EmailTemplates";
 import { ApplicationStatusHistory } from "@/components/applications/ApplicationStatusHistory";
 import { CandidateTag } from "@/components/applications/CandidateTag";
 import { ApplicationAnalytics } from "@/components/applications/ApplicationAnalytics";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { startOfDay, subDays, subWeeks, subMonths, parseISO, isAfter } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import {
