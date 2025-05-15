@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,8 @@ import {
   CheckSquare,
   Square,
 } from "lucide-react";
-import { ApplicationFilters, ApplicationFilterValues } from "@/components/applications/ApplicationFilters";
+import { ApplicationFilters } from "@/components/applications/ApplicationFilters";
+import { ApplicationFilterValues } from "@/components/applications/types";
 import { ApplicationsBulkActions } from "@/components/applications/ApplicationsBulkActions";
 import { EmailTemplates } from "@/components/applications/EmailTemplates";
 import { ApplicationStatusHistory } from "@/components/applications/ApplicationStatusHistory";

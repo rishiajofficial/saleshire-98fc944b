@@ -1,101 +1,37 @@
-import React from "react";
-import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Users, FileText, Calendar, ArrowRight } from "lucide-react";
-import { useAuth } from "@/contexts/auth";
 
-interface DashboardStatsProps {
-  totalCandidates?: number;
-  pendingReviews?: number;
-  interviewsScheduled?: number;
-  nextInterviewDate?: string;
-  isLoading?: boolean;
+import React from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
+
+interface StatItem {
+  value: number;
+  label: string;
+  change: number;
 }
 
-const DashboardStats: React.FC<DashboardStatsProps> = ({
-  totalCandidates = 0,
-  pendingReviews = 0,
-  interviewsScheduled = 0,
-  nextInterviewDate,
-  isLoading = false,
-}) => {
-  const { profile } = useAuth();
-  const role = profile?.role?.toLowerCase();
+export interface DashboardStatsProps {
+  stats: StatItem[];
+}
 
-  const pendingLink = 
-    role === 'manager' || role === 'director'
-      ? `/candidates?status=hr_approved&status=final_interview`
-      : '/candidates';
-
-  const formatDateTime = (dateString?: string) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return `${date.toLocaleDateString()} at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-  };
-
+const DashboardStats: React.FC<DashboardStatsProps> = ({ stats }) => {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">
-                Total Candidates
-              </p>
-              <h3 className="text-3xl font-bold mt-1">
-                {isLoading ? "..." : totalCandidates}
-              </h3>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {stats.map((stat, index) => (
+        <Card key={index}>
+          <CardContent className="p-4 flex flex-col">
+            <div className="flex items-center justify-between">
+              <span className="text-2xl font-bold">{stat.value}</span>
+              <div className={`flex items-center ${stat.change > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                {stat.change > 0 ? 
+                  <ArrowUpRight className="h-4 w-4 mr-1" /> : 
+                  <ArrowDownRight className="h-4 w-4 mr-1" />}
+                <span>{Math.abs(stat.change)}%</span>
+              </div>
             </div>
-            <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center">
-              <Users className="h-6 w-6 text-primary" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="flex-1">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">
-                Pending Reviews
-              </p>
-              <h3 className="text-3xl font-bold mt-1">
-                {isLoading ? "..." : pendingReviews}
-              </h3>
-            </div>
-            <div className="h-12 w-12 bg-amber-100 rounded-full flex items-center justify-center">
-              <FileText className="h-6 w-6 text-amber-600" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">
-                Interviews Scheduled
-              </p>
-              <h3 className="text-3xl font-bold mt-1">
-                {isLoading ? "..." : interviewsScheduled}
-              </h3>
-            </div>
-            <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
-              <Calendar className="h-6 w-6 text-blue-600" />
-            </div>
-          </div>
-          <div className="mt-4">
-            {nextInterviewDate && (
-              <span className="text-xs text-muted-foreground">
-                Next: {formatDateTime(nextInterviewDate)}
-              </span>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+            <span className="text-sm text-muted-foreground mt-1">{stat.label}</span>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 };

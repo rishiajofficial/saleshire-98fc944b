@@ -1,28 +1,22 @@
-
-import React from 'react';
+import React from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, X } from "lucide-react";
-import { ApplicationFilterValues } from "./ApplicationsList";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { X, Filter } from "lucide-react";
+import { ApplicationFilterValues } from "./types";
 
-interface ApplicationFiltersProps {
+export interface ApplicationFiltersProps {
   filters: ApplicationFilterValues;
   onFilterChange: (filters: ApplicationFilterValues) => void;
   onReset: () => void;
 }
 
-export const ApplicationFilters = ({ 
-  filters, 
-  onFilterChange, 
-  onReset 
-}: ApplicationFiltersProps) => {
+export const ApplicationFilters: React.FC<ApplicationFiltersProps> = ({
+  filters,
+  onFilterChange,
+  onReset,
+}) => {
   const handleStatusChange = (status: string) => {
     onFilterChange({ 
       ...filters, 

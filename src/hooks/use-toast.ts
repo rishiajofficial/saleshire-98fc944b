@@ -1,28 +1,25 @@
 
-import { toast as sonnerToast, Toast as SonnerToast } from "sonner";
+import { toast as sonnerToast, type ToastT } from "sonner";
 
-type ToastProps = {
+export interface ToastProps {
   title?: string;
   description?: string;
-  variant?: "default" | "destructive";
-};
-
-export function toast({ title, description, variant }: ToastProps) {
-  const isDestructive = variant === "destructive";
-  
-  if (isDestructive) {
-    return sonnerToast.error(title, {
-      description,
-    });
-  }
-  
-  return sonnerToast(title, {
-    description,
-  });
+  variant?: "default" | "destructive" | "success";
 }
 
+export const toast = {
+  toast: ({ title, description, variant = "default" }: ToastProps) => {
+    return sonnerToast(title, {
+      description,
+      className: variant === "destructive" 
+        ? "bg-destructive text-destructive-foreground" 
+        : variant === "success"
+          ? "bg-green-600 text-white"
+          : undefined,
+    });
+  }
+};
+
 export const useToast = () => {
-  return {
-    toast,
-  };
+  return toast;
 };
