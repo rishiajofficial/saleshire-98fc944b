@@ -20,3 +20,6 @@ export const DashboardLayout = ({ children, sideContent }: DashboardLayoutProps)
     </div>
   );
 };
+
+// Add a default export for backward compatibility
+export default DashboardLayout;

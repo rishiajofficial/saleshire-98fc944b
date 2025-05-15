@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import DashboardLayout from '@/components/dashboard/DashboardLayout';
+import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { CandidateInfo } from '/dev-server/src/components/candidates/CandidateInfo';
 import { ProjectStatusSection } from '/dev-server/src/components/candidates/ProjectStatusSection';
 import { StatusUpdateSection } from '/dev-server/src/components/candidates/StatusUpdateSection';
@@ -72,40 +72,10 @@ const CandidateDetail = () => {
     project_status: candidate.project_status || 'Not Assigned'
   };
 
-  const mockProjectData = {
-    projectStatus: mockCandidateData.project_status,
-    isUpdatingProject: false,
-    onAssignProject: () => console.log('Assign project'),
-    onUpdateProjectOutcome: () => console.log('Update project outcome')
-  };
-
-  const mockStatusData = {
-    status: mockCandidateData.status,
-    isUpdating: false,
-    onUpdateStatus: () => console.log('Update status')
-  };
-
-  const mockAssessmentData = {
-    results: candidate.assessments || [],
-    isLoading: false
-  };
-
-  const mockInterviewData = {
-    upcoming: candidate.interviews || [],
-    past: [],
-    isLoading: false,
-    onSchedule: () => console.log('Schedule interview')
-  };
-
-  const mockVideoData = {
-    videoList: candidate.videos || [],
-    isLoading: false
-  };
-
-  const mockManagerData = {
-    currentManager: candidate.manager || null,
-    isUpdating: false,
-    onAssign: () => console.log('Assign manager')
+  // Format date helper function
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString();
   };
 
   return (
@@ -122,17 +92,9 @@ const CandidateDetail = () => {
         </div>
         
         <CandidateInfo 
-          email={mockCandidateData.email}
-          phone={mockCandidateData.phone}
-          location={mockCandidateData.location}
-          region={mockCandidateData.region}
-          status={mockCandidateData.status}
-          projectStatus={mockCandidateData.project_status}
+          candidate={mockCandidateData}
+          isLoading={false}
           isUpdating={false}
-          resumeUrl={candidate.resume_url}
-          linkedInUrl={candidate.linkedin_url}
-          githubUrl={candidate.github_url}
-          portfolioUrl={candidate.portfolio_url}
         />
         
         <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -145,28 +107,53 @@ const CandidateDetail = () => {
           </TabsList>
           
           <TabsContent value="overview" className="space-y-6 pt-6">
-            <ProjectStatusSection {...mockProjectData} />
+            <ProjectStatusSection 
+              candidate={mockCandidateData}
+              projectStatus={mockCandidateData.project_status}
+              isUpdatingProject={false}
+              onAssignProject={() => console.log('Assign project')}
+              onUpdateProjectOutcome={() => console.log('Update project outcome')}
+            />
             <Separator />
-            <StatusUpdateSection {...mockStatusData} />
+            <StatusUpdateSection 
+              applicationStatus={mockCandidateData.status}
+              isUpdatingStatus={false}
+              candidateData={mockCandidateData}
+              onStatusChange={() => console.log('Status changed')}
+              onStatusUpdate={() => console.log('Update status')}
+            />
           </TabsContent>
           
           <TabsContent value="assessments" className="space-y-6 pt-6">
-            <AssessmentResultsSection {...mockAssessmentData} />
+            <AssessmentResultsSection 
+              assessmentResults={candidate.assessments || []}
+              isLoadingResults={false}
+              formatDate={formatDate}
+            />
           </TabsContent>
           
           <TabsContent value="videos" className="space-y-6 pt-6">
-            <VideoDisplay {...mockVideoData} />
+            <VideoDisplay 
+              url={candidate.videos?.[0]?.url || ''}
+              title={candidate.videos?.[0]?.title || 'No video available'}
+            />
           </TabsContent>
           
           <TabsContent value="interviews" className="space-y-6 pt-6">
             <InterviewScheduling 
               candidateId={id || ''}
-              interviews={mockInterviewData}
+              interviews={candidate.interviews || []}
             />
           </TabsContent>
           
           <TabsContent value="management" className="space-y-6 pt-6">
-            <ManagerAssignment {...mockManagerData} />
+            <ManagerAssignment 
+              selectedManager={candidate.manager || null}
+              isLoadingManagers={false}
+              isAssigningManager={false}
+              onManagerSelect={() => console.log('Manager selected')}
+              onAssignManager={() => console.log('Assign manager')}
+            />
           </TabsContent>
         </Tabs>
       </div>
@@ -174,7 +161,7 @@ const CandidateDetail = () => {
       <CandidateHistoryDialog 
         isOpen={historyOpen} 
         onClose={() => setHistoryOpen(false)} 
-        candidateId={id || ''}
+        history={[]} 
       />
     </DashboardLayout>
   );
