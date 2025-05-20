@@ -329,7 +329,10 @@ const CandidateDetail: React.FC = () => {
       <CandidateHistoryDialog 
         isOpen={isHistoryOpen} 
         onClose={() => setIsHistoryOpen(false)} 
-        id={id || ""} 
+        candidateId={id || ""}
+        candidateName={candidate?.profile?.name || "Candidate"}
+        isLoading={false}
+        logs={[]}
       />
     </MainLayout>
   );

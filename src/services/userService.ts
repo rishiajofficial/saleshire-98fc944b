@@ -1,5 +1,20 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { Tables } from '@/integrations/supabase/types';
+
+// Define simpler types to avoid excessive type instantiation
+type ProfileWithCompany = {
+  id: string;
+  name?: string;
+  email: string;
+  role: string;
+  company?: {
+    id: string;
+    name: string;
+    domain?: string;
+    logo?: string;
+  } | null;
+};
 
 // Get all user profiles
 export const getUserProfiles = async (filters = {}) => {
@@ -46,7 +61,7 @@ export const getUserProfiles = async (filters = {}) => {
 };
 
 // Get user profile by ID
-export const getUserProfile = async (userId: string) => {
+export const getUserProfile = async (userId: string): Promise<ProfileWithCompany | null> => {
   if (!userId) return null;
 
   try {
@@ -127,7 +142,7 @@ export const createUserProfile = async (userData: any) => {
 };
 
 // Get activity logs for a user
-export const getUserActivityLogs = async (userId: string, limit = 10) => {
+export const getUserActivityLogs = async (userId: string, limit = 10): Promise<Tables<'activity_logs'>[]> => {
   try {
     const { data, error } = await supabase
       .from('activity_logs')
@@ -140,7 +155,7 @@ export const getUserActivityLogs = async (userId: string, limit = 10) => {
       throw error;
     }
 
-    return data;
+    return data || [];
   } catch (error) {
     console.error('Error fetching user activity logs:', error);
     throw error;
@@ -148,7 +163,7 @@ export const getUserActivityLogs = async (userId: string, limit = 10) => {
 };
 
 // Get user with company information 
-export const getUserWithCompany = async (userId: string) => {
+export const getUserWithCompany = async (userId: string): Promise<ProfileWithCompany | null> => {
   try {
     const { data, error } = await supabase
       .from('profiles')
@@ -178,8 +193,7 @@ export const getUserWithCompany = async (userId: string) => {
           name: data.companies.name,
           domain: data.companies.domain,
           logo: data.companies.logo,
-        } : null,
-        isCompanyAdmin: false // Default value
+        } : null
       };
     }
     

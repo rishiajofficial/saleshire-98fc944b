@@ -13,6 +13,7 @@ import JobListings from '@/components/dashboard/JobListings';
 import { getUserActivityLogs } from '@/services/userService';
 import { useQuery } from '@tanstack/react-query';
 import { Tables } from '@/integrations/supabase/types';
+import { TrainingModuleProgress } from '@/types/training';
 
 const HRDashboard = () => {
   const { profile } = useAuth();
@@ -43,10 +44,34 @@ const HRDashboard = () => {
   // Format notifications for NotificationsCard from activity logs
   const formattedNotifications = activityLogs || [];
 
-  // Mock training data for the TrainingCard
-  const mockTrainingModules = [
-    { id: '1', title: 'Onboarding', progress: 75, totalVideos: 4, watchedVideos: 3, quizIds: ['quiz1'], quizCompleted: false },
-    { id: '2', title: 'Sales Training', progress: 30, totalVideos: 6, watchedVideos: 2, quizIds: ['quiz2'], quizCompleted: false },
+  // Mock training data for the TrainingCard with all required properties
+  const mockTrainingModules: TrainingModuleProgress[] = [
+    { 
+      id: '1', 
+      title: 'Onboarding', 
+      progress: 75, 
+      totalVideos: 4, 
+      watchedVideos: 3, 
+      quizIds: ['quiz1'], 
+      quizCompleted: false,
+      module: 'onboarding',
+      status: 'in_progress',
+      locked: false,
+      videos: []
+    },
+    { 
+      id: '2', 
+      title: 'Sales Training', 
+      progress: 30, 
+      totalVideos: 6, 
+      watchedVideos: 2, 
+      quizIds: ['quiz2'], 
+      quizCompleted: false,
+      module: 'sales',
+      status: 'active',
+      locked: false,
+      videos: []
+    },
   ];
 
   return (

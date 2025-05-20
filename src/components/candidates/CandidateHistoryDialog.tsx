@@ -12,12 +12,13 @@ import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { StatusBadge } from "./StatusBadge";
 
-interface CandidateHistoryDialogProps {
+export interface CandidateHistoryDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  candidateName: string;
-  isLoading: boolean;
-  logs: Array<{
+  candidateName?: string;
+  candidateId: string; // Add the candidateId prop
+  isLoading?: boolean;
+  logs?: Array<{
     id: string;
     action: string;
     created_at: string;
@@ -28,9 +29,10 @@ interface CandidateHistoryDialogProps {
 export const CandidateHistoryDialog: React.FC<CandidateHistoryDialogProps> = ({
   isOpen,
   onClose,
-  candidateName,
-  isLoading,
-  logs,
+  candidateName = "Candidate",
+  candidateId,
+  isLoading = false,
+  logs = [],
 }) => {
   const formatLogAction = (log: any) => {
     if (log.action === 'status_change' && log.details) {
