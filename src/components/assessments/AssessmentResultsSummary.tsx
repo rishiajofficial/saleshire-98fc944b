@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -73,6 +72,7 @@ const AssessmentResultsSummary: React.FC<AssessmentResultsSummaryProps> = ({ ass
           score: result.score,
           completed: result.completed,
           completed_at: result.completed_at,
+          // Fix the nested access to profile data
           candidate_name: result.candidates?.profile?.name
         })) || [];
         

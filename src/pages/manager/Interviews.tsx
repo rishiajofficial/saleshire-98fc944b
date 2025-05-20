@@ -57,7 +57,7 @@ const Interviews = () => {
 
         if (error) throw error;
         
-        // Transform the data to match our interface
+        // Transform the data to ensure nested objects match our interface
         const transformedData: InterviewData[] = (data || []).map(item => ({
           id: item.id,
           scheduled_at: item.scheduled_at,

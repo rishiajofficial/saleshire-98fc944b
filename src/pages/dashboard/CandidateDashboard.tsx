@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
@@ -61,6 +60,7 @@ const CandidateDashboard = () => {
           
         if (error) throw error;
         
+        // Transform the data to properly extract job details
         const jobs: UserJob[] = data?.map(item => ({
           id: item.job_id,
           title: item.jobs?.title || 'Untitled Job'
@@ -156,8 +156,47 @@ const CandidateDashboard = () => {
       <TooltipProvider>
         <div className="container mx-auto px-4 py-8 space-y-8">
           <DashboardHeader userName={profile?.name} userRole={profile?.role} />
-          <DashboardLayout sideContent={sideContent}>
-            {mainContent}
+          <DashboardLayout sideContent={
+            <>
+              <StatusCard 
+                currentStep={currentStep}
+                candidateStatus={candidateData?.status}
+              />
+              <NotificationsCard 
+                notifications={notifications}
+              />
+            </>
+          }>
+            <>
+              {userJobs.length > 0 && (
+                <Card className="mb-6">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Select Job Application</CardTitle>
+                    <Select value={selectedJobId} onValueChange={setSelectedJobId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a job application" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {userJobs.map(job => (
+                          <SelectItem key={job.id} value={job.id}>
+                            {job.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </CardHeader>
+                </Card>
+              )}
+              <HiringJourneyCard 
+                currentStep={currentStep}
+                applicationSubmitted={applicationSubmitted}
+              />
+              <TrainingCard 
+                canAccessTraining={canAccessTraining}
+                trainingModules={trainingModules}
+                isLoadingTraining={isLoadingTraining}
+              />
+            </>
           </DashboardLayout>
         </div>
       </TooltipProvider>
