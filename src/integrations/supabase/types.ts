@@ -270,6 +270,7 @@ export type Database = {
           created_at: string
           domain: string | null
           id: string
+          invite_code: string | null
           logo: string | null
           name: string
           updated_at: string
@@ -278,6 +279,7 @@ export type Database = {
           created_at?: string
           domain?: string | null
           id?: string
+          invite_code?: string | null
           logo?: string | null
           name: string
           updated_at?: string
@@ -286,6 +288,7 @@ export type Database = {
           created_at?: string
           domain?: string | null
           id?: string
+          invite_code?: string | null
           logo?: string | null
           name?: string
           updated_at?: string
@@ -1077,6 +1080,15 @@ export type Database = {
           details?: Json
         }
         Returns: undefined
+      }
+      sign_up_with_company: {
+        Args: {
+          email: string
+          password: string
+          company_invite_code: string
+          user_data?: Json
+        }
+        Returns: Json
       }
       user_is_in_role: {
         Args: { user_id: string; role_name: string }
