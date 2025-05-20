@@ -170,7 +170,7 @@ export const getUserWithCompany = async (userId: string) => {
     }
     
     // Manually construct the profile object without using parseProfile
-    return data ? {
+    const result = data ? {
       ...data,
       company: data.companies ? {
         id: data.companies.id,
@@ -180,6 +180,8 @@ export const getUserWithCompany = async (userId: string) => {
       } : null,
       isCompanyAdmin: false // Default value
     } : null;
+    
+    return result;
   } catch (error) {
     console.error('Error fetching user with company:', error);
     return null;

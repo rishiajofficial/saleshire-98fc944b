@@ -9,6 +9,7 @@ import ApplicationsList from '@/components/dashboard/ApplicationsList';
 import { TrainingCard } from '@/components/dashboard/TrainingCard';
 import { useJobApplications } from '@/hooks/useJobApplications';
 import { UserRole } from '@/types';
+import JobListings from '@/components/dashboard/JobListings';
 
 const HRDashboard = () => {
   const { profile } = useAuth();
@@ -59,9 +60,17 @@ const HRDashboard = () => {
 
   // Mock training data for the TrainingCard
   const mockTrainingModules = [
-    { id: '1', title: 'Onboarding', progress: 75 },
-    { id: '2', title: 'Sales Training', progress: 30 },
+    { id: '1', title: 'Onboarding', progress: 75, module: {id: '1', title: 'Onboarding'}, status: 'in_progress', locked: false, videos: [], completed: false, total: 4, quiz_completed: false },
+    { id: '2', title: 'Sales Training', progress: 30, module: {id: '2', title: 'Sales Training'}, status: 'in_progress', locked: false, videos: [], completed: false, total: 6, quiz_completed: false },
   ];
+
+  // Format notifications for NotificationsCard
+  const formattedNotifications = formattedLogs.map(log => ({
+    id: log.id,
+    title: log.action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+    message: log.displayText,
+    time: new Date(log.created_at).toLocaleString(),
+  }));
 
   return (
     <DashboardLayout
@@ -72,13 +81,13 @@ const HRDashboard = () => {
             <p className="text-muted-foreground">Manage job listings and applications</p>
           </div>
           
-          <DashboardStats stats={stats} />
+          <DashboardStats items={stats} />
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="md:col-span-2">
               <NotificationsCard 
-                title="Recent Activity"
-                notifications={activityLogs}
+                heading="Recent Activity"
+                notifications={formattedNotifications}
               />
             </div>
             <div>
@@ -92,13 +101,7 @@ const HRDashboard = () => {
           
           <div className="space-y-6">
             <h2 className="text-xl font-semibold">Job Listings</h2>
-            <JobsList 
-              jobs={[]}
-              userApplications={[]}
-              isLoading={false}
-              onApply={() => {}}
-              onWithdraw={() => {}}
-            />
+            <JobListings />
           </div>
           
           <div className="space-y-6">

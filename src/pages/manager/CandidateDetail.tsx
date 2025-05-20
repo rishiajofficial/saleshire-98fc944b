@@ -20,6 +20,26 @@ interface CandidateDetailParams {
   id: string;
 }
 
+// Define types for mock data to match expected types
+interface MockAssessmentResult {
+  id: string;
+  score: number;
+  completed_at: string;
+  assessment: { title: string };
+  // Add the missing fields to match AssessmentResult type
+  answer_timings: any;
+  answers: any;
+  assessment_id: string;
+  candidate_id: string;
+  completed: boolean;
+  created_at: string;
+  feedback: string;
+  reviewed_at: string;
+  reviewed_by: string;
+  started_at: string;
+  updated_at: string;
+}
+
 const CandidateDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -83,10 +103,42 @@ const CandidateDetail: React.FC = () => {
     navigate('/manager/candidates');
   };
 
-  // Sample assessment results for testing
-  const mockAssessmentResults = [
-    { id: "1", score: 85, completed_at: "2023-05-15T14:30:00Z", assessment: { title: "Sales Assessment" } },
-    { id: "2", score: 92, completed_at: "2023-05-10T09:15:00Z", assessment: { title: "Communication Skills" } },
+  // Sample assessment results for testing - extended to match required type
+  const mockAssessmentResults: MockAssessmentResult[] = [
+    { 
+      id: "1", 
+      score: 85, 
+      completed_at: "2023-05-15T14:30:00Z", 
+      assessment: { title: "Sales Assessment" },
+      answer_timings: {},
+      answers: {},
+      assessment_id: "a1",
+      candidate_id: "c1",
+      completed: true,
+      created_at: "2023-05-15T13:30:00Z",
+      feedback: "",
+      reviewed_at: "",
+      reviewed_by: "",
+      started_at: "2023-05-15T13:30:00Z",
+      updated_at: "2023-05-15T14:30:00Z"
+    },
+    { 
+      id: "2", 
+      score: 92, 
+      completed_at: "2023-05-10T09:15:00Z", 
+      assessment: { title: "Communication Skills" },
+      answer_timings: {},
+      answers: {},
+      assessment_id: "a2",
+      candidate_id: "c1",
+      completed: true,
+      created_at: "2023-05-10T08:15:00Z",
+      feedback: "",
+      reviewed_at: "",
+      reviewed_by: "",
+      started_at: "2023-05-10T08:15:00Z",
+      updated_at: "2023-05-10T09:15:00Z"
+    },
   ];
 
   // Helper function to format dates
@@ -278,7 +330,7 @@ const CandidateDetail: React.FC = () => {
       <CandidateHistoryDialog 
         isOpen={isHistoryOpen} 
         onClose={() => setIsHistoryOpen(false)} 
-        applicationId={id || ""} 
+        candidateId={id || ""} 
       />
     </MainLayout>
   );
