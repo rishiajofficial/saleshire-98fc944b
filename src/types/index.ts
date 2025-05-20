@@ -33,5 +33,5 @@ export * from './training';
 
 // Re-export common types except for the duplicate CandidateProfile that's now defined in candidate.ts
 // Use explicit re-exports to avoid the ambiguity
-import { ActivityLog, UserProfile } from './common';
-export { ActivityLog, UserProfile };
+import type { ActivityLog, UserProfile } from './common';
+export type { ActivityLog, UserProfile };

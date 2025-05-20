@@ -93,7 +93,7 @@ const Register = () => {
   }, [location.search]);
 
   const formatPhoneNumber = (value: string) => {
-    const cleaned = value.replace(/\D/g, '');
+    const cleaned = value.replace(/\D/g, "");
     let formatted = '';
     
     if (cleaned.length <= 5) {
@@ -114,6 +114,7 @@ const Register = () => {
     setPhone(cleaned.length > 0 ? `+91 ${cleaned}` : "");
   };
 
+  // Update the handleSubmit function to correctly type userData
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -131,13 +132,14 @@ const Register = () => {
     setError("");
     
     try {
-      const location = `${city}, ${state}`;
+      const locationString = `${city}, ${state}`;
       
-      const userData = {
+      // Use the UserRegistrationData interface
+      const userData: UserRegistrationData = {
         name,
         role: 'candidate',
         phone,
-        location,
+        location: locationString,
         region,
         resume: null,
         about_me_video: null,

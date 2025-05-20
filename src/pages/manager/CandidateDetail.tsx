@@ -95,7 +95,8 @@ const CandidateDetail = () => {
         return [];
       }
       console.log("[CandidateDetail] Managers fetched:", data);
-      return data || [];
+      // Cast the data to match our ManagerProfile interface
+      return (data || []) as ManagerProfile[];
     },
     enabled: !!profile && (profile.role === 'hr' || profile.role === 'admin' || profile.role === 'director' || profile.role === 'authenticated'),
   });
@@ -315,7 +316,8 @@ const CandidateDetail = () => {
         });
         return [];
       }
-      return data || [];
+      // Cast the data to match our AssessmentResult interface
+      return (data || []) as AssessmentResult[];
     },
     enabled: !!id,
   });
