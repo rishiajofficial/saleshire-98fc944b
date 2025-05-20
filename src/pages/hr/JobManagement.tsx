@@ -12,7 +12,6 @@ import MainLayout from '@/components/layout/MainLayout';
 const JobManagementPage = () => {
   const { jobs, loading, error, fetchJobs, createJob, updateJob, deleteJob } = useJobs();
   const [assessments, setAssessments] = useState<{ id: string; title: string }[]>([]);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   
   useEffect(() => {
     fetchJobs();
@@ -52,7 +51,6 @@ const JobManagementPage = () => {
     try {
       await createJob(jobData);
       toast.success("Job created successfully!");
-      setIsCreateDialogOpen(false);
     } catch (err: any) {
       toast.error(`Failed to create job: ${err.message}`);
     }
@@ -111,7 +109,10 @@ const JobManagementPage = () => {
       <div className="container mx-auto p-6">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold">Job Management</h1>
-          <Button onClick={() => setIsCreateDialogOpen(true)}>Create New Job</Button>
+          <JobCreationDialog 
+            onJobCreated={handleJobCreated}
+            assessments={assessments}
+          />
         </div>
         
         <JobList 
@@ -121,13 +122,6 @@ const JobManagementPage = () => {
           onJobArchived={handleJobArchived}
           assessments={assessments}
           categories={[]} // Pass empty array for categories since job_categories table was removed
-        />
-
-        <JobCreationDialog 
-          onJobCreated={handleJobCreated}
-          assessments={assessments}
-          isOpen={isCreateDialogOpen}
-          onClose={() => setIsCreateDialogOpen(false)}
         />
       </div>
     </MainLayout>

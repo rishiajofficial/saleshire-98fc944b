@@ -71,7 +71,6 @@ export const StatusUpdateSection = ({
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="profile_created">Profile Created (Step 0)</SelectItem>
                 <SelectItem value="applied">Application in Progress (Step 1)</SelectItem>
                 <SelectItem value="hr_review">HR Review (Step 2)</SelectItem>
                 <SelectItem value="hr_approved">HR Approved (Step 3)</SelectItem>

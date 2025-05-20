@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,10 +9,27 @@ import { DeleteJobDialog } from "./DeleteJobDialog";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { supabase } from "@/integrations/supabase/client";
 
+interface EditingJob {
+  id: string;
+  title: string;
+  description: string;
+  department: string;
+  location: string;
+  employment_type: string;
+  salary_range: string;
+  selectedAssessment: string;
+  selectedModules: string[];
+  status?: string;
+  archived?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  created_by?: string;
+}
+
 interface JobListProps {
   jobs: Job[];
   onJobDeleted: (jobId: string) => void;
-  onJobUpdated: (job: Job) => void;
+  onJobUpdated: (job: any) => void;
   onJobArchived: (jobId: string, archived: boolean) => void;
   assessments: { id: string; title: string }[];
   categories: { id: string; name: string }[];
@@ -27,17 +43,16 @@ const JobList: React.FC<JobListProps> = ({
   assessments,
   categories
 }) => {
-  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [selectedJob, setSelectedJob] = useState<EditingJob | null>(null);
   const [viewMode, setViewMode] = useState<"view" | "edit" | null>(null);
   const [showApplications, setShowApplications] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState<string | null>(null);
   const [filter, setFilter] = useState<"active" | "archived">("active");
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [dialogOpen, setDialogOpen] = useState<boolean>(false);
 
   const filteredJobs = jobs.filter(job => job.archived === (filter === "archived"));
 
-  const fetchJobRelatedData = async (job: Job): Promise<Job> => {
+  const fetchJobRelatedData = async (job: Job): Promise<EditingJob> => {
     try {
       setIsLoading(true);
       
@@ -83,21 +98,10 @@ const JobList: React.FC<JobListProps> = ({
 
   const handleViewOrEdit = async (job: Job, mode: "view" | "edit") => {
     try {
-      // Close any existing dialog
-      if (dialogOpen) {
-        setDialogOpen(false);
-        setSelectedJob(null);
-        setViewMode(null);
-        
-        // Small delay before opening new dialog to prevent flickering
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
-      
       setIsLoading(true);
       const enhancedJob = await fetchJobRelatedData(job);
       setSelectedJob(enhancedJob);
       setViewMode(mode);
-      setDialogOpen(true);
     } catch (error) {
       console.error("Error fetching job related data:", error);
     } finally {
@@ -105,16 +109,9 @@ const JobList: React.FC<JobListProps> = ({
     }
   };
 
-  const closeDialog = () => {
-    setDialogOpen(false);
-    setTimeout(() => {
-      setSelectedJob(null);
-      setViewMode(null);
-    }, 100); // Small delay to prevent flickering
+  const dummyOnJobCreated = () => {
+    console.log("This function is not used for view/edit dialogs");
   };
-
-  // This function is not used for view/edit dialogs 
-  const dummyOnJobCreated = () => {};
 
   return (
     <div className="space-y-4">
@@ -187,7 +184,7 @@ const JobList: React.FC<JobListProps> = ({
         ))}
       </div>
 
-      {dialogOpen && selectedJob && viewMode && (
+      {selectedJob && viewMode && !isLoading && (
         <JobCreationDialog
           mode={viewMode}
           editingJob={selectedJob}
@@ -195,8 +192,11 @@ const JobList: React.FC<JobListProps> = ({
           categories={categories}
           onJobCreated={dummyOnJobCreated}
           onJobUpdated={onJobUpdated}
-          isOpen={dialogOpen}
-          onClose={closeDialog}
+          isOpen={true}
+          onClose={() => {
+            setSelectedJob(null);
+            setViewMode(null);
+          }}
         />
       )}
 

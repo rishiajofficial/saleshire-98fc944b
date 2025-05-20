@@ -17,7 +17,7 @@ const BusinessImpactSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | nu
             Benefits for Your Business
           </h2>
           <p className="text-xl text-muted-foreground">
-            Our platform offers tangible improvements to your hiring outcomes across all departments.
+            Our platform offers tangible improvements to your sales hiring outcomes.
           </p>
         </div>
 
@@ -28,11 +28,11 @@ const BusinessImpactSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | nu
             </h3>
             <ul className="space-y-4">
               {[
-                "AI-powered candidate matching reduces screening time by 60% across all roles",
-                "Data-driven insights eliminate hiring biases for more diverse teams",
+                "AI-powered candidate matching reduces screening time by 60%",
+                "Data-driven insights eliminate hiring biases",
                 "Predictive analytics forecast candidate success with 85% accuracy",
                 "Standardized evaluation criteria ensure consistent assessment",
-                "Intelligent interviewing tools generate role-specific questions"
+                "Intelligent interviewing tools generate personalized questions"
               ].map((item, index) => (
                 <li key={index} className="flex items-start">
                   <div className="p-1 bg-indigo-100 rounded-full mr-3 flex-shrink-0">
@@ -50,11 +50,11 @@ const BusinessImpactSection = ({ addToRefs }: { addToRefs: (el: HTMLElement | nu
             </h3>
             <ul className="space-y-4">
               {[
-                "Role-specific learning paths adapt to individual strengths and job requirements",
+                "Personalized learning paths adapt to individual strengths",
                 "AI-generated feedback provides actionable improvement steps",
-                "Interactive assessments that engage rather than intimidate",
+                "Interactive assessments that engage rather than evaluate",
                 "Real-time progress tracking with performance insights",
-                "Skills-based evaluation ensures fair opportunity regardless of background"
+                "Skills-based evaluation ensures fair opportunity"
               ].map((item, index) => (
                 <li key={index} className="flex items-start">
                   <div className="p-1 bg-indigo-100 rounded-full mr-3 flex-shrink-0">

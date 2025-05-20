@@ -12,14 +12,31 @@ import { Loader2 } from "lucide-react";
 import JobForm from "./JobForm";
 import JobDialogTrigger from "./JobDialogTrigger";
 import { useTrainingModules } from "@/hooks/useTrainingModules";
-import { Job } from "@/types/job";
+import { TrainingModuleProgress } from "@/types/training";
+
+interface EditingJob {
+  id: string;
+  title: string;
+  description: string;
+  department: string;
+  location: string;
+  employment_type: string;
+  salary_range: string;
+  selectedAssessment: string;
+  selectedModules: string[];
+  status?: string;
+  archived?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  created_by?: string;
+}
 
 interface JobCreationDialogProps {
   onJobCreated?: (job: any) => void;
-  onJobUpdated?: (job: Job) => void;
+  onJobUpdated?: (job: EditingJob) => void;
   assessments: { id: string; title: string }[];
   categories?: Array<{ id: string; name: string }>;
-  editingJob?: Job;
+  editingJob?: EditingJob;
   mode?: "create" | "edit" | "view";
   isOpen?: boolean;
   onClose?: () => void;
@@ -35,34 +52,20 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
   onClose
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [modulesLoaded, setModulesLoaded] = useState(false);
   const { modules, loading, fetchTrainingModules } = useTrainingModules();
-  
-  // Handle external control of dialog state
+
   useEffect(() => {
     if (externalIsOpen !== undefined) {
       setDialogOpen(externalIsOpen);
     }
-  }, [externalIsOpen]);
-
-  // Fetch modules when dialog opens
-  useEffect(() => {
-    if (dialogOpen && !modulesLoaded) {
-      fetchTrainingModules().then(() => {
-        setModulesLoaded(true);
-      });
+    if (externalIsOpen) {
+      fetchTrainingModules();
     }
-  }, [dialogOpen, modulesLoaded, fetchTrainingModules]);
-
-  // Reset modules loaded state when dialog closes
-  useEffect(() => {
-    if (!dialogOpen) {
-      setModulesLoaded(false);
-    }
-  }, [dialogOpen]);
+  }, [externalIsOpen, fetchTrainingModules]);
 
   const handleOpen = () => {
     setDialogOpen(true);
+    fetchTrainingModules();
   };
 
   const handleClose = () => {
@@ -72,18 +75,16 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
 
   const handleSubmit = (form: any) => {
     if (mode === "edit" && onJobUpdated && editingJob) {
-      const updatedJob: Job = { 
+      const updatedJob: EditingJob = { 
         ...editingJob, 
         ...form,
-        selectedAssessment: form.selectedAssessment === "none" ? null : form.selectedAssessment,
-        status: form.status || "active" // Ensure status is always defined
+        selectedAssessment: form.selectedAssessment === "none" ? null : form.selectedAssessment
       };
       onJobUpdated(updatedJob);
     } else if (onJobCreated) {
       const processedForm = {
         ...form,
-        selectedAssessment: form.selectedAssessment === "none" ? null : form.selectedAssessment,
-        status: form.status || "active" // Ensure status is always defined when creating
+        selectedAssessment: form.selectedAssessment === "none" ? null : form.selectedAssessment
       };
       onJobCreated(processedForm);
     }
@@ -103,51 +104,33 @@ const JobCreationDialog: React.FC<JobCreationDialogProps> = ({
   };
 
   return (
-    <Dialog 
-      open={dialogOpen} 
-      onOpenChange={(open) => {
-        if (!open) {
-          // Only handle close through the onClose prop if externally controlled
-          if (externalIsOpen !== undefined) {
-            if (onClose) onClose();
-          } else {
-            // Direct state control if not externally controlled
-            setDialogOpen(false);
-          }
-        } else if (externalIsOpen === undefined) {
-          // Only set to open if not externally controlled
-          setDialogOpen(true);
-        }
-      }}
-    >
-      {externalIsOpen === undefined && (
+    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      {!externalIsOpen && (
         <DialogTrigger asChild>
-          <div onClick={handleOpen}>
-            <JobDialogTrigger mode={mode} onClick={() => {}} />
+          <div>
+            <JobDialogTrigger mode={mode} onClick={handleOpen} />
           </div>
         </DialogTrigger>
       )}
-      {dialogOpen && (
-        <DialogContent onEscapeKeyDown={handleClose} className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{getDialogTitle()}</DialogTitle>
-            <DialogDescription>{getDialogDescription()}</DialogDescription>
-          </DialogHeader>
-          {(loading && !modulesLoaded) ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : (
-            <JobForm
-              job={editingJob}
-              onSubmit={handleSubmit}
-              assessments={assessments}
-              modules={modules}
-              mode={mode}
-            />
-          )}
-        </DialogContent>
-      )}
+      <DialogContent onEscapeKeyDown={handleClose} onInteractOutside={handleClose} className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{getDialogTitle()}</DialogTitle>
+          <DialogDescription>{getDialogDescription()}</DialogDescription>
+        </DialogHeader>
+        {loading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <JobForm
+            job={editingJob}
+            onSubmit={handleSubmit}
+            assessments={assessments}
+            modules={modules}
+            mode={mode}
+          />
+        )}
+      </DialogContent>
     </Dialog>
   );
 };

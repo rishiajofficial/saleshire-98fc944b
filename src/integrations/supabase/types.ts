@@ -265,62 +265,6 @@ export type Database = {
           },
         ]
       }
-      companies: {
-        Row: {
-          created_at: string
-          domain: string | null
-          id: string
-          logo: string | null
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          domain?: string | null
-          id?: string
-          logo?: string | null
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          domain?: string | null
-          id?: string
-          logo?: string | null
-          name?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      company_admins: {
-        Row: {
-          company_id: string
-          created_at: string
-          id: string
-          user_id: string
-        }
-        Insert: {
-          company_id: string
-          created_at?: string
-          id?: string
-          user_id: string
-        }
-        Update: {
-          company_id?: string
-          created_at?: string
-          id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "company_admins_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       interviews: {
         Row: {
           candidate_id: string
@@ -486,7 +430,6 @@ export type Database = {
           description: string
           employment_type: string | null
           id: string
-          is_public: boolean
           location: string | null
           salary_range: string | null
           status: string
@@ -501,7 +444,6 @@ export type Database = {
           description: string
           employment_type?: string | null
           id?: string
-          is_public?: boolean
           location?: string | null
           salary_range?: string | null
           status?: string
@@ -516,7 +458,6 @@ export type Database = {
           description?: string
           employment_type?: string | null
           id?: string
-          is_public?: boolean
           location?: string | null
           salary_range?: string | null
           status?: string
@@ -654,7 +595,6 @@ export type Database = {
       }
       profiles: {
         Row: {
-          company_id: string | null
           created_at: string
           email: string
           id: string
@@ -663,7 +603,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          company_id?: string | null
           created_at?: string
           email: string
           id: string
@@ -672,7 +611,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          company_id?: string | null
           created_at?: string
           email?: string
           id?: string
@@ -680,15 +618,7 @@ export type Database = {
           role?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "profiles_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       questions: {
         Row: {
@@ -1026,10 +956,6 @@ export type Database = {
           updated_at: string
         }[]
       }
-      get_user_company: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
       get_user_role: {
         Args: { user_id: string }
         Returns: string
@@ -1040,10 +966,6 @@ export type Database = {
       }
       is_candidate: {
         Args: { user_id: string }
-        Returns: boolean
-      }
-      is_company_admin: {
-        Args: { company_uuid: string; user_uuid?: string }
         Returns: boolean
       }
       is_director: {

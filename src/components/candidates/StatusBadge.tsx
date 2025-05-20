@@ -22,7 +22,7 @@ export const StatusBadge = ({ status }: StatusBadgeProps) => {
     case "profile_created":
       return (
         <Badge className="bg-gray-100 text-gray-800">
-          <User className="mr-1 h-3 w-3" /> Profile Created (Step 0)
+          <User className="mr-1 h-3 w-3" /> Profile Created
         </Badge>
       );
     case "applied":

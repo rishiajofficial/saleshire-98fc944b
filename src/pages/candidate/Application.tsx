@@ -104,7 +104,7 @@ const Application = () => {
       try {
         const { data, error } = await supabase
           .from("candidates")
-          .select("resume, about_me_video, sales_pitch_video, current_step, status")
+          .select("resume, about_me_video, sales_pitch_video, status")
           .eq("id", user.id)
           .single();
 
@@ -173,7 +173,7 @@ const Application = () => {
       // First, fetch the latest candidate data including the uploaded files
       const { data: candidateData, error: fetchError } = await supabase
         .from("candidates")
-        .select("resume, about_me_video, sales_pitch_video, current_step")
+        .select("resume, about_me_video, sales_pitch_video")
         .eq("id", user.id)
         .single();
         

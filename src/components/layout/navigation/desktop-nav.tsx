@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -58,19 +57,19 @@ export const DesktopNav = ({
                 (item.href === "/dashboard/director" && pathname.includes("/dashboard") && profile?.role === "director") ||
                 (item.href === "/dashboard/candidate" && pathname.includes("/dashboard") && profile?.role === "candidate");
               
-              const isDropdownActive = activeDropdowns.includes(item.title);
-              const hasSubitems = item.submenu && item.submenu.length > 0;
+              const isDropdownActive = activeDropdowns.includes(item.label);
+              const hasSubitems = item.subitems && item.subitems.length > 0;
 
               if (hasSubitems) {
                 return (
-                  <div key={item.title}>
+                  <div key={item.label}>
                     <Button
                       variant="ghost"
                       className={`w-full justify-start ${isDropdownActive ? "bg-muted" : ""}`}
-                      onClick={() => toggleDropdown(item.title)}
+                      onClick={() => toggleDropdown(item.label)}
                     >
-                      {React.createElement(item.icon, { className: "h-4 w-4 mr-2" })}
-                      {isSidebarExpanded && <span className="ml-2">{item.title}</span>}
+                      {item.icon}
+                      {isSidebarExpanded && <span className="ml-2">{item.label}</span>}
                       {isSidebarExpanded && (
                         <div className="ml-auto">
                           {isDropdownActive ? (
@@ -81,20 +80,20 @@ export const DesktopNav = ({
                         </div>
                       )}
                     </Button>
-                    {isDropdownActive && isSidebarExpanded && item.submenu && (
+                    {isDropdownActive && isSidebarExpanded && item.subitems && (
                       <div className="pl-4 mt-1 grid gap-1">
-                        {item.submenu.map((subitem) => {
+                        {item.subitems.map((subitem) => {
                           const isSubitemActive = subitem.href === pathname;
                           return (
                             <Button
-                              key={subitem.title}
+                              key={subitem.label}
                               variant={isSubitemActive ? "secondary" : "ghost"}
                               className="w-full justify-start"
                               asChild
                             >
                               <Link to={subitem.href}>
-                                {React.createElement(subitem.icon, { className: "h-4 w-4 mr-2" })}
-                                <span className="ml-2">{subitem.title}</span>
+                                {subitem.icon}
+                                <span className="ml-2">{subitem.label}</span>
                               </Link>
                             </Button>
                           );
@@ -107,14 +106,14 @@ export const DesktopNav = ({
 
               return (
                 <Button
-                  key={item.title}
+                  key={item.label}
                   variant={isActive ? "secondary" : "ghost"}
                   className="w-full justify-start"
                   asChild
                 >
                   <Link to={item.href}>
-                    {React.createElement(item.icon, { className: "h-4 w-4 mr-2" })}
-                    {isSidebarExpanded && <span className="ml-2">{item.title}</span>}
+                    {item.icon}
+                    {isSidebarExpanded && <span className="ml-2">{item.label}</span>}
                   </Link>
                 </Button>
               );

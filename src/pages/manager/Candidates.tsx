@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -308,7 +307,6 @@ const Candidates = () => {
           isOpen={showHistoryDialog}
           onClose={closeHistoryDialog}
           candidateName={historyCandidateName}
-          candidateId={historyCandidateId} // Add this missing prop
           isLoading={historyLoading}
           logs={historyLogs}
         />

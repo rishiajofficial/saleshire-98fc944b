@@ -40,8 +40,7 @@ export function useCandidateDashboardState(userId?: string, selectedJobId?: stri
     // Computed properties
     showApplicationPrompt: 
       !dashboardState.applicationSubmitted && 
-      (dashboardState.candidateData?.status === 'profile_created' ||
-       dashboardState.candidateData?.status?.toLowerCase() === 'applied' || 
+      (dashboardState.candidateData?.status?.toLowerCase() === 'applied' || 
        dashboardState.candidateData?.status?.toLowerCase() === 'screening'),
     canAccessTraining,
     
