@@ -14,12 +14,17 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { useCandidateDashboardState } from '@/hooks/useCandidateDashboardState';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
+
+interface UserJob {
+  id: string;
+  title: string;
+}
 
 const CandidateDashboard = () => {
   const { profile, user } = useAuth();
   const [selectedJobId, setSelectedJobId] = useState<string | undefined>(undefined);
-  const [userJobs, setUserJobs] = useState<{id: string, title: string}[]>([]);
+  const [userJobs, setUserJobs] = useState<UserJob[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(true);
   
   const {
@@ -56,7 +61,7 @@ const CandidateDashboard = () => {
           
         if (error) throw error;
         
-        const jobs = data?.map(item => ({
+        const jobs: UserJob[] = data?.map(item => ({
           id: item.job_id,
           title: item.jobs?.title || 'Untitled Job'
         })) || [];

@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { Eye, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from 'date-fns';
 
@@ -59,7 +59,7 @@ const AssessmentResultsSummary: React.FC<AssessmentResultsSummaryProps> = ({ ass
             score,
             completed,
             completed_at,
-            candidates!assessment_results_candidate_id_fkey ( profiles!candidates_id_fkey ( name ) ) 
+            candidates:candidate_id ( profile:id ( name ) ) 
           `)
           .eq('assessment_id', assessmentId)
           .order('completed_at', { ascending: false, nullsFirst: false });
@@ -73,7 +73,7 @@ const AssessmentResultsSummary: React.FC<AssessmentResultsSummaryProps> = ({ ass
           score: result.score,
           completed: result.completed,
           completed_at: result.completed_at,
-          candidate_name: result.candidates?.profiles?.name
+          candidate_name: result.candidates?.profile?.name
         })) || [];
         
         setResults(transformedResults);

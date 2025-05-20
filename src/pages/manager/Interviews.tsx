@@ -1,6 +1,7 @@
+
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from '@/contexts/auth';
 import { toast } from "sonner";
 import MainLayout from "@/components/layout/MainLayout";
@@ -45,17 +46,33 @@ const Interviews = () => {
             id,
             scheduled_at,
             status,
-            candidate:candidates!interviews_candidate_id_fkey (
-              id, profile:profiles!candidates_id_fkey ( id, name, email )
+            candidate:candidate_id (
+              id, profile:id ( id, name, email )
             ),
-            manager:managers!interviews_manager_id_fkey (
-              id, profile:profiles!managers_id_fkey ( id, name )
+            manager:manager_id (
+              id, profile:id ( id, name )
             )
           `)
           .order('scheduled_at', { ascending: true });
 
         if (error) throw error;
-        return data || [];
+        
+        // Transform the data to match our interface
+        const transformedData: InterviewData[] = (data || []).map(item => ({
+          id: item.id,
+          scheduled_at: item.scheduled_at,
+          status: item.status,
+          candidate: item.candidate ? {
+            id: item.candidate.id,
+            profile: item.candidate.profile
+          } : null,
+          manager: item.manager ? {
+            id: item.manager.id,
+            profile: item.manager.profile
+          } : null
+        }));
+        
+        return transformedData;
       } catch (err) {
         console.error("Error fetching interviews:", err);
         return [];
