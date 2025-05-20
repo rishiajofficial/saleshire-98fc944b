@@ -4,9 +4,10 @@ import Navbar from './Navbar';
 
 interface MainLayoutProps {
   children: ReactNode;
+  title?: string; // Add optional title prop
 }
 
-const MainLayout = ({ children }: MainLayoutProps) => {
+const MainLayout = ({ children, title }: MainLayoutProps) => {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />

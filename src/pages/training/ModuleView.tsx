@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -107,7 +106,7 @@ const ModuleView = () => {
     : 0;
 
   return (
-    <MainLayout title="Training Module">
+    <MainLayout>
       <div className="container mx-auto py-8">
         <ModuleHeader
           title={formatModuleName(moduleName)}

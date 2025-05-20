@@ -14,7 +14,7 @@ import DirectorDashboard from './pages/dashboard/DirectorDashboard';
 import Candidates from './pages/manager/Candidates';
 import CandidateDetail from './pages/manager/CandidateDetail';
 import Training from './pages/training/Training';
-import Assessment from './pages/training/Assessment';
+import Assessment from './pages/training/AssessmentQuiz';
 import AssessmentResult from './pages/training/AssessmentResult';
 import ApplicationComplete from './pages/candidate/ApplicationComplete';
 

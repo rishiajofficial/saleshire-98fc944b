@@ -265,7 +265,7 @@ const Quiz = () => {
   }
 
   return (
-    <MainLayout title={`${getModuleTitle()} Quiz`}>
+    <MainLayout>
       <div className="max-w-3xl mx-auto py-8">
         <div className="mb-6">
           <h1 className="text-3xl font-bold tracking-tight">{getModuleTitle()} Quiz</h1>
