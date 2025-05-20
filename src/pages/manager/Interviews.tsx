@@ -64,11 +64,18 @@ const Interviews = () => {
           status: item.status,
           candidate: item.candidate ? {
             id: item.candidate.id,
-            profile: item.candidate.profile
+            profile: item.candidate.profile ? {
+              id: item.candidate.profile.id,
+              name: item.candidate.profile.name,
+              email: item.candidate.profile.email
+            } : null
           } : null,
           manager: item.manager ? {
             id: item.manager.id,
-            profile: item.manager.profile
+            profile: item.manager.profile ? {
+              id: item.manager.profile.id,
+              name: item.manager.profile.name
+            } : null
           } : null
         }));
         

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
@@ -103,53 +104,6 @@ const CandidateDashboard = () => {
       </MainLayout>
     );
   }
-
-  // Main content components
-  const mainContent = (
-    <>
-      {userJobs.length > 0 && (
-        <Card className="mb-6">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Select Job Application</CardTitle>
-            <Select value={selectedJobId} onValueChange={setSelectedJobId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a job application" />
-              </SelectTrigger>
-              <SelectContent>
-                {userJobs.map(job => (
-                  <SelectItem key={job.id} value={job.id}>
-                    {job.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </CardHeader>
-        </Card>
-      )}
-      <HiringJourneyCard 
-        currentStep={currentStep}
-        applicationSubmitted={applicationSubmitted}
-      />
-      <TrainingCard 
-        canAccessTraining={canAccessTraining}
-        trainingModules={trainingModules}
-        isLoadingTraining={isLoadingTraining}
-      />
-    </>
-  );
-
-  // Sidebar content components
-  const sideContent = (
-    <>
-      <StatusCard 
-        currentStep={currentStep}
-        candidateStatus={candidateData?.status}
-      />
-      <NotificationsCard 
-        notifications={notifications}
-      />
-    </>
-  );
 
   return (
     <MainLayout>
