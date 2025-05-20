@@ -56,29 +56,32 @@ const CandidateDashboard = () => {
               id,
               title
             ),
-            interview_datetime
+            scheduled_at
           `)
           .eq('candidate_id', user.id);
           
         if (error) throw error;
         
-        const jobs = data?.map(item => ({
-          id: item.job_id,
-          title: item.jobs?.title || 'Untitled Job'
-        })) || [];
-        
-        setUserJobs(jobs);
-        
-        // Set default selected job if we have jobs and none is selected
-        if (jobs.length > 0 && !selectedJobId) {
-          setSelectedJobId(jobs[0].id);
-        }
-        
-        // Get interview date if available
-        const interview = data?.find(item => item.interview_datetime);
-        if (interview?.interview_datetime) {
-          const date = new Date(interview.interview_datetime);
-          setInterviewDate(date.toLocaleDateString() + ' at ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
+        // Handle successful response
+        if (data) {
+          const jobs = data.map(item => ({
+            id: item.job_id,
+            title: item.jobs?.title || 'Untitled Job'
+          }));
+          
+          setUserJobs(jobs);
+          
+          // Set default selected job if we have jobs and none is selected
+          if (jobs.length > 0 && !selectedJobId) {
+            setSelectedJobId(jobs[0].id);
+          }
+          
+          // Get interview date if available
+          const interview = data.find(item => item.scheduled_at);
+          if (interview?.scheduled_at) {
+            const date = new Date(interview.scheduled_at);
+            setInterviewDate(date.toLocaleDateString() + ' at ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
+          }
         }
         
       } catch (err) {

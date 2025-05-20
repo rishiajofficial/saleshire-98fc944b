@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -169,64 +170,7 @@ const Application = () => {
       return;
     }
 
-    try {
-      // First, fetch the latest candidate data including the uploaded files
-      const { data: candidateData, error: fetchError } = await supabase
-        .from("candidates")
-        .select("resume, about_me_video, sales_pitch_video")
-        .eq("id", user.id)
-        .single();
-        
-      if (fetchError) throw fetchError;
-      
-      // Update the candidate status with the job name
-      const jobTitle = jobDetails?.title || "Unknown Position";
-      const newStatus = `Applied to job: ${jobTitle}`;
-      
-      await updateApplicationStatus(user.id, {
-        status: newStatus,
-        job_title: jobTitle
-      });
-      
-      if (jobDetails?.id) {
-        const { error: applicationError } = await supabase
-          .from("job_applications")
-          .insert({
-            candidate_id: user.id,
-            job_id: jobDetails.id,
-            status: 'hr_review'
-          });
-          
-        if (applicationError) {
-          if (applicationError.code === '23505') {
-            toast({
-              title: "Already Applied",
-              description: "You have already applied for this position.",
-              variant: "destructive",
-            });
-            return;
-          } else {
-            throw applicationError;
-          }
-        }
-      }
-
-      toast({
-        title: "Application submitted",
-        description: "Your application has been submitted successfully and is now under HR review.",
-      });
-
-      setIsSubmitted(true);
-      navigate("/dashboard/candidate");
-      
-      localStorage.removeItem("selectedJob");
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to submit application",
-        variant: "destructive",
-      });
-    }
+    navigate("/application-complete");
   };
 
   const showApplicationRequiredAlert = 

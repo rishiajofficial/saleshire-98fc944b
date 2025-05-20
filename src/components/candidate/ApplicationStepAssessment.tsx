@@ -19,6 +19,7 @@ const ApplicationStepAssessment = ({ onBack, onComplete, jobId }: ApplicationSte
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasExistingApplication, setHasExistingApplication] = useState(false);
+  const [hasCompletedAssessment, setHasCompletedAssessment] = useState(false);
 
   useEffect(() => {
     const checkExistingApplication = async () => {
@@ -60,6 +61,8 @@ const ApplicationStepAssessment = ({ onBack, onComplete, jobId }: ApplicationSte
         // If there's no assessment linked to this job
         if (!jobAssessment) {
           setAssessment(null);
+          // If no assessment is required, we can auto-complete
+          setHasCompletedAssessment(true);
           return;
         }
         
@@ -72,6 +75,21 @@ const ApplicationStepAssessment = ({ onBack, onComplete, jobId }: ApplicationSte
         
         if (assessmentError) throw assessmentError;
         setAssessment(assessmentData);
+        
+        // Check if user has already completed this assessment
+        const userId = (await supabase.auth.getUser()).data.user?.id;
+        if (userId) {
+          const { data: results, error: resultsError } = await supabase
+            .from('assessment_results')
+            .select('*')
+            .eq('candidate_id', userId)
+            .eq('assessment_id', jobAssessment.assessment_id)
+            .maybeSingle();
+            
+          if (!resultsError && results) {
+            setHasCompletedAssessment(true);
+          }
+        }
       } catch (error: any) {
         console.error("Error in fetchJobAssessment:", error);
         setError("Failed to load assessment details.");
@@ -182,12 +200,33 @@ const ApplicationStepAssessment = ({ onBack, onComplete, jobId }: ApplicationSte
               {assessment.description}
             </div>
             <div className="flex flex-col gap-4 mt-4">
-              <Button onClick={handleTakeAssessment}>
-                Take Assessment
-              </Button>
-              <div className="text-xs text-gray-500 italic">
-                Note: You can complete the assessment later from your dashboard.
-              </div>
+              {hasCompletedAssessment ? (
+                <div className="bg-green-50 p-4 rounded-md border border-green-200">
+                  <p className="text-green-700 font-medium">Assessment Completed!</p>
+                  <p className="text-sm text-green-600 mt-1">
+                    You've already completed this assessment. Please click submit to continue.
+                  </p>
+                  <Button onClick={handleComplete} className="mt-4" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      "Submit Application"
+                    )}
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <Button onClick={handleTakeAssessment}>
+                    Take Assessment
+                  </Button>
+                  <div className="text-xs text-gray-500 italic">
+                    You must complete the assessment before your application can be submitted.
+                  </div>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -197,24 +236,21 @@ const ApplicationStepAssessment = ({ onBack, onComplete, jobId }: ApplicationSte
           <AlertDescription>
             This position doesn't require an initial screening assessment.
           </AlertDescription>
+          <Button onClick={handleComplete} className="mt-4" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Submitting...
+              </>
+            ) : (
+              "Submit Application"
+            )}
+          </Button>
         </Alert>
       )}
       
       <div className="flex justify-between mt-8">
         <Button onClick={onBack} variant="outline">Back</Button>
-        <Button 
-          onClick={handleComplete}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Submit Application
-            </>
-          ) : (
-            "Submit Application"
-          )}
-        </Button>
       </div>
     </div>
   );
