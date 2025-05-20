@@ -1,3 +1,4 @@
+
 // Let's make sure our UserRole type is available globally
 export type UserRole = 'admin' | 'hr' | 'manager' | 'director' | 'candidate';
 
@@ -27,6 +28,10 @@ export type AssessmentWithStats = {
 };
 
 export * from './job';
-export * from './common';
 export * from './candidate';
 export * from './training';
+
+// Re-export common types except for the duplicate CandidateProfile that's now defined in candidate.ts
+// Use explicit re-exports to avoid the ambiguity
+import { ActivityLog, UserProfile } from './common';
+export { ActivityLog, UserProfile };
