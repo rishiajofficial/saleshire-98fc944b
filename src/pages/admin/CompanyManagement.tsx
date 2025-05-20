@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { supabase } from '@/integrations/supabase/client';
@@ -80,7 +81,11 @@ const CompanyManagement = () => {
   const fetchCompanyMembers = async () => {
     try {
       setIsLoading(true);
-      if (!profile?.company_id) return;
+      if (!profile?.company_id) {
+        setCompanyMembers([]);
+        setIsLoading(false);
+        return;
+      }
 
       const { data, error } = await supabase
         .from('profiles')
@@ -109,11 +114,20 @@ const CompanyManagement = () => {
     try {
       setIsSubmitting(true);
       
+      if (!profile?.company_id) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "You must be assigned to a company to add users.",
+        });
+        return;
+      }
+      
       const response = await userService.createUserProfile({
         name: data.name,
         email: data.email,
         role: data.role,
-        company_id: profile?.company_id,
+        company_id: profile.company_id,
       });
 
       toast({
@@ -135,8 +149,11 @@ const CompanyManagement = () => {
     }
   };
 
+  // Check if user has no company assigned
+  const noCompanyAssigned = !profile?.company_id;
+  
   // Check permissions
-  if (!profile?.isCompanyAdmin) {
+  if (profile && !profile.isCompanyAdmin && !noCompanyAssigned) {
     return (
       <MainLayout>
         <div className="flex flex-col items-center justify-center min-h-[60vh]">
@@ -152,176 +169,193 @@ const CompanyManagement = () => {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold">Company Management</h1>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>Add New User</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add New User</DialogTitle>
-                <DialogDescription>
-                  Create a new user for your company. They will receive an email with their login details.
-                </DialogDescription>
-              </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="John Doe" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input placeholder="johndoe@example.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="role"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Role</FormLabel>
-                        <Select
-                          value={field.value}
-                          onValueChange={field.onChange}
-                        >
+          {!noCompanyAssigned && (
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>Add New User</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add New User</DialogTitle>
+                  <DialogDescription>
+                    Create a new user for your company. They will receive an email with their login details.
+                  </DialogDescription>
+                </DialogHeader>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Name</FormLabel>
                           <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select role" />
-                            </SelectTrigger>
+                            <Input placeholder="John Doe" {...field} />
                           </FormControl>
-                          <SelectContent>
-                            <SelectItem value="hr">HR Manager</SelectItem>
-                            <SelectItem value="manager">Manager</SelectItem>
-                            <SelectItem value="director">Director</SelectItem>
-                            <SelectItem value="candidate">Candidate</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Temporary Password</FormLabel>
-                        <FormControl>
-                          <Input type="password" placeholder="******" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <DialogFooter>
-                    <Button type="submit" disabled={isSubmitting}>
-                      {isSubmitting ? "Creating..." : "Create User"}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input placeholder="johndoe@example.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="role"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Role</FormLabel>
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select role" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="hr">HR Manager</SelectItem>
+                              <SelectItem value="manager">Manager</SelectItem>
+                              <SelectItem value="director">Director</SelectItem>
+                              <SelectItem value="candidate">Candidate</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Temporary Password</FormLabel>
+                          <FormControl>
+                            <Input type="password" placeholder="******" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <DialogFooter>
+                      <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? "Creating..." : "Create User"}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{profile?.company?.name || "Company"} Members</CardTitle>
-            <CardDescription>Manage users in your company</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-              </div>
-            ) : (
-              <div className="relative overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                  <thead className="text-xs uppercase bg-gray-100 dark:bg-gray-700">
-                    <tr>
-                      <th scope="col" className="px-6 py-3">Name</th>
-                      <th scope="col" className="px-6 py-3">Email</th>
-                      <th scope="col" className="px-6 py-3">Role</th>
-                      <th scope="col" className="px-6 py-3 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {companyMembers.map((member) => (
-                      <tr key={member.id} className="bg-white border-b">
-                        <td className="px-6 py-4">{member.name}</td>
-                        <td className="px-6 py-4">{member.email}</td>
-                        <td className="px-6 py-4 capitalize">{member.role}</td>
-                        <td className="px-6 py-4 text-right">
-                          <Button variant="outline" size="sm" className="ml-2">Edit</Button>
-                        </td>
-                      </tr>
-                    ))}
-                    {companyMembers.length === 0 && (
-                      <tr>
-                        <td colSpan={4} className="px-6 py-8 text-center">
-                          No members found. Add your first user!
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {noCompanyAssigned ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center p-6 py-12">
+              <h2 className="text-2xl font-semibold mb-2">No Company Assigned</h2>
+              <p className="text-gray-500 text-center mb-6">
+                You don't have a company assigned to your profile. Please contact an administrator
+                to associate your account with a company.
+              </p>
+              <Button variant="secondary">Contact Support</Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle>{profile?.company?.name || "Company"} Members</CardTitle>
+                <CardDescription>Manage users in your company</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                  </div>
+                ) : (
+                  <div className="relative overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                      <thead className="text-xs uppercase bg-gray-100 dark:bg-gray-700">
+                        <tr>
+                          <th scope="col" className="px-6 py-3">Name</th>
+                          <th scope="col" className="px-6 py-3">Email</th>
+                          <th scope="col" className="px-6 py-3">Role</th>
+                          <th scope="col" className="px-6 py-3 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {companyMembers.map((member) => (
+                          <tr key={member.id} className="bg-white border-b">
+                            <td className="px-6 py-4">{member.name}</td>
+                            <td className="px-6 py-4">{member.email}</td>
+                            <td className="px-6 py-4 capitalize">{member.role}</td>
+                            <td className="px-6 py-4 text-right">
+                              <Button variant="outline" size="sm" className="ml-2">Edit</Button>
+                            </td>
+                          </tr>
+                        ))}
+                        {companyMembers.length === 0 && (
+                          <tr>
+                            <td colSpan={4} className="px-6 py-8 text-center">
+                              No members found. Add your first user!
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Company Settings</CardTitle>
-            <CardDescription>Manage your company information</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="companyName" className="text-right">
-                  Company Name
-                </label>
-                <Input
-                  id="companyName"
-                  value={profile?.company?.name || ""}
-                  className="col-span-3"
-                  readOnly
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="domain" className="text-right">
-                  Domain
-                </label>
-                <Input
-                  id="domain"
-                  value={profile?.company?.domain || ""}
-                  className="col-span-3"
-                  readOnly
-                />
-              </div>
-              <div className="flex justify-end">
-                <Button variant="outline">Edit Company Info</Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Company Settings</CardTitle>
+                <CardDescription>Manage your company information</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label htmlFor="companyName" className="text-right">
+                      Company Name
+                    </label>
+                    <Input
+                      id="companyName"
+                      value={profile?.company?.name || ""}
+                      className="col-span-3"
+                      readOnly
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label htmlFor="domain" className="text-right">
+                      Domain
+                    </label>
+                    <Input
+                      id="domain"
+                      value={profile?.company?.domain || ""}
+                      className="col-span-3"
+                      readOnly
+                    />
+                  </div>
+                  <div className="flex justify-end">
+                    <Button variant="outline">Edit Company Info</Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
     </MainLayout>
   );
