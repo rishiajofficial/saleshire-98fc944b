@@ -3,37 +3,17 @@ import React, { createContext, useState, useEffect, useContext, useRef } from 'r
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useLocation } from 'react-router-dom';
 import { AuthContextProps } from './types';
 import { cleanupAuthState, fetchUserProfile } from './authUtils';
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
-
-// Create a custom hook for router independent navigation
-// This will be used only when a router is available
-const useNavigation = () => {
-  // Store navigation function that will be set when used within a router context
-  const navigate = (path: string) => {
-    // This is just a placeholder that will be overridden when used in a component with router context
-    console.warn("Navigation attempted outside Router context - this is safe to ignore during initialization");
-  };
-
-  return { navigate };
-};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const location = useLocation();
-  const locationRef = useRef(location);
-  const { navigate } = useNavigation(); // This is safe as it doesn't actually use router hooks
-
-  useEffect(() => {
-    locationRef.current = location;
-  }, [location]);
-
+  
   // This flag helps prevent redirect loops
   const [initialAuthCheckComplete, setInitialAuthCheckComplete] = useState<boolean>(false);
   
@@ -69,14 +49,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setProfile(null);
           
           // Handle navigation through window.location only when needed
-          const currentPath = locationRef.current.pathname;
-          if (initialAuthCheckComplete && 
-              currentPath !== '/login' && 
-              currentPath !== '/register' && 
-              currentPath !== '/forgot-password' && 
-              currentPath !== '/reset-password' &&
-              currentPath !== '/' &&
-              currentPath !== '/careers') {
+          const isPrivatePage = window.location.pathname !== '/login' && 
+              window.location.pathname !== '/register' && 
+              window.location.pathname !== '/forgot-password' && 
+              window.location.pathname !== '/reset-password' &&
+              window.location.pathname !== '/' &&
+              window.location.pathname !== '/careers';
+              
+          if (initialAuthCheckComplete && isPrivatePage) {
             // Just change location once instead of forcing a reload
             window.location.replace('/login');
           }
@@ -101,13 +81,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setInitialAuthCheckComplete(true);
         
         // Only redirect if not on public pages
-        const currentPath = locationRef.current.pathname;
-        if (currentPath !== '/login' && 
-            currentPath !== '/register' && 
-            currentPath !== '/forgot-password' && 
-            currentPath !== '/reset-password' &&
-            currentPath !== '/' &&
-            currentPath !== '/careers') {
+        const isPrivatePage = window.location.pathname !== '/login' && 
+            window.location.pathname !== '/register' && 
+            window.location.pathname !== '/forgot-password' && 
+            window.location.pathname !== '/reset-password' &&
+            window.location.pathname !== '/' &&
+            window.location.pathname !== '/careers';
+            
+        if (isPrivatePage) {
           window.location.replace('/login');
         }
       }

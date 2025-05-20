@@ -20,8 +20,8 @@ import ApplicationComplete from './pages/candidate/ApplicationComplete';
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
+    <Router>
+      <AuthProvider>
         <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/login" element={<Login />} />
@@ -40,8 +40,8 @@ function App() {
           <Route path="/training/assessment/:assessmentId" element={<Assessment />} />
           <Route path="/assessment-result/:resultId" element={<AssessmentResult />} />
         </Routes>
-      </Router>
-    </AuthProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 
