@@ -1,47 +1,20 @@
 
-import { Tables } from "@/integrations/supabase/types";
+// Add or update the file to include the extended user data properties
+import { Region, UserRole } from './index';
 
-export type Profile = Tables<'profiles'>;
-
-// Make certain properties optional to match what we receive from the database
-export type Candidate = Partial<Tables<'candidates'>> & { 
-  id: string;
-  profile?: Pick<Profile, 'name' | 'email'> | null;
-  status: string;
-  current_step?: number;
-  tags?: string[];
-};
-
-export type CandidateWithProfile = Candidate & {
-  profile?: Pick<Profile, 'name' | 'email' | 'role'> | null;
-};
-
-export type AssessmentResult = Tables<'assessment_results'> & { 
-  assessment: Pick<Tables<'assessments'>, 'title'> | null;
-};
-
-export type ManagerProfile = Pick<Profile, 'id' | 'name'>;
-
-// Add a new type to handle candidates from job applications
-export type JobApplicationCandidate = Candidate & {
-  assessment_results?: any[];
-};
-
-export interface StatusHistoryEntry {
-  id: string;
-  application_id: string;
-  status: string;
-  notes?: string;
-  created_at: string;
-  updated_by: string;
-  updated_by_user?: {
-    name: string;
-  };
-}
-
-export interface CandidateTag {
+export interface CandidateProfile {
   id: string;
   name: string;
-  color?: string;
-  description?: string;
+  role: UserRole;
+  phone: string;
+  location: string;
+  region: Region;
+  resume: string | null;
+  about_me_video: string | null;
+  sales_pitch_video: string | null;
+  company_invite_code?: string;
+  register_as_company?: string;
+  company_name?: string;
+  company_domain?: string;
+  company_id?: string;
 }
