@@ -6,12 +6,12 @@ import { UserRole } from '@/types';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  allowedRoles: UserRole[];
+  allowedRoles?: UserRole[];
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
-  allowedRoles 
+  allowedRoles = [] 
 }) => {
   const { user, profile, isLoading } = useAuth();
   const location = useLocation();
@@ -45,8 +45,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     </div>;
   }
   
-  // If profile is loaded and role is not allowed, redirect to appropriate dashboard
-  if (!allowedRoles.includes(profile.role as UserRole)) {
+  // If profile is loaded and allowedRoles is provided but role is not allowed, redirect to appropriate dashboard
+  if (allowedRoles.length > 0 && !allowedRoles.includes(profile.role as UserRole)) {
     const dashboardPath = `/dashboard/${profile.role}`;
     return <Navigate to={dashboardPath} replace />;
   }
