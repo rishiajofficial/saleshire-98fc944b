@@ -1,25 +1,34 @@
 
 import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { AuthContextProps } from './types';
 import { cleanupAuthState, fetchUserProfile } from './authUtils';
-import { Company } from '@/services/userService';
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
+
+// Create a custom hook for router independent navigation
+// This will be used only when a router is available
+const useNavigation = () => {
+  // Store navigation function that will be set when used within a router context
+  const navigate = (path: string) => {
+    // This is just a placeholder that will be overridden when used in a component with router context
+    console.warn("Navigation attempted outside Router context - this is safe to ignore during initialization");
+  };
+
+  return { navigate };
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<any>(null);
-  const [company, setCompany] = useState<Company | null>(null);
-  const [isCompanyAdmin, setIsCompanyAdmin] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const location = useLocation();
   const locationRef = useRef(location);
-  const navigate = useNavigate();
+  const { navigate } = useNavigation(); // This is safe as it doesn't actually use router hooks
 
   useEffect(() => {
     locationRef.current = location;
@@ -51,17 +60,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setTimeout(() => {
               fetchUserProfile(currentSession.user.id).then(profileData => {
                 setProfile(profileData);
-                
-                // Check if user is part of a company
-                if (profileData?.company_id) {
-                  fetchCompanyData(profileData.company_id);
-                  // Set company admin status based on role
-                  setIsCompanyAdmin(profileData.role === 'hr' || profileData.role === 'admin');
-                } else {
-                  setCompany(null);
-                  setIsCompanyAdmin(false);
-                }
-                
                 isProfileFetchingRef.current = false;
               });
             }, 0);
@@ -69,8 +67,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else if (event === 'SIGNED_OUT') {
           console.log('AuthContext: SIGNED_OUT event detected. Clearing profile.');
           setProfile(null);
-          setCompany(null);
-          setIsCompanyAdmin(false);
           
           // Handle navigation through window.location only when needed
           const currentPath = locationRef.current.pathname;
@@ -97,14 +93,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (currentSession?.user) {
         fetchUserProfile(currentSession.user.id).then(profileData => {
           setProfile(profileData);
-          
-          // Check if user is part of a company
-          if (profileData?.company_id) {
-            fetchCompanyData(profileData.company_id);
-            // Set company admin status based on role
-            setIsCompanyAdmin(profileData.role === 'hr' || profileData.role === 'admin');
-          }
-          
           setIsLoading(false);
           setInitialAuthCheckComplete(true);
         });
@@ -129,28 +117,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       subscription.unsubscribe();
     };
   }, []);
-
-  // Fetch company data
-  const fetchCompanyData = async (companyId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('companies')
-        .select('*')
-        .eq('id', companyId)
-        .single();
-      
-      if (error) {
-        console.error('Error fetching company data:', error);
-        setCompany(null);
-        return;
-      }
-      
-      setCompany(data as Company);
-    } catch (error) {
-      console.error('Error in fetchCompanyData:', error);
-      setCompany(null);
-    }
-  };
 
   // Sign in function
   const signIn = async (email: string, password: string) => {
@@ -182,24 +148,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (profileError) {
           console.error('Error fetching profile for redirect:', profileError.message);
-          // Default redirect
-          navigate('/dashboard/candidate');
+          // Default redirect using window.location
+          window.location.href = '/dashboard/candidate';
           return;
         }
         
         console.log('User role:', profileData?.role);
         
-        // Redirect based on role
+        // Redirect based on role using window.location
         if (profileData?.role === 'admin') {
-          navigate('/dashboard/admin');
+          window.location.href = '/dashboard/admin';
         } else if (profileData?.role === 'manager') {
-          navigate('/dashboard/manager');
+          window.location.href = '/dashboard/manager';
         } else if (profileData?.role === 'hr') {
-          navigate('/dashboard/hr');
+          window.location.href = '/dashboard/hr';
         } else if (profileData?.role === 'director') {
-          navigate('/dashboard/director');
+          window.location.href = '/dashboard/director';
         } else {
-          navigate('/dashboard/candidate');
+          window.location.href = '/dashboard/candidate';
         }
       }
     } catch (error: any) {
@@ -228,7 +194,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       toast.success('Registration successful! Please check your email for verification.');
-      navigate('/login');
+      window.location.href = '/login'; // Use window.location instead of useNavigate
       
     } catch (error: any) {
       toast.error(error.message || 'Failed to sign up');
@@ -260,13 +226,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(null);
       setUser(null);
       setProfile(null);
-      setCompany(null);
-      setIsCompanyAdmin(false);
       
       toast.success('Successfully signed out');
       
-      // Use navigate to prevent additional history entries
-      navigate('/login', { replace: true });
+      // Use replace instead of href to prevent additional history entries
+      window.location.replace('/login');
     } catch (error: any) {
       toast.error(error.message || 'Failed to sign out');
       console.error('AuthContext: Error in signOut function wrapper:', error.message);
@@ -306,9 +270,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         session,
         user,
         profile,
-        company,
         isLoading,
-        isCompanyAdmin,
         signIn,
         signUp,
         signOut,

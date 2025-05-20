@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,12 +20,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
-import { Region, UserRegistrationData } from "@/types";
+import { Region } from "@/types";
 import { AlertCircle, Eye, EyeOff } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import AuthLayout from '@/components/layout/AuthLayout';
-import { Checkbox } from "@/components/ui/checkbox";
-import { supabase } from "@/lib/supabase";
 
 const indianStates = [
   "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", 
@@ -49,9 +48,6 @@ const Register = () => {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [companyInviteCode, setCompanyInviteCode] = useState("");
-  const [companyName, setCompanyName] = useState("");
-  const [joinAsCompany, setJoinAsCompany] = useState(false);
   
   const { signUp, user } = useAuth();
   const navigate = useNavigate();
@@ -64,36 +60,8 @@ const Register = () => {
     }
   }, [user, navigate, location]);
 
-  useEffect(() => {
-    const queryParams = new URLSearchParams(location.search);
-    const inviteCode = queryParams.get('invite');
-    if (inviteCode) {
-      setCompanyInviteCode(inviteCode);
-      
-      // Fetch company name for display
-      const fetchCompanyName = async () => {
-        try {
-          const { data, error } = await supabase
-            .from('companies')
-            .select('name')
-            .eq('invite_code', inviteCode)
-            .single();
-            
-          if (error) throw error;
-          if (data) {
-            setCompanyName(data.name);
-          }
-        } catch (err) {
-          console.error("Error fetching company details:", err);
-        }
-      };
-      
-      fetchCompanyName();
-    }
-  }, [location.search]);
-
   const formatPhoneNumber = (value: string) => {
-    const cleaned = value.replace(/\D/g, "");
+    const cleaned = value.replace(/\D/g, '');
     let formatted = '';
     
     if (cleaned.length <= 5) {
@@ -114,7 +82,6 @@ const Register = () => {
     setPhone(cleaned.length > 0 ? `+91 ${cleaned}` : "");
   };
 
-  // Update the handleSubmit function to correctly type userData
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -132,32 +99,18 @@ const Register = () => {
     setError("");
     
     try {
-      const locationString = `${city}, ${state}`;
+      const location = `${city}, ${state}`;
       
-      // Use the UserRegistrationData interface
-      const userData: UserRegistrationData = {
+      const userData = {
         name,
         role: 'candidate',
         phone,
-        location: locationString,
+        location,
         region,
         resume: null,
         about_me_video: null,
         sales_pitch_video: null
       };
-
-      // If we have a company invite code, add it to the user data
-      if (companyInviteCode) {
-        userData.company_invite_code = companyInviteCode;
-      }
-      
-      // If user is registering as a company
-      if (joinAsCompany && companyName) {
-        userData.register_as_company = 'true';
-        userData.company_name = companyName;
-        userData.company_domain = '';
-        userData.role = 'hr'; // Company registrants start as HR
-      }
 
       await signUp(email, password, userData);
       navigate("/job-openings");
@@ -173,21 +126,10 @@ const Register = () => {
       <div className="flex min-h-[calc(100vh-12rem)] items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader className="space-y-1">
-            {companyInviteCode && companyName ? (
-              <>
-                <CardTitle className="text-2xl font-bold">Join {companyName}</CardTitle>
-                <CardDescription>
-                  Create your account to apply for roles at {companyName}
-                </CardDescription>
-              </>
-            ) : (
-              <>
-                <CardTitle className="text-2xl font-bold">Create a Candidate Account</CardTitle>
-                <CardDescription>
-                  Enter your information to apply for our sales roles
-                </CardDescription>
-              </>
-            )}
+            <CardTitle className="text-2xl font-bold">Create a Candidate Account</CardTitle>
+            <CardDescription>
+              Enter your information to apply for our sales roles
+            </CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="p-6">
@@ -196,37 +138,6 @@ const Register = () => {
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
-              )}
-              
-              {!companyInviteCode && (
-                <div className="mb-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="company-register" 
-                      checked={joinAsCompany}
-                      onCheckedChange={(checked) => setJoinAsCompany(!!checked)}
-                    />
-                    <label
-                      htmlFor="company-register"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      I want to register my company
-                    </label>
-                  </div>
-                </div>
-              )}
-              
-              {joinAsCompany && !companyInviteCode && (
-                <div className="space-y-2 mb-4">
-                  <Label htmlFor="company-name">Company Name</Label>
-                  <Input
-                    id="company-name"
-                    placeholder="Acme Corporation"
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    required={joinAsCompany}
-                  />
-                </div>
               )}
               
               <div className="space-y-4">

@@ -1,126 +1,47 @@
 
-import { Region, UserRole } from './index';
+import { Tables } from "@/integrations/supabase/types";
 
-// Base candidate profile definition
-export interface CandidateProfile {
+export type Profile = Tables<'profiles'>;
+
+// Make certain properties optional to match what we receive from the database
+export type Candidate = Partial<Tables<'candidates'>> & { 
   id: string;
-  name: string;
-  role: UserRole;
-  phone: string;
-  location: string;
-  region: Region;
-  resume: string | null;
-  about_me_video: string | null;
-  sales_pitch_video: string | null;
-  company_invite_code?: string;
-  register_as_company?: string;
-  company_name?: string;
-  company_domain?: string;
-  company_id?: string;
-}
-
-// Basic user data interface for registration
-export interface UserRegistrationData {
-  name: string;
-  role: string;
-  phone: string;
-  location: string;
-  region: Region;
-  resume: any;
-  about_me_video: any;
-  sales_pitch_video: any;
-  company_invite_code?: string;
-  register_as_company?: string;
-  company_name?: string;
-  company_domain?: string;
-  company_id?: string;
-}
-
-// Candidate model used in components
-export interface Candidate {
-  id: string;
-  phone: string;
-  location: string;
-  region: string;
-  resume: string | null;
-  about_me_video: string | null;
-  sales_pitch_video: string | null;
-  status?: string;
+  profile?: Pick<Profile, 'name' | 'email'> | null;
+  status: string;
   current_step?: number;
-  profile?: {
-    name: string;
-    email: string;
-  };
-  assigned_manager?: string;
-  company_id?: string;
-}
+  tags?: string[];
+};
 
-// Candidate with full profile information
-export interface CandidateWithProfile {
+export type CandidateWithProfile = Candidate & {
+  profile?: Pick<Profile, 'name' | 'email' | 'role'> | null;
+};
+
+export type AssessmentResult = Tables<'assessment_results'> & { 
+  assessment: Pick<Tables<'assessments'>, 'title'> | null;
+};
+
+export type ManagerProfile = Pick<Profile, 'id' | 'name'>;
+
+// Add a new type to handle candidates from job applications
+export type JobApplicationCandidate = Candidate & {
+  assessment_results?: any[];
+};
+
+export interface StatusHistoryEntry {
   id: string;
-  phone: string;
-  location: string;
-  region: string;
-  resume: string | null;
-  about_me_video: string | null;
-  sales_pitch_video: string | null;
+  application_id: string;
   status: string;
-  current_step: number;
-  profile: {
+  notes?: string;
+  created_at: string;
+  updated_by: string;
+  updated_by_user?: {
     name: string;
-    email: string;
-    role: string;
-    id?: string;  // Made optional to match actual data
   };
-  assigned_manager?: string;
-  updated_at?: string;
 }
 
-// Assessment result definition
-export interface AssessmentResult {
-  id: string;
-  candidate_id: string;
-  assessment_id: string;
-  score: number;
-  completed_at: string;
-  assessment?: {
-    title: string;
-    id?: string;  // Made optional to match actual data structure
-  };
-  // Additional fields that might come from the database
-  answers?: any;
-  answer_timings?: any;
-  completed?: boolean;
-  created_at?: string;
-  feedback?: string;
-  reviewed_at?: string;
-  reviewed_by?: string;
-  started_at?: string;
-}
-
-// Manager profile definition
-export interface ManagerProfile {
+export interface CandidateTag {
   id: string;
   name: string;
-  email?: string;  // Made optional to match actual data structure
-  role?: string;   // Made optional to match actual data structure
-  regions?: string[];
-}
-
-// Job application with candidate information
-export interface JobApplicationCandidate {
-  id: string;
-  job_id: string;
-  candidate_id: string;
-  status: string;
-  created_at: string;
-  updated_at: string;
-  job: {
-    title: string;
-    description: string;
-    location: string;
-    department: string;
-    employment_type: string;
-  };
-  candidate: Candidate;
+  color?: string;
+  description?: string;
 }

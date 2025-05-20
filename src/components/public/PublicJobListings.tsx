@@ -11,23 +11,18 @@ interface PublicJobListingsProps {
   jobs: Job[];
   isLoading: boolean;
   onApply: (jobId: string) => void;
-  isPublic?: boolean;
 }
 
 export const PublicJobListings: React.FC<PublicJobListingsProps> = ({ 
   jobs, 
   isLoading,
-  onApply,
-  isPublic = true
+  onApply
 }) => {
-  // Filter to only show public jobs on the public page
-  const displayJobs = isPublic ? jobs.filter(job => job.is_public) : jobs;
-
   if (isLoading) {
     return <Loading message="Loading job openings..." />;
   }
 
-  if (!displayJobs || displayJobs.length === 0) {
+  if (!jobs || jobs.length === 0) {
     return (
       <div className="text-center py-12 bg-gray-50 rounded-lg">
         <div className="flex flex-col items-center justify-center space-y-2">
@@ -43,7 +38,7 @@ export const PublicJobListings: React.FC<PublicJobListingsProps> = ({
 
   return (
     <div className="grid gap-6">
-      {displayJobs.map((job) => (
+      {jobs.map((job) => (
         <Card key={job.id} className="overflow-hidden hover:shadow-lg transition-all duration-300">
           <CardContent className="p-0">
             <div className="p-6">
@@ -96,11 +91,6 @@ export const PublicJobListings: React.FC<PublicJobListingsProps> = ({
                 <span className="bg-green-50 text-green-700 text-xs px-2.5 py-1 rounded-full">
                   Training Available
                 </span>
-                {job.is_public && (
-                  <span className="bg-blue-50 text-blue-700 text-xs px-2.5 py-1 rounded-full">
-                    Public Listing
-                  </span>
-                )}
               </div>
               
               <div className="mt-4 flex justify-end">

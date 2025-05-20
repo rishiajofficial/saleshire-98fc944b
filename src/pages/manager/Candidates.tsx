@@ -66,8 +66,7 @@ const Candidates = () => {
         throw new Error(error.message);
       }
       
-      // Cast the data to match our CandidateWithProfile interface
-      return (data || []) as unknown as CandidateWithProfile[];
+      return (data || []) as CandidateWithProfile[];
     },
     enabled: !!user,
   });
@@ -208,7 +207,6 @@ const Candidates = () => {
     }
   };
 
-  // Filter candidates to ensure only candidates with role 'candidate' are shown
   const filteredCandidates = fetchedCandidates?.filter(
     (candidate) =>
       candidate.profile?.role === 'candidate' &&

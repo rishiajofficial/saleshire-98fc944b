@@ -14,17 +14,12 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { useCandidateDashboardState } from '@/hooks/useCandidateDashboardState';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
-import { supabase } from '@/lib/supabase';
-
-interface UserJob {
-  id: string;
-  title: string;
-}
+import { supabase } from '@/integrations/supabase/client';
 
 const CandidateDashboard = () => {
   const { profile, user } = useAuth();
   const [selectedJobId, setSelectedJobId] = useState<string | undefined>(undefined);
-  const [userJobs, setUserJobs] = useState<UserJob[]>([]);
+  const [userJobs, setUserJobs] = useState<{id: string, title: string}[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(true);
   
   const {
@@ -61,8 +56,7 @@ const CandidateDashboard = () => {
           
         if (error) throw error;
         
-        // Transform the data to properly extract job details
-        const jobs: UserJob[] = data?.map(item => ({
+        const jobs = data?.map(item => ({
           id: item.job_id,
           title: item.jobs?.title || 'Untitled Job'
         })) || [];
@@ -105,52 +99,60 @@ const CandidateDashboard = () => {
     );
   }
 
+  // Main content components
+  const mainContent = (
+    <>
+      {userJobs.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Select Job Application</CardTitle>
+            <Select value={selectedJobId} onValueChange={setSelectedJobId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a job application" />
+              </SelectTrigger>
+              <SelectContent>
+                {userJobs.map(job => (
+                  <SelectItem key={job.id} value={job.id}>
+                    {job.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardHeader>
+        </Card>
+      )}
+      <HiringJourneyCard 
+        currentStep={currentStep}
+        applicationSubmitted={applicationSubmitted}
+      />
+      <TrainingCard 
+        canAccessTraining={canAccessTraining}
+        trainingModules={trainingModules}
+        isLoadingTraining={isLoadingTraining}
+      />
+    </>
+  );
+
+  // Sidebar content components
+  const sideContent = (
+    <>
+      <StatusCard 
+        currentStep={currentStep}
+        candidateStatus={candidateData?.status}
+      />
+      <NotificationsCard 
+        notifications={notifications}
+      />
+    </>
+  );
+
   return (
     <MainLayout>
       <TooltipProvider>
         <div className="container mx-auto px-4 py-8 space-y-8">
           <DashboardHeader userName={profile?.name} userRole={profile?.role} />
-          <DashboardLayout sideContent={
-            <>
-              <StatusCard 
-                currentStep={currentStep}
-                candidateStatus={candidateData?.status}
-              />
-              <NotificationsCard 
-                notifications={notifications}
-              />
-            </>
-          }>
-            <>
-              {userJobs.length > 0 && (
-                <Card className="mb-6">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Select Job Application</CardTitle>
-                    <Select value={selectedJobId} onValueChange={setSelectedJobId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a job application" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {userJobs.map(job => (
-                          <SelectItem key={job.id} value={job.id}>
-                            {job.title}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </CardHeader>
-                </Card>
-              )}
-              <HiringJourneyCard 
-                currentStep={currentStep}
-                applicationSubmitted={applicationSubmitted}
-              />
-              <TrainingCard 
-                canAccessTraining={canAccessTraining}
-                trainingModules={trainingModules}
-                isLoadingTraining={isLoadingTraining}
-              />
-            </>
+          <DashboardLayout sideContent={sideContent}>
+            {mainContent}
           </DashboardLayout>
         </div>
       </TooltipProvider>
