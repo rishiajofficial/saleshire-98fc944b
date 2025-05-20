@@ -3,17 +3,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 
 // Define simpler types to avoid excessive type instantiation
+type CompanyInfo = {
+  id: string;
+  name: string;
+  domain?: string;
+  logo?: string;
+};
+
 type ProfileWithCompany = {
   id: string;
   name?: string;
   email: string;
   role: string;
-  company?: {
-    id: string;
-    name: string;
-    domain?: string;
-    logo?: string;
-  } | null;
+  company?: CompanyInfo | null;
 };
 
 // Get all user profiles
@@ -85,8 +87,11 @@ export const getUserProfile = async (userId: string): Promise<ProfileWithCompany
 
     // Use a more direct approach to avoid recursive parsing
     if (data) {
-      const profile = {
-        ...data,
+      const profile: ProfileWithCompany = {
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        role: data.role,
         company: data.companies ? {
           id: data.companies.id,
           name: data.companies.name,
@@ -187,7 +192,10 @@ export const getUserWithCompany = async (userId: string): Promise<ProfileWithCom
     // Return the user with company data properly structured
     if (data) {
       return {
-        ...data,
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        role: data.role,
         company: data.companies ? {
           id: data.companies.id,
           name: data.companies.name,
