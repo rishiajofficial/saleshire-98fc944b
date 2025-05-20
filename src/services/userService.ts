@@ -1,6 +1,5 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { parseProfile } from '@/contexts/auth/authUtils';
 
 // Get all user profiles
 export const getUserProfiles = async (filters = {}) => {
@@ -71,7 +70,7 @@ export const getUserProfile = async (userId: string) => {
 
     // Use a more direct approach to avoid recursive parsing
     if (data) {
-      return {
+      const profile = {
         ...data,
         company: data.companies ? {
           id: data.companies.id,
@@ -80,6 +79,7 @@ export const getUserProfile = async (userId: string) => {
           logo: data.companies.logo,
         } : null
       };
+      return profile;
     }
     
     return null;
@@ -147,7 +147,7 @@ export const getUserActivityLogs = async (userId: string, limit = 10) => {
   }
 };
 
-// Get user with company information - avoid using parseProfile to prevent recursion
+// Get user with company information 
 export const getUserWithCompany = async (userId: string) => {
   try {
     const { data, error } = await supabase
@@ -169,19 +169,21 @@ export const getUserWithCompany = async (userId: string) => {
       return null;
     }
     
-    // Manually construct the profile object without using parseProfile
-    const result = data ? {
-      ...data,
-      company: data.companies ? {
-        id: data.companies.id,
-        name: data.companies.name,
-        domain: data.companies.domain,
-        logo: data.companies.logo,
-      } : null,
-      isCompanyAdmin: false // Default value
-    } : null;
+    // Return the user with company data properly structured
+    if (data) {
+      return {
+        ...data,
+        company: data.companies ? {
+          id: data.companies.id,
+          name: data.companies.name,
+          domain: data.companies.domain,
+          logo: data.companies.logo,
+        } : null,
+        isCompanyAdmin: false // Default value
+      };
+    }
     
-    return result;
+    return null;
   } catch (error) {
     console.error('Error fetching user with company:', error);
     return null;

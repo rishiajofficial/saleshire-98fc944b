@@ -10,67 +10,44 @@ import { TrainingCard } from '@/components/dashboard/TrainingCard';
 import { useJobApplications } from '@/hooks/useJobApplications';
 import { UserRole } from '@/types';
 import JobListings from '@/components/dashboard/JobListings';
+import { getUserActivityLogs } from '@/services/userService';
+import { useQuery } from '@tanstack/react-query';
+import { Tables } from '@/integrations/supabase/types';
 
 const HRDashboard = () => {
   const { profile } = useAuth();
   const { data: applications, isLoading: applicationsLoading } = useJobApplications();
+  
+  // Fetch activity logs
+  const { data: activityLogs, isLoading: logsLoading } = useQuery({
+    queryKey: ['activityLogs', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return [];
+      return await getUserActivityLogs(profile.id, 5);
+    },
+    enabled: !!profile?.id,
+  });
 
   if (!profile) {
     return <div>Loading...</div>;
   }
 
   // Mock data for demonstration purposes
-  const stats = [
-    { value: 12, label: 'Active Jobs', change: 2 },
-    { value: 48, label: 'Pending Applications', change: -5 },
-    { value: 8, label: 'Scheduled Interviews', change: 3 },
-    { value: 92, label: 'Hiring Rate %', change: 5 },
-  ];
+  const stats = {
+    totalCandidates: 12,
+    pendingReviews: 48,
+    interviewsScheduled: 8,
+    nextInterviewDate: '2023-06-15T10:00:00Z'
+  };
 
-  // Mock data for activity logs
-  const activityLogs = [
-    { id: '1', action: 'job_created', details: {}, created_at: '2023-06-10T10:00:00Z', entity_id: '1', entity_type: 'jobs', user_id: '123' },
-    { id: '2', action: 'application_reviewed', details: {}, created_at: '2023-06-09T14:30:00Z', entity_id: '2', entity_type: 'applications', user_id: '123' },
-    { id: '3', action: 'interview_scheduled', details: {}, created_at: '2023-06-08T09:15:00Z', entity_id: '3', entity_type: 'interviews', user_id: '123' },
-  ];
-
-  // Format the activity logs to include display text
-  const formattedLogs = activityLogs.map(log => {
-    let displayText = '';
-    
-    switch(log.action) {
-      case 'job_created':
-        displayText = 'New job posting has been created';
-        break;
-      case 'application_reviewed':
-        displayText = 'Application has been reviewed';
-        break;
-      case 'interview_scheduled':
-        displayText = 'Interview has been scheduled';
-        break;
-      default:
-        displayText = 'Activity recorded';
-    }
-    
-    return {
-      ...log,
-      displayText
-    };
-  });
+  // Format notifications for NotificationsCard from activity logs
+  const formattedNotifications = activityLogs || [];
 
   // Mock training data for the TrainingCard
   const mockTrainingModules = [
-    { id: '1', title: 'Onboarding', progress: 75, module: {id: '1', title: 'Onboarding'}, status: 'in_progress', locked: false, videos: [], completed: false, total: 4, quiz_completed: false },
-    { id: '2', title: 'Sales Training', progress: 30, module: {id: '2', title: 'Sales Training'}, status: 'in_progress', locked: false, videos: [], completed: false, total: 6, quiz_completed: false },
+    { id: '1', title: 'Onboarding', progress: 75, totalVideos: 4, watchedVideos: 3, quizIds: ['quiz1'], quizCompleted: false },
+    { id: '2', title: 'Sales Training', progress: 30, totalVideos: 6, watchedVideos: 2, quizIds: ['quiz2'], quizCompleted: false },
   ];
-
-  // Format notifications for NotificationsCard
-  const formattedNotifications = formattedLogs.map(log => ({
-    id: log.id,
-    title: log.action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-    message: log.displayText,
-    time: new Date(log.created_at).toLocaleString(),
-  }));
 
   return (
     <DashboardLayout
@@ -81,7 +58,13 @@ const HRDashboard = () => {
             <p className="text-muted-foreground">Manage job listings and applications</p>
           </div>
           
-          <DashboardStats items={stats} />
+          <DashboardStats 
+            totalCandidates={stats.totalCandidates}
+            pendingReviews={stats.pendingReviews}
+            interviewsScheduled={stats.interviewsScheduled}
+            nextInterviewDate={stats.nextInterviewDate}
+            isLoading={false}
+          />
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="md:col-span-2">

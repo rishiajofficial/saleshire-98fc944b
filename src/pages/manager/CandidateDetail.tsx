@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
@@ -330,7 +329,7 @@ const CandidateDetail: React.FC = () => {
       <CandidateHistoryDialog 
         isOpen={isHistoryOpen} 
         onClose={() => setIsHistoryOpen(false)} 
-        candidateId={id || ""} 
+        id={id || ""} 
       />
     </MainLayout>
   );
