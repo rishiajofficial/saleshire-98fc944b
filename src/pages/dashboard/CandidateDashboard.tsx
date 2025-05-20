@@ -15,12 +15,16 @@ import { useCandidateDashboardState } from '@/hooks/useCandidateDashboardState';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobileHamburgerNav } from '@/components/layout/navigation/mobile-hamburger-nav';
 
 const CandidateDashboard = () => {
   const { profile, user } = useAuth();
   const [selectedJobId, setSelectedJobId] = useState<string | undefined>(undefined);
   const [userJobs, setUserJobs] = useState<{id: string, title: string}[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(true);
+  const [interviewDate, setInterviewDate] = useState<string | undefined>(undefined);
+  const isMobile = useIsMobile();
   
   const {
     loading,
@@ -32,11 +36,12 @@ const CandidateDashboard = () => {
     trainingModules,
     isLoadingTraining,
     canAccessTraining,
+    stepDetails,
   } = useCandidateDashboardState(user?.id, selectedJobId);
 
-  // Fetch user's job applications
+  // Fetch user's job applications and interview date
   useEffect(() => {
-    const fetchUserJobs = async () => {
+    const fetchUserData = async () => {
       if (!user?.id) return;
       
       try {
@@ -50,7 +55,8 @@ const CandidateDashboard = () => {
             jobs:job_id (
               id,
               title
-            )
+            ),
+            interview_datetime
           `)
           .eq('candidate_id', user.id);
           
@@ -68,6 +74,13 @@ const CandidateDashboard = () => {
           setSelectedJobId(jobs[0].id);
         }
         
+        // Get interview date if available
+        const interview = data?.find(item => item.interview_datetime);
+        if (interview?.interview_datetime) {
+          const date = new Date(interview.interview_datetime);
+          setInterviewDate(date.toLocaleDateString() + ' at ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
+        }
+        
       } catch (err) {
         console.error("Error fetching user jobs:", err);
       } finally {
@@ -75,7 +88,7 @@ const CandidateDashboard = () => {
       }
     };
     
-    fetchUserJobs();
+    fetchUserData();
   }, [user?.id]);
 
   if (loading || loadingJobs) {
@@ -102,7 +115,7 @@ const CandidateDashboard = () => {
   // Main content components
   const mainContent = (
     <>
-      {userJobs.length > 0 && (
+      {!isMobile && userJobs.length > 0 && (
         <Card className="mb-6">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Select Job Application</CardTitle>
@@ -124,17 +137,21 @@ const CandidateDashboard = () => {
       <HiringJourneyCard 
         currentStep={currentStep}
         applicationSubmitted={applicationSubmitted}
+        stepDetails={stepDetails}
+        interviewDate={interviewDate}
       />
-      <TrainingCard 
-        canAccessTraining={canAccessTraining}
-        trainingModules={trainingModules}
-        isLoadingTraining={isLoadingTraining}
-      />
+      {(!isMobile || (isMobile && currentStep === 3)) && (
+        <TrainingCard 
+          canAccessTraining={canAccessTraining}
+          trainingModules={trainingModules}
+          isLoadingTraining={isLoadingTraining}
+        />
+      )}
     </>
   );
 
-  // Sidebar content components
-  const sideContent = (
+  // Sidebar content components - only shown on desktop
+  const sideContent = !isMobile ? (
     <>
       <StatusCard 
         currentStep={currentStep}
@@ -144,13 +161,14 @@ const CandidateDashboard = () => {
         notifications={notifications}
       />
     </>
-  );
+  ) : null;
 
   return (
     <MainLayout>
       <TooltipProvider>
-        <div className="container mx-auto px-4 py-8 space-y-8">
-          <DashboardHeader userName={profile?.name} userRole={profile?.role} />
+        <div className="container mx-auto px-4 py-4 md:py-8 space-y-6 md:space-y-8">
+          {isMobile && <MobileHamburgerNav />}
+          {!isMobile && <DashboardHeader userName={profile?.name} userRole={profile?.role} />}
           <DashboardLayout sideContent={sideContent}>
             {mainContent}
           </DashboardLayout>
