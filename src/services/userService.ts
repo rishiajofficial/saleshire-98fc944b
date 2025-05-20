@@ -47,15 +47,16 @@ export const getUserProfiles = async (filters = {}) => {
     }
 
     // Process profiles without creating recursive structures
-    return data.map(profile => {
-      return {
-        ...profile,
-        company: profile.companies ? {
-          id: profile.companies.id,
-          name: profile.companies.name
-        } : null
-      };
-    });
+    return data.map(profile => ({
+      id: profile.id,
+      name: profile.name,
+      email: profile.email,
+      role: profile.role,
+      company: profile.companies ? {
+        id: profile.companies.id,
+        name: profile.companies.name
+      } : null
+    }));
   } catch (error) {
     console.error('Error fetching user profiles:', error);
     throw error;
