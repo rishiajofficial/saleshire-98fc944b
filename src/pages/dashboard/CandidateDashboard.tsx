@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
@@ -55,8 +54,7 @@ const CandidateDashboard = () => {
             jobs:job_id (
               id,
               title
-            ),
-            scheduled_at
+            )
           `)
           .eq('candidate_id', user.id);
           
@@ -75,13 +73,18 @@ const CandidateDashboard = () => {
           if (jobs.length > 0 && !selectedJobId) {
             setSelectedJobId(jobs[0].id);
           }
+        }
+        
+        // Fetch interview date if available (in a separate query)
+        const { data: interviews } = await supabase
+          .from('interviews')
+          .select('scheduled_at')
+          .eq('candidate_id', user.id)
+          .maybeSingle();
           
-          // Get interview date if available
-          const interview = data.find(item => item.scheduled_at);
-          if (interview?.scheduled_at) {
-            const date = new Date(interview.scheduled_at);
-            setInterviewDate(date.toLocaleDateString() + ' at ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
-          }
+        if (interviews?.scheduled_at) {
+          const date = new Date(interviews.scheduled_at);
+          setInterviewDate(date.toLocaleDateString() + ' at ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
         }
         
       } catch (err) {

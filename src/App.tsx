@@ -1,20 +1,21 @@
+
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './contexts/auth';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Profile from './pages/Profile';
-import JobOpenings from './pages/JobOpenings';
+import Login from './pages/auth/Login';
+import Register from './pages/auth/Register';
+import Profile from './pages/common/Profile';
+import JobOpenings from './pages/candidate/JobOpenings';
 import Application from './pages/candidate/Application';
 import CandidateDashboard from './pages/dashboard/CandidateDashboard';
 import ManagerDashboard from './pages/dashboard/ManagerDashboard';
 import AdminDashboard from './pages/dashboard/AdminDashboard';
 import DirectorDashboard from './pages/dashboard/DirectorDashboard';
-import Candidates from './pages/Candidates';
+import Candidates from './pages/manager/Candidates';
 import CandidateDetail from './pages/manager/CandidateDetail';
-import Training from './pages/Training';
-import Assessment from './pages/Assessment';
-import AssessmentResult from './pages/AssessmentResult';
+import Training from './pages/training/Training';
+import Assessment from './pages/training/Assessment';
+import AssessmentResult from './pages/training/AssessmentResult';
 import ApplicationComplete from './pages/candidate/ApplicationComplete';
 
 function App() {

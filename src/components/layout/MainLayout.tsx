@@ -1,20 +1,16 @@
 
-import React from 'react';
+import React, { ReactNode } from 'react';
 import Navbar from './Navbar';
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface MainLayoutProps {
-  children: React.ReactNode;
-  hideNavbar?: boolean;
+  children: ReactNode;
 }
 
-const MainLayout = ({ children, hideNavbar = false }: MainLayoutProps) => {
-  const isMobile = useIsMobile();
-  
+const MainLayout = ({ children }: MainLayoutProps) => {
   return (
-    <div className="flex flex-col min-h-screen">
-      {!isMobile && !hideNavbar && <Navbar />}
-      <main className="flex-1">
+    <div className="min-h-screen flex flex-col">
+      <Navbar />
+      <main className="flex-grow">
         {children}
       </main>
     </div>
