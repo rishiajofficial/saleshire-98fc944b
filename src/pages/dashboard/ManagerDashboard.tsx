@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/auth";
 import { useJobApplications } from "@/hooks/useJobApplications";
 import { usePendingCandidates } from "@/hooks/usePendingCandidates";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import CandidateList from "@/components/dashboard/CandidateList";
 
 const ManagerDashboard = () => {
   const { user, profile } = useAuth();
@@ -39,6 +40,7 @@ const ManagerDashboard = () => {
               <TabsTrigger value="applications">Applications</TabsTrigger>
               <TabsTrigger value="interviews">Interviews</TabsTrigger>
               <TabsTrigger value="assessments">Assessments</TabsTrigger>
+              <TabsTrigger value="candidates">Candidates</TabsTrigger>
             </TabsList>
             <TabsContent value="applications">
               <div className="space-y-8">
@@ -59,6 +61,13 @@ const ManagerDashboard = () => {
             </TabsContent>
             <TabsContent value="assessments">
               <AssessmentList />
+            </TabsContent>
+            <TabsContent value="candidates">
+              <CandidateList 
+                candidates={pendingCandidates || []}
+                isLoading={isLoadingPendingCandidates}
+                role={profile?.role || 'manager'}
+              />
             </TabsContent>
           </Tabs>
         </div>
