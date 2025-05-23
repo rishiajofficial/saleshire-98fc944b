@@ -66,7 +66,7 @@ export const useJobApplications = (userId?: string, role?: string, includeArchiv
           app.candidate_status === 'archived'
         );
       } else {
-        // Filter out archived candidates and rejected applications
+        // Show all non-archived applications (including in-progress ones)
         filteredData = formattedData.filter(app => 
           app.candidate_status !== 'archived' && 
           app.status !== 'archived' &&

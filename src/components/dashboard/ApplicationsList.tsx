@@ -83,7 +83,7 @@ const ApplicationsList: React.FC<ApplicationsListProps> = ({
   const [selectedApplications, setSelectedApplications] = useState<Application[]>([]);
   const [showAnalytics, setShowAnalytics] = useState<boolean>(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState<boolean>(false);
-  const [selectedTabValue, setSelectedTabValue] = useState<string>("all");
+  const [selectedTabValue, setSelectedTabValue] = useState<string>("awaiting_review");
   
   // Handle changes when applications prop changes
   useEffect(() => {
@@ -340,9 +340,7 @@ const ApplicationsList: React.FC<ApplicationsListProps> = ({
               <CardTitle>
                 {role?.toLowerCase() === 'director'
                   ? "All Job Applications"
-                  : role?.toLowerCase() === 'manager' 
-                    ? "Job Applications for Your Positions" 
-                    : "Job Applications Awaiting Review"
+                  : "Job Applications"
                 }
               </CardTitle>
               <CardDescription>
@@ -350,7 +348,7 @@ const ApplicationsList: React.FC<ApplicationsListProps> = ({
                   ? "View all applications across all jobs."
                   : role?.toLowerCase() === 'manager'
                     ? "Review applications assigned to your job postings."
-                    : "Review and screen new applications."
+                    : "Review and manage applications at various stages."
                 }
               </CardDescription>
             </div>

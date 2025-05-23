@@ -41,6 +41,7 @@ const Application = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [jobDetails, setJobDetails] = useState<{ id: string, title: string } | null>(null);
   const [hasAppliedBefore, setHasAppliedBefore] = useState(false);
+  const [applicationId, setApplicationId] = useState<string | null>(null);
 
   useEffect(() => {
     const selectedJob = localStorage.getItem("selectedJob");
@@ -99,9 +100,10 @@ const Application = () => {
 
   useEffect(() => {
     const fetchApplicationData = async () => {
-      if (!user) return;
+      if (!user || !jobDetails?.id) return;
 
       try {
+        // Fetch candidate data
         const { data, error } = await supabase
           .from("candidates")
           .select("resume, about_me_video, sales_pitch_video, status")
@@ -127,16 +129,38 @@ const Application = () => {
           }
         }
         
-        if (jobDetails?.id) {
-          const { data: applicationData, error: applicationError } = await supabase
+        // Check for existing application
+        const { data: applicationData, error: applicationError } = await supabase
+          .from("job_applications")
+          .select("id, status")
+          .eq("candidate_id", user.id)
+          .eq("job_id", jobDetails.id)
+          .single();
+            
+        if (!applicationError && applicationData) {
+          setHasAppliedBefore(true);
+          setApplicationId(applicationData.id);
+          
+          // If status is 'applied' or 'hr_review', application is complete
+          if (applicationData.status === 'applied' || applicationData.status === 'hr_review') {
+            setIsSubmitted(true);
+          }
+        } else {
+          // Create a new application record with 'in_progress' status
+          const { data: newApplication, error: createError } = await supabase
             .from("job_applications")
-            .select("*")
-            .eq("candidate_id", user.id)
-            .eq("job_id", jobDetails.id)
+            .insert({
+              candidate_id: user.id,
+              job_id: jobDetails.id,
+              status: 'in_progress'
+            })
+            .select('id')
             .single();
             
-          if (!applicationError && applicationData) {
-            setHasAppliedBefore(true);
+          if (createError) {
+            console.error("Error creating application record:", createError);
+          } else if (newApplication) {
+            setApplicationId(newApplication.id);
           }
         }
       } catch (error) {
@@ -147,7 +171,20 @@ const Application = () => {
     fetchApplicationData();
   }, [user, jobDetails?.id]);
 
-  const handleNext = () => setCurrentStep((step) => Math.min(step + 1, steps.length));
+  const handleNext = async () => {
+    // Update application status to reflect current step
+    if (applicationId) {
+      await supabase
+        .from("job_applications")
+        .update({
+          status: `in_progress_step_${currentStep + 1}`
+        })
+        .eq("id", applicationId);
+    }
+    
+    setCurrentStep((step) => Math.min(step + 1, steps.length));
+  };
+  
   const handleBack = () => setCurrentStep((step) => Math.max(step - 1, 1));
   
   const handleComplete = async () => {
@@ -160,10 +197,10 @@ const Application = () => {
       return;
     }
 
-    if (hasAppliedBefore) {
+    if (isSubmitted) {
       toast({
-        title: "Already Applied",
-        description: "You have already applied for this position.",
+        title: "Already Submitted",
+        description: "Your application has already been submitted.",
         variant: "destructive",
       });
       return;
@@ -188,7 +225,18 @@ const Application = () => {
         job_title: jobTitle
       });
       
-      if (jobDetails?.id) {
+      if (applicationId) {
+        // Update existing application record
+        const { error: updateError } = await supabase
+          .from("job_applications")
+          .update({
+            status: 'hr_review'
+          })
+          .eq("id", applicationId);
+          
+        if (updateError) throw updateError;
+      } else if (jobDetails?.id) {
+        // Create new application record if somehow we don't have one
         const { error: applicationError } = await supabase
           .from("job_applications")
           .insert({
@@ -197,18 +245,7 @@ const Application = () => {
             status: 'hr_review'
           });
           
-        if (applicationError) {
-          if (applicationError.code === '23505') {
-            toast({
-              title: "Already Applied",
-              description: "You have already applied for this position.",
-              variant: "destructive",
-            });
-            return;
-          } else {
-            throw applicationError;
-          }
-        }
+        if (applicationError) throw applicationError;
       }
 
       toast({
@@ -250,7 +287,7 @@ const Application = () => {
           </div>
         )}
 
-        {hasAppliedBefore && (
+        {hasAppliedBefore && isSubmitted && (
           <Alert className="mb-4 bg-yellow-50 border-yellow-200">
             <AlertCircle className="h-4 w-4 text-yellow-600" />
             <AlertTitle>Already Applied</AlertTitle>
@@ -276,7 +313,7 @@ const Application = () => {
           ))}
         </div>
 
-        {!hasAppliedBefore && (
+        {!isSubmitted && (
           <>
             {currentStep === 1 && (
               <ApplicationStepProfile 
@@ -305,7 +342,7 @@ const Application = () => {
           </>
         )}
 
-        {showApplicationSubmittedAlert ? (
+        {isSubmitted ? (
           <Alert className="mb-8">
             <AlertTitle>Application Submitted</AlertTitle>
             <AlertDescription>
