@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
-import { useAuth } from '@/contexts/auth';  // Change this line
+import { useAuth } from '@/contexts/auth';
 import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";  // Add this import
+import { Button } from "@/components/ui/button";
 import MainLayout from "@/components/layout/MainLayout";
 import { QuizStart } from "@/components/quiz/QuizStart";
 import { QuizQuestion } from "@/components/quiz/QuizQuestion";

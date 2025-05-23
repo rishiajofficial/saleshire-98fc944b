@@ -55,15 +55,14 @@ const CandidateDashboard = () => {
             jobs:job_id (
               id,
               title
-            ),
-            scheduled_at
+            )
           `)
           .eq('candidate_id', user.id);
           
         if (error) throw error;
         
         // Handle successful response
-        if (data) {
+        if (data && data.length > 0) {
           const jobs = data.map(item => ({
             id: item.job_id,
             title: item.jobs?.title || 'Untitled Job'
@@ -76,11 +75,20 @@ const CandidateDashboard = () => {
             setSelectedJobId(jobs[0].id);
           }
           
-          // Get interview date if available
-          const interview = data.find(item => item.scheduled_at);
-          if (interview?.scheduled_at) {
-            const date = new Date(interview.scheduled_at);
-            setInterviewDate(date.toLocaleDateString() + ' at ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
+          // Get interview date from interviews table instead
+          const { data: interviewData, error: interviewError } = await supabase
+            .from('interviews')
+            .select('scheduled_at')
+            .eq('candidate_id', user.id)
+            .order('scheduled_at', { ascending: true })
+            .limit(1);
+            
+          if (!interviewError && interviewData && interviewData.length > 0) {
+            const interview = interviewData[0];
+            if (interview.scheduled_at) {
+              const date = new Date(interview.scheduled_at);
+              setInterviewDate(date.toLocaleDateString() + ' at ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
+            }
           }
         }
         
