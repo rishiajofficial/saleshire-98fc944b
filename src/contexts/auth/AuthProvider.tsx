@@ -29,7 +29,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const location = useLocation();
   const locationRef = useRef(location);
   const { navigate } = useNavigation(); // This is safe as it doesn't actually use router hooks
-
+  
+  // Keep location ref updated
   useEffect(() => {
     locationRef.current = location;
   }, [location]);
@@ -43,12 +44,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     console.log("Auth Provider initialized");
     
-    // Set up auth state listener
+    // Set up auth state listener first before checking session
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
         console.log('Auth state changed:', event, 'Session:', currentSession?.user?.id);
         
-        // Update session state
+        // Always update session first
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
@@ -68,25 +69,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log('AuthContext: SIGNED_OUT event detected. Clearing profile.');
           setProfile(null);
           
-          // Handle navigation through window.location only when needed
+          // Only navigate to login if not already on authentication pages
           const currentPath = locationRef.current.pathname;
           if (initialAuthCheckComplete && 
-              currentPath !== '/login' && 
-              currentPath !== '/register' && 
-              currentPath !== '/forgot-password' && 
-              currentPath !== '/reset-password' &&
+              !currentPath.includes('/login') && 
+              !currentPath.includes('/register') && 
+              !currentPath.includes('/forgot-password') && 
+              !currentPath.includes('/reset-password') &&
               currentPath !== '/' &&
-              currentPath !== '/careers') {
+              !currentPath.includes('/careers')) {
             // Just change location once instead of forcing a reload
-            window.location.replace('/login');
+            window.location.href = '/login';
           }
         }
       }
     );
 
-    // Get the current session
+    // AFTER setting up the listener, check for existing session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      console.log('Current session:', currentSession?.user?.id);
+      console.log('Current session check:', currentSession?.user?.id ? 'User is logged in' : 'No active session');
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       
@@ -100,7 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsLoading(false);
         setInitialAuthCheckComplete(true);
         
-        // Only redirect if not on public pages
+        // Only redirect if not on public pages and initial check is complete
         const currentPath = locationRef.current.pathname;
         if (currentPath !== '/login' && 
             currentPath !== '/register' && 
@@ -108,7 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             currentPath !== '/reset-password' &&
             currentPath !== '/' &&
             currentPath !== '/careers') {
-          window.location.replace('/login');
+          window.location.href = '/login';
         }
       }
     });
@@ -123,6 +124,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Signing in with:', email);
       setIsLoading(true);
+      
+      // Clean up any existing auth state to prevent conflicts
+      cleanupAuthState();
       
       // Proceed with sign in
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -200,7 +204,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     try {
       setIsLoading(true);
-      console.log("AuthContext: Attempting signOut. Current session state:", session);
+      console.log("AuthContext: Attempting signOut. Current session state:", session ? "Active" : "None");
 
       // Clean up auth state
       cleanupAuthState();

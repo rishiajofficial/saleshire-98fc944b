@@ -22,6 +22,7 @@ export const cleanupAuthState = () => {
  */
 export const fetchUserProfile = async (userId: string) => {
   try {
+    console.log('Fetching profile for user:', userId);
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -29,12 +30,16 @@ export const fetchUserProfile = async (userId: string) => {
       .single();
     
     if (error) {
+      console.error('Error fetching profile:', error.message);
       throw error;
     }
 
     if (!data) {
+      console.warn('No profile found for user:', userId);
       return null;
     }
+    
+    console.log('Profile fetched successfully:', data);
     
     // Now fetch additional role-specific data
     let additionalData = null;
