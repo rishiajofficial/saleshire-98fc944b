@@ -107,7 +107,7 @@ const ModuleView = () => {
     : 0;
 
   return (
-    <MainLayout title={formatModuleName(moduleName)}>
+    <MainLayout title="Training Module">
       <div className="container mx-auto py-8">
         <ModuleHeader
           title={formatModuleName(moduleName)}

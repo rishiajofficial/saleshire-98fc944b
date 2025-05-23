@@ -42,18 +42,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   if (!profile) {
     return <div className="flex items-center justify-center h-screen">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      <div className="ml-4">Loading profile...</div>
     </div>;
   }
   
   // If profile is loaded and role is not allowed, redirect to appropriate dashboard
   if (!allowedRoles.includes(profile.role as UserRole)) {
-    console.log(`Redirecting user with role ${profile.role} to their dashboard`);
     const dashboardPath = `/dashboard/${profile.role}`;
     return <Navigate to={dashboardPath} replace />;
   }
   
-  console.log(`Rendering protected route for role: ${profile.role}`);
   // If everything is fine, render the children
   return <>{children}</>;
 };

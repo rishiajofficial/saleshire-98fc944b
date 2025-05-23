@@ -22,7 +22,6 @@ export const cleanupAuthState = () => {
  */
 export const fetchUserProfile = async (userId: string) => {
   try {
-    console.log('Fetching profile for user:', userId);
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -30,16 +29,12 @@ export const fetchUserProfile = async (userId: string) => {
       .single();
     
     if (error) {
-      console.error('Error fetching profile:', error.message);
       throw error;
     }
 
     if (!data) {
-      console.warn('No profile found for user:', userId);
       return null;
     }
-    
-    console.log('Profile fetched successfully:', data);
     
     // Now fetch additional role-specific data
     let additionalData = null;
@@ -69,24 +64,5 @@ export const fetchUserProfile = async (userId: string) => {
   } catch (error: any) {
     console.error('Error fetching profile:', error.message);
     return null;
-  }
-};
-
-/**
- * Get dashboard route based on user role
- */
-export const getDashboardRouteByRole = (role?: string) => {
-  switch (role) {
-    case 'admin':
-      return '/dashboard/admin';
-    case 'manager':
-      return '/dashboard/manager';
-    case 'hr':
-      return '/dashboard/hr';
-    case 'director':
-      return '/dashboard/director';
-    case 'candidate':
-    default:
-      return '/dashboard/candidate';
   }
 };

@@ -15,16 +15,12 @@ import { useCandidateDashboardState } from '@/hooks/useCandidateDashboardState';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
-import { useIsMobile } from "@/hooks/use-mobile";
-import { MobileHamburgerNav } from '@/components/layout/navigation/mobile-hamburger-nav';
 
 const CandidateDashboard = () => {
   const { profile, user } = useAuth();
   const [selectedJobId, setSelectedJobId] = useState<string | undefined>(undefined);
   const [userJobs, setUserJobs] = useState<{id: string, title: string}[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(true);
-  const [interviewDate, setInterviewDate] = useState<string | undefined>(undefined);
-  const isMobile = useIsMobile();
   
   const {
     loading,
@@ -36,12 +32,11 @@ const CandidateDashboard = () => {
     trainingModules,
     isLoadingTraining,
     canAccessTraining,
-    stepDetails,
   } = useCandidateDashboardState(user?.id, selectedJobId);
 
-  // Fetch user's job applications and interview date
+  // Fetch user's job applications
   useEffect(() => {
-    const fetchUserData = async () => {
+    const fetchUserJobs = async () => {
       if (!user?.id) return;
       
       try {
@@ -61,35 +56,16 @@ const CandidateDashboard = () => {
           
         if (error) throw error;
         
-        // Handle successful response
-        if (data && data.length > 0) {
-          const jobs = data.map(item => ({
-            id: item.job_id,
-            title: item.jobs?.title || 'Untitled Job'
-          }));
-          
-          setUserJobs(jobs);
-          
-          // Set default selected job if we have jobs and none is selected
-          if (jobs.length > 0 && !selectedJobId) {
-            setSelectedJobId(jobs[0].id);
-          }
-          
-          // Get interview date from interviews table instead
-          const { data: interviewData, error: interviewError } = await supabase
-            .from('interviews')
-            .select('scheduled_at')
-            .eq('candidate_id', user.id)
-            .order('scheduled_at', { ascending: true })
-            .limit(1);
-            
-          if (!interviewError && interviewData && interviewData.length > 0) {
-            const interview = interviewData[0];
-            if (interview.scheduled_at) {
-              const date = new Date(interview.scheduled_at);
-              setInterviewDate(date.toLocaleDateString() + ' at ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
-            }
-          }
+        const jobs = data?.map(item => ({
+          id: item.job_id,
+          title: item.jobs?.title || 'Untitled Job'
+        })) || [];
+        
+        setUserJobs(jobs);
+        
+        // Set default selected job if we have jobs and none is selected
+        if (jobs.length > 0 && !selectedJobId) {
+          setSelectedJobId(jobs[0].id);
         }
         
       } catch (err) {
@@ -99,7 +75,7 @@ const CandidateDashboard = () => {
       }
     };
     
-    fetchUserData();
+    fetchUserJobs();
   }, [user?.id]);
 
   if (loading || loadingJobs) {
@@ -126,7 +102,7 @@ const CandidateDashboard = () => {
   // Main content components
   const mainContent = (
     <>
-      {!isMobile && userJobs.length > 0 && (
+      {userJobs.length > 0 && (
         <Card className="mb-6">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Select Job Application</CardTitle>
@@ -148,21 +124,17 @@ const CandidateDashboard = () => {
       <HiringJourneyCard 
         currentStep={currentStep}
         applicationSubmitted={applicationSubmitted}
-        stepDetails={stepDetails}
-        interviewDate={interviewDate}
       />
-      {(!isMobile || (isMobile && currentStep === 3)) && (
-        <TrainingCard 
-          canAccessTraining={canAccessTraining}
-          trainingModules={trainingModules}
-          isLoadingTraining={isLoadingTraining}
-        />
-      )}
+      <TrainingCard 
+        canAccessTraining={canAccessTraining}
+        trainingModules={trainingModules}
+        isLoadingTraining={isLoadingTraining}
+      />
     </>
   );
 
-  // Sidebar content components - only shown on desktop
-  const sideContent = !isMobile ? (
+  // Sidebar content components
+  const sideContent = (
     <>
       <StatusCard 
         currentStep={currentStep}
@@ -172,14 +144,13 @@ const CandidateDashboard = () => {
         notifications={notifications}
       />
     </>
-  ) : null;
+  );
 
   return (
     <MainLayout>
       <TooltipProvider>
-        <div className="container mx-auto px-4 py-4 md:py-8 space-y-6 md:space-y-8">
-          {isMobile && <MobileHamburgerNav />}
-          {!isMobile && <DashboardHeader userName={profile?.name} userRole={profile?.role} />}
+        <div className="container mx-auto px-4 py-8 space-y-8">
+          <DashboardHeader userName={profile?.name} userRole={profile?.role} />
           <DashboardLayout sideContent={sideContent}>
             {mainContent}
           </DashboardLayout>

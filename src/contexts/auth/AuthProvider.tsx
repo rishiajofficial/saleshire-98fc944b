@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -5,7 +6,6 @@ import { toast } from 'sonner';
 import { useLocation } from 'react-router-dom';
 import { AuthContextProps } from './types';
 import { cleanupAuthState, fetchUserProfile } from './authUtils';
-import { getDashboardRouteByRole } from './authUtils';
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
@@ -29,8 +29,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const location = useLocation();
   const locationRef = useRef(location);
   const { navigate } = useNavigation(); // This is safe as it doesn't actually use router hooks
-  
-  // Keep location ref updated
+
   useEffect(() => {
     locationRef.current = location;
   }, [location]);
@@ -44,12 +43,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     console.log("Auth Provider initialized");
     
-    // Set up auth state listener first before checking session
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
         console.log('Auth state changed:', event, 'Session:', currentSession?.user?.id);
         
-        // Always update session first
+        // Update session state
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
@@ -69,25 +68,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log('AuthContext: SIGNED_OUT event detected. Clearing profile.');
           setProfile(null);
           
-          // Only navigate to login if not already on authentication pages
+          // Handle navigation through window.location only when needed
           const currentPath = locationRef.current.pathname;
           if (initialAuthCheckComplete && 
-              !currentPath.includes('/login') && 
-              !currentPath.includes('/register') && 
-              !currentPath.includes('/forgot-password') && 
-              !currentPath.includes('/reset-password') &&
+              currentPath !== '/login' && 
+              currentPath !== '/register' && 
+              currentPath !== '/forgot-password' && 
+              currentPath !== '/reset-password' &&
               currentPath !== '/' &&
-              !currentPath.includes('/careers')) {
+              currentPath !== '/careers') {
             // Just change location once instead of forcing a reload
-            window.location.href = '/login';
+            window.location.replace('/login');
           }
         }
       }
     );
 
-    // AFTER setting up the listener, check for existing session
+    // Get the current session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      console.log('Current session check:', currentSession?.user?.id ? 'User is logged in' : 'No active session');
+      console.log('Current session:', currentSession?.user?.id);
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       
@@ -101,7 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsLoading(false);
         setInitialAuthCheckComplete(true);
         
-        // Only redirect if not on public pages and initial check is complete
+        // Only redirect if not on public pages
         const currentPath = locationRef.current.pathname;
         if (currentPath !== '/login' && 
             currentPath !== '/register' && 
@@ -109,7 +108,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             currentPath !== '/reset-password' &&
             currentPath !== '/' &&
             currentPath !== '/careers') {
-          window.location.href = '/login';
+          window.location.replace('/login');
         }
       }
     });
@@ -124,9 +123,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Signing in with:', email);
       setIsLoading(true);
-      
-      // Clean up any existing auth state to prevent conflicts
-      cleanupAuthState();
       
       // Proceed with sign in
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -159,9 +155,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         console.log('User role:', profileData?.role);
         
-        // Redirect based on role using getDashboardRouteByRole utility
-        const dashboardRoute = getDashboardRouteByRole(profileData?.role);
-        window.location.href = dashboardRoute;
+        // Redirect based on role using window.location
+        if (profileData?.role === 'admin') {
+          window.location.href = '/dashboard/admin';
+        } else if (profileData?.role === 'manager') {
+          window.location.href = '/dashboard/manager';
+        } else if (profileData?.role === 'hr') {
+          window.location.href = '/dashboard/hr';
+        } else if (profileData?.role === 'director') {
+          window.location.href = '/dashboard/director';
+        } else {
+          window.location.href = '/dashboard/candidate';
+        }
       }
     } catch (error: any) {
       toast.error(error.message || 'Failed to sign in');
@@ -204,7 +209,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     try {
       setIsLoading(true);
-      console.log("AuthContext: Attempting signOut. Current session state:", session ? "Active" : "None");
+      console.log("AuthContext: Attempting signOut. Current session state:", session);
 
       // Clean up auth state
       cleanupAuthState();

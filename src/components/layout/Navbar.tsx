@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -546,7 +547,7 @@ const Navbar: React.FC = () => {
             <Link to="/" className="flex items-center space-x-2">
               <BarChart className="h-8 w-8 text-primary" />
               <span className="text-xl font-semibold tracking-tight">
-                WorkForce
+                SalesHire
               </span>
             </Link>
           </div>
