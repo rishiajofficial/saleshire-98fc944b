@@ -66,3 +66,22 @@ export const fetchUserProfile = async (userId: string) => {
     return null;
   }
 };
+
+/**
+ * Get dashboard route based on user role
+ */
+export const getDashboardRouteByRole = (role?: string) => {
+  switch (role) {
+    case 'admin':
+      return '/dashboard/admin';
+    case 'manager':
+      return '/dashboard/manager';
+    case 'hr':
+      return '/dashboard/hr';
+    case 'director':
+      return '/dashboard/director';
+    case 'candidate':
+    default:
+      return '/dashboard/candidate';
+  }
+};

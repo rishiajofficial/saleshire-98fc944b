@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,6 +5,7 @@ import { toast } from 'sonner';
 import { useLocation } from 'react-router-dom';
 import { AuthContextProps } from './types';
 import { cleanupAuthState, fetchUserProfile } from './authUtils';
+import { getDashboardRouteByRole } from './authUtils';
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
@@ -155,18 +155,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         console.log('User role:', profileData?.role);
         
-        // Redirect based on role using window.location
-        if (profileData?.role === 'admin') {
-          window.location.href = '/dashboard/admin';
-        } else if (profileData?.role === 'manager') {
-          window.location.href = '/dashboard/manager';
-        } else if (profileData?.role === 'hr') {
-          window.location.href = '/dashboard/hr';
-        } else if (profileData?.role === 'director') {
-          window.location.href = '/dashboard/director';
-        } else {
-          window.location.href = '/dashboard/candidate';
-        }
+        // Redirect based on role using getDashboardRouteByRole utility
+        const dashboardRoute = getDashboardRouteByRole(profileData?.role);
+        window.location.href = dashboardRoute;
       }
     } catch (error: any) {
       toast.error(error.message || 'Failed to sign in');
