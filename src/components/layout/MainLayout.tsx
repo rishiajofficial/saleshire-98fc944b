@@ -152,10 +152,21 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     );
   }
 
-  // Normal authenticated layout
+  // For candidates, show minimal layout without navigation
+  if (isCandidate) {
+    return (
+      <div className="min-h-screen bg-background">
+        <main className="container py-6 md:py-8 max-w-6xl">
+          {children}
+        </main>
+      </div>
+    );
+  }
+
+  // Normal authenticated layout for non-candidates
   return (
     <div className="flex min-h-screen bg-background">
-      {!isCandidate && !isMobile ? (
+      {!isMobile ? (
         <DesktopNav
           isSidebarExpanded={isSidebarExpanded}
           setIsSidebarExpanded={setIsSidebarExpanded}
@@ -168,64 +179,27 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
         />
       ) : null}
 
-      <div className={`flex-1 ${isMobile || isCandidate ? "pt-16" : ""}`} style={{ 
-        paddingLeft: (!isCandidate && !isMobile) ? (isSidebarExpanded ? '16rem' : '5rem') : 0,
+      <div className={`flex-1 ${isMobile ? "pt-16" : ""}`} style={{ 
+        paddingLeft: !isMobile ? (isSidebarExpanded ? '16rem' : '5rem') : 0,
         transition: 'padding-left 0.3s'
       }}>
-        {(isMobile || isCandidate) && (
+        {isMobile && (
           <header className="fixed top-0 left-0 right-0 z-30 flex h-16 items-center justify-between border-b bg-background px-4">
             <div className="flex items-center gap-2">
-              {isMobile && !isCandidate && (
-                <MobileNav
-                  isOpen={isOpen}
-                  setIsOpen={setIsOpen}
-                  activeDropdowns={activeDropdowns}
-                  toggleDropdown={toggleDropdown}
-                  navItems={navItems}
-                  profile={profile}
-                  pathname={location.pathname}
-                  onNavigate={(to) => navigate(to)}
-                />
-              )}
+              <MobileNav
+                isOpen={isOpen}
+                setIsOpen={setIsOpen}
+                activeDropdowns={activeDropdowns}
+                toggleDropdown={toggleDropdown}
+                navItems={navItems}
+                profile={profile}
+                pathname={location.pathname}
+                onNavigate={(to) => navigate(to)}
+              />
               <Link to={user ? `/dashboard/${profile?.role}` : "/"} className="flex items-center">
                 <div className="font-bold text-lg">WorkForce</div>
               </Link>
             </div>
-            {isCandidate && (
-              <nav className="flex items-center gap-4">
-                <Link 
-                  to="/dashboard/candidate" 
-                  className={`text-sm font-medium ${location.pathname === '/dashboard/candidate' ? 'text-primary' : 'text-gray-600 hover:text-gray-900'}`}
-                >
-                  Dashboard
-                </Link>
-                <Link 
-                  to="/training" 
-                  className={`text-sm font-medium ${location.pathname === '/training' ? 'text-primary' : 'text-gray-600 hover:text-gray-900'}`}
-                >
-                  Training
-                </Link>
-                <Link 
-                  to="/application" 
-                  className={`text-sm font-medium ${location.pathname === '/application' ? 'text-primary' : 'text-gray-600 hover:text-gray-900'}`}
-                >
-                  My Application
-                </Link>
-                <Link 
-                  to="/profile" 
-                  className={`text-sm font-medium ${location.pathname === '/profile' ? 'text-primary' : 'text-gray-600 hover:text-gray-900'}`}
-                >
-                  Profile
-                </Link>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={handleSignOut}
-                >
-                  Sign Out
-                </Button>
-              </nav>
-            )}
           </header>
         )}
         <main className="container py-6 md:py-8 max-w-6xl">

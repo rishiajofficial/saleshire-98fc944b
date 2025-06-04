@@ -1,20 +1,21 @@
 
 import React, { useState, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Plus } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
 import { useAuth } from '@/contexts/auth';
 import ErrorMessage from '@/components/ui/error-message';
-import { StatusCard } from '@/components/dashboard/StatusCard';
-import { NotificationsCard } from '@/components/dashboard/NotificationsCard';
 import { HiringWizard } from '@/components/candidate/HiringWizard';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useCandidateDashboardState } from '@/hooks/useCandidateDashboardState';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 
 const CandidateDashboard = () => {
   const { profile, user } = useAuth();
+  const navigate = useNavigate();
   const [selectedJobId, setSelectedJobId] = useState<string | undefined>(undefined);
   const [userJobs, setUserJobs] = useState<{id: string, title: string}[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(true);
@@ -23,11 +24,8 @@ const CandidateDashboard = () => {
     loading,
     error,
     candidateData,
-    notifications,
     applicationSubmitted,
     currentStep,
-    trainingModules,
-    isLoadingTraining,
     canAccessTraining,
   } = useCandidateDashboardState(user?.id, selectedJobId);
 
@@ -96,28 +94,63 @@ const CandidateDashboard = () => {
     );
   }
 
+  // If no applications, show apply to job prompt
+  if (userJobs.length === 0) {
+    return (
+      <MainLayout>
+        <div className="container mx-auto px-4 py-8 max-w-2xl">
+          <div className="text-center space-y-6">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-4">
+                Welcome, {profile?.name}!
+              </h1>
+              <p className="text-lg text-gray-600 mb-8">
+                Ready to start your journey with us? Apply to an open position to begin.
+              </p>
+            </div>
+            
+            <Card className="p-8">
+              <CardContent className="text-center space-y-4">
+                <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                  <Plus className="h-8 w-8 text-primary" />
+                </div>
+                <h2 className="text-xl font-semibold">Apply to a Job</h2>
+                <p className="text-gray-600">
+                  Browse our open positions and submit your application to get started.
+                </p>
+                <Button 
+                  size="lg" 
+                  className="mt-4"
+                  onClick={() => navigate('/careers')}
+                >
+                  View Open Positions
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  // If has applications, show application selector and wizard
   return (
     <MainLayout>
       <TooltipProvider>
         <div className="container mx-auto px-4 py-6 max-w-4xl">
-          {/* Header */}
-          <div className="text-center mb-6">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Welcome back, {profile?.name}!
-            </h1>
-            <p className="text-gray-600">
-              Track your progress through our hiring process
-            </p>
-          </div>
-
-          {/* Job Selection */}
-          {userJobs.length > 0 && (
-            <Card className="mb-6">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Current Application</CardTitle>
+          {/* Application Selector */}
+          <Card className="mb-6">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Your Applications</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Select Application to View Progress
+                </label>
                 <Select value={selectedJobId} onValueChange={setSelectedJobId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a job application" />
+                    <SelectValue placeholder="Choose an application" />
                   </SelectTrigger>
                   <SelectContent>
                     {userJobs.map(job => (
@@ -127,33 +160,31 @@ const CandidateDashboard = () => {
                     ))}
                   </SelectContent>
                 </Select>
-              </CardHeader>
-            </Card>
+              </div>
+              
+              <div className="pt-2 border-t">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => navigate('/careers')}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Apply to Another Job
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Hiring Wizard */}
+          {selectedJobId && (
+            <HiringWizard 
+              currentStep={currentStep}
+              applicationSubmitted={applicationSubmitted}
+              canAccessTraining={canAccessTraining}
+              candidateStatus={candidateData?.status}
+            />
           )}
-
-          {/* Main Content - Mobile First Layout */}
-          <div className="space-y-6">
-            {/* Hiring Wizard - Primary Content */}
-            <div className="order-1">
-              <HiringWizard 
-                currentStep={currentStep}
-                applicationSubmitted={applicationSubmitted}
-                canAccessTraining={canAccessTraining}
-                candidateStatus={candidateData?.status}
-              />
-            </div>
-
-            {/* Secondary Information - Stacked on Mobile */}
-            <div className="order-2 grid gap-4 md:grid-cols-2">
-              <StatusCard 
-                currentStep={currentStep}
-                candidateStatus={candidateData?.status}
-              />
-              <NotificationsCard 
-                notifications={notifications}
-              />
-            </div>
-          </div>
         </div>
       </TooltipProvider>
     </MainLayout>
