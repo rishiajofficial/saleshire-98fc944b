@@ -141,23 +141,23 @@ const ApplicationStepProfile = ({ onNext, profileData, setProfileData }: Applica
   };
 
   return (
-    <div className="mb-8">
+    <div>
       <div className="mb-6">
-        <h2 className="text-xl font-semibold mb-3">Profile Information</h2>
-        <p className="text-gray-600 text-sm">Please complete your profile information below.</p>
+        <h3 className="text-lg font-semibold mb-2">Complete Your Profile</h3>
+        <p className="text-gray-600 text-sm">Please provide your contact information to continue.</p>
       </div>
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <FormField
               control={form.control}
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Full Name</FormLabel>
+                  <FormLabel>Full Name *</FormLabel>
                   <FormControl>
-                    <Input placeholder="John Doe" {...field} />
+                    <Input placeholder="Enter your full name" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -169,9 +169,9 @@ const ApplicationStepProfile = ({ onNext, profileData, setProfileData }: Applica
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>Email Address</FormLabel>
                   <FormControl>
-                    <Input placeholder="example@email.com" {...field} disabled />
+                    <Input placeholder="your.email@example.com" {...field} disabled />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -183,7 +183,7 @@ const ApplicationStepProfile = ({ onNext, profileData, setProfileData }: Applica
               name="phone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Phone Number</FormLabel>
+                  <FormLabel>Phone Number *</FormLabel>
                   <FormControl>
                     <Input placeholder="+91 98765 43210" {...field} value={field.value || ""} />
                   </FormControl>
@@ -192,13 +192,13 @@ const ApplicationStepProfile = ({ onNext, profileData, setProfileData }: Applica
               )}
             />
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 col-span-1 md:col-span-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="city"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>City</FormLabel>
+                    <FormLabel>City *</FormLabel>
                     <FormControl>
                       <Input placeholder="Mumbai" {...field} value={field.value || ""} />
                     </FormControl>
@@ -212,14 +212,13 @@ const ApplicationStepProfile = ({ onNext, profileData, setProfileData }: Applica
                 name="state"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>State</FormLabel>
+                    <FormLabel>State *</FormLabel>
                     <FormControl>
-                      <Select value={field.value || "none"} onValueChange={field.onChange}>
+                      <Select value={field.value || ""} onValueChange={field.onChange}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a state" />
+                          <SelectValue placeholder="Select your state" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none" disabled>Select a state</SelectItem>
                           {indianStates.map((state) => (
                             <SelectItem key={state} value={state}>
                               {state}
@@ -235,8 +234,8 @@ const ApplicationStepProfile = ({ onNext, profileData, setProfileData }: Applica
             </div>
           </div>
           
-          <div className="flex justify-end mt-4">
-            <Button type="submit">Next</Button>
+          <div className="flex justify-end mt-6 pt-4 border-t">
+            <Button type="submit">Continue to Documents</Button>
           </div>
         </form>
       </Form>

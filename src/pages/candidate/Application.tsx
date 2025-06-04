@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -8,19 +9,12 @@ import { supabase } from "@/integrations/supabase/client";
 import MainLayout from "@/components/layout/MainLayout";
 import ApplicationStepProfile from "@/components/candidate/ApplicationStepProfile";
 import ApplicationStepUploads from "@/components/candidate/ApplicationStepUploads";
-import ApplicationStepAssessment from "@/components/candidate/ApplicationStepAssessment";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, ArrowLeft } from "lucide-react";
 import { updateApplicationStatus } from "@/hooks/useDatabaseQuery";
-
-const steps = [
-  { id: 1, label: "Profile Info" },
-  { id: 2, label: "Uploads" },
-  { id: 3, label: "Assessment" },
-];
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 
 const Application = () => {
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [candidateStatus, setCandidateStatus] = useState<string | null>(null);
   const [applicationData, setApplicationData] = useState({
     resume: null,
     aboutMeVideo: null,
@@ -40,8 +34,13 @@ const Application = () => {
 
   const [currentStep, setCurrentStep] = useState(1);
   const [jobDetails, setJobDetails] = useState<{ id: string, title: string } | null>(null);
-  const [hasAppliedBefore, setHasAppliedBefore] = useState(false);
-  const [applicationId, setApplicationId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasExistingApplication, setHasExistingApplication] = useState(false);
+
+  const steps = [
+    { id: 1, title: "Complete Profile", description: "Personal information" },
+    { id: 2, title: "Upload Documents", description: "Resume and videos" }
+  ];
 
   useEffect(() => {
     const selectedJob = localStorage.getItem("selectedJob");
@@ -49,7 +48,7 @@ const Application = () => {
     
     if (!selectedJob) {
       console.log("No job selected, redirecting to job openings");
-      navigate("/job-openings");
+      navigate("/candidate/jobs");
       return;
     }
 
@@ -60,41 +59,29 @@ const Application = () => {
     } catch (error) {
       console.log("Could not parse job data as JSON, using as job ID");
       
-      const mockJobs = [
-        { id: "job-a", title: "Sales Executive" },
-        { id: "job-b", title: "Business Development Associate" },
-        { id: "job-c", title: "Field Sales Representative" },
-      ];
-
-      const found = mockJobs.find(j => j.id === selectedJob);
-      if (found) {
-        console.log("Found mock job:", found);
-        setJobDetails(found);
-      } else {
-        const fetchJobDetails = async () => {
-          try {
-            const { data, error } = await supabase
-              .from('jobs')
-              .select('id, title')
-              .eq('id', selectedJob)
-              .single();
-              
-            if (error) {
-              console.error("Error fetching job details:", error);
-              return;
-            }
+      const fetchJobDetails = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('jobs')
+            .select('id, title')
+            .eq('id', selectedJob)
+            .single();
             
-            if (data) {
-              console.log("Fetched job details:", data);
-              setJobDetails(data);
-            }
-          } catch (error) {
-            console.error("Error fetching job:", error);
+          if (error) {
+            console.error("Error fetching job details:", error);
+            return;
           }
-        };
-        
-        fetchJobDetails();
-      }
+          
+          if (data) {
+            console.log("Fetched job details:", data);
+            setJobDetails(data);
+          }
+        } catch (error) {
+          console.error("Error fetching job:", error);
+        }
+      };
+      
+      fetchJobDetails();
     }
   }, [navigate]);
 
@@ -103,10 +90,23 @@ const Application = () => {
       if (!user || !jobDetails?.id) return;
 
       try {
-        // Fetch candidate data
+        // Check for existing application
+        const { data: applicationData, error: applicationError } = await supabase
+          .from("job_applications")
+          .select("id, status")
+          .eq("candidate_id", user.id)
+          .eq("job_id", jobDetails.id)
+          .single();
+            
+        if (!applicationError && applicationData) {
+          setHasExistingApplication(true);
+          return;
+        }
+
+        // Fetch candidate data for pre-filling
         const { data, error } = await supabase
           .from("candidates")
-          .select("resume, about_me_video, sales_pitch_video, status")
+          .select("resume, about_me_video, sales_pitch_video, phone, location")
           .eq("id", user.id)
           .single();
 
@@ -122,45 +122,18 @@ const Application = () => {
             salesPitchVideo: data.sales_pitch_video,
           });
 
-          setCandidateStatus(data.status);
+          const locationParts = data.location?.split(', ') || ["", ""];
+          setProfileData({
+            name: user?.email?.split('@')[0] || "",
+            email: user?.email || "",
+            phone: data.phone || "",
+            city: locationParts[0] || "",
+            state: locationParts[1] || "",
+          });
 
-          if (data.resume && data.about_me_video && data.sales_pitch_video) {
-            setIsSubmitted(true);
-          }
-        }
-        
-        // Check for existing application
-        const { data: applicationData, error: applicationError } = await supabase
-          .from("job_applications")
-          .select("id, status")
-          .eq("candidate_id", user.id)
-          .eq("job_id", jobDetails.id)
-          .single();
-            
-        if (!applicationError && applicationData) {
-          setHasAppliedBefore(true);
-          setApplicationId(applicationData.id);
-          
-          // If status is 'applied' or 'hr_review', application is complete
-          if (applicationData.status === 'applied' || applicationData.status === 'hr_review') {
-            setIsSubmitted(true);
-          }
-        } else {
-          // Create a new application record with 'in_progress' status
-          const { data: newApplication, error: createError } = await supabase
-            .from("job_applications")
-            .insert({
-              candidate_id: user.id,
-              job_id: jobDetails.id,
-              status: 'in_progress'
-            })
-            .select('id')
-            .single();
-            
-          if (createError) {
-            console.error("Error creating application record:", createError);
-          } else if (newApplication) {
-            setApplicationId(newApplication.id);
+          // Check if profile is complete
+          if (data.phone && data.location) {
+            setCurrentStep(2);
           }
         }
       } catch (error) {
@@ -171,150 +144,158 @@ const Application = () => {
     fetchApplicationData();
   }, [user, jobDetails?.id]);
 
-  const handleNext = async () => {
-    // Update application status to reflect current step
-    if (applicationId) {
-      await supabase
-        .from("job_applications")
-        .update({
-          status: `in_progress_step_${currentStep + 1}`
-        })
-        .eq("id", applicationId);
-    }
-    
+  const handleNext = () => {
     setCurrentStep((step) => Math.min(step + 1, steps.length));
   };
   
-  const handleBack = () => setCurrentStep((step) => Math.max(step - 1, 1));
+  const handleBack = () => {
+    setCurrentStep((step) => Math.max(step - 1, 1));
+  };
   
   const handleComplete = async () => {
-    if (!user) {
+    if (!user || !jobDetails?.id) {
       toast({
         title: "Error",
-        description: "You must be logged in to submit an application.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (isSubmitted) {
-      toast({
-        title: "Already Submitted",
-        description: "Your application has already been submitted.",
+        description: "Missing user or job information.",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      // First, fetch the latest candidate data including the uploaded files
-      const { data: candidateData, error: fetchError } = await supabase
-        .from("candidates")
-        .select("resume, about_me_video, sales_pitch_video")
-        .eq("id", user.id)
-        .single();
-        
-      if (fetchError) throw fetchError;
-      
-      // Update the candidate status with the job name
-      const jobTitle = jobDetails?.title || "Unknown Position";
-      const newStatus = `Applied to job: ${jobTitle}`;
-      
+      setIsSubmitting(true);
+
+      // Update candidate status
+      const jobTitle = jobDetails.title || "Unknown Position";
       await updateApplicationStatus(user.id, {
-        status: newStatus,
+        status: 'applied',
         job_title: jobTitle
       });
       
-      if (applicationId) {
-        // Update existing application record
-        const { error: updateError } = await supabase
-          .from("job_applications")
-          .update({
-            status: 'hr_review'
-          })
-          .eq("id", applicationId);
-          
-        if (updateError) throw updateError;
-      } else if (jobDetails?.id) {
-        // Create new application record if somehow we don't have one
-        const { error: applicationError } = await supabase
-          .from("job_applications")
-          .insert({
-            candidate_id: user.id,
-            job_id: jobDetails.id,
-            status: 'hr_review'
-          });
-          
-        if (applicationError) throw applicationError;
-      }
+      // Create application record
+      const { error: applicationError } = await supabase
+        .from("job_applications")
+        .insert({
+          candidate_id: user.id,
+          job_id: jobDetails.id,
+          status: 'hr_review'
+        });
+        
+      if (applicationError) throw applicationError;
 
       toast({
-        title: "Application submitted",
-        description: "Your application has been submitted successfully and is now under HR review.",
+        title: "Application submitted successfully!",
+        description: "Your application is now under review. You can track your progress in the dashboard.",
       });
 
-      setIsSubmitted(true);
+      localStorage.removeItem("selectedJob");
       navigate("/dashboard/candidate");
       
-      localStorage.removeItem("selectedJob");
     } catch (error: any) {
+      console.error("Error submitting application:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to submit application",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const showApplicationRequiredAlert = 
-    candidateStatus && 
-    ["profile_created", "application_in_progress", "applied"].includes(candidateStatus.toLowerCase());
-
-  const showApplicationSubmittedAlert = isSubmitted || 
-    (candidateStatus && ["hr_review", "hr_approved", "training", "manager_interview", "paid_project"].includes(candidateStatus.toLowerCase()));
-
-  return (
-    <MainLayout>
-      <div className="container mx-auto py-8 max-w-2xl">
-        <h1 className="text-3xl font-bold mb-2">My Application</h1>
-        
-        {jobDetails && (
-          <div className="bg-blue-50 px-4 py-2 rounded mb-8">
-            <div className="font-semibold">
-              Job Applied:&nbsp; <span className="text-blue-800">{jobDetails.title}</span>
-            </div>
-            <div className="text-xs text-gray-600">Application Steps: Profile &rarr; Uploads &rarr; Assessment</div>
-          </div>
-        )}
-
-        {hasAppliedBefore && isSubmitted && (
+  if (hasExistingApplication) {
+    return (
+      <MainLayout>
+        <div className="container mx-auto py-8 max-w-2xl">
           <Alert className="mb-4 bg-yellow-50 border-yellow-200">
             <AlertCircle className="h-4 w-4 text-yellow-600" />
             <AlertTitle>Already Applied</AlertTitle>
             <AlertDescription>
               You have already applied for this position. You can view your application status in your dashboard.
             </AlertDescription>
-            <div className="mt-2">
+            <div className="mt-2 space-x-2">
               <Button size="sm" onClick={() => navigate("/dashboard/candidate")}>
                 View Application Status
               </Button>
+              <Button size="sm" variant="outline" onClick={() => navigate("/candidate/jobs")}>
+                View Other Jobs
+              </Button>
             </div>
           </Alert>
-        )}
+        </div>
+      </MainLayout>
+    );
+  }
 
-        <div className="flex gap-4 mb-8">
-          {steps.map(s => (
-            <div key={s.id} className={`flex-1 flex flex-col items-center`}>
-              <div className={`rounded-full w-8 h-8 flex items-center justify-center mb-1
-                ${currentStep === s.id ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}
-              `}>{s.id}</div>
-              <span className={`text-xs ${currentStep === s.id ? 'font-bold text-blue-700' : 'text-gray-500'}`}>{s.label}</span>
-            </div>
-          ))}
+  return (
+    <MainLayout>
+      <div className="container mx-auto py-6 max-w-2xl">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-6">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/candidate/jobs")}
+            className="p-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">Complete Application</h1>
+            {jobDetails && (
+              <p className="text-gray-600 text-sm">
+                for <span className="font-medium text-blue-600">{jobDetails.title}</span>
+              </p>
+            )}
+          </div>
         </div>
 
-        {!isSubmitted && (
-          <>
+        {/* Progress Card */}
+        <Card className="mb-6">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg">Application Progress</CardTitle>
+              <span className="text-sm text-gray-500">{currentStep}/{steps.length}</span>
+            </div>
+            <Progress value={(currentStep / steps.length) * 100} className="mt-2" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {steps.map((step) => (
+                <div
+                  key={step.id}
+                  className={`flex items-center gap-3 p-3 rounded-lg border ${
+                    step.id === currentStep
+                      ? 'bg-blue-50 border-blue-200'
+                      : step.id < currentStep
+                      ? 'bg-green-50 border-green-200'
+                      : 'bg-gray-50 border-gray-200'
+                  }`}
+                >
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                      step.id === currentStep
+                        ? 'bg-blue-600 text-white'
+                        : step.id < currentStep
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-300 text-gray-600'
+                    }`}
+                  >
+                    {step.id < currentStep ? '✓' : step.id}
+                  </div>
+                  <div>
+                    <div className="font-medium">{step.title}</div>
+                    <div className="text-sm text-gray-600">{step.description}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Step Content */}
+        <Card>
+          <CardContent className="p-6">
             {currentStep === 1 && (
               <ApplicationStepProfile 
                 onNext={handleNext}
@@ -324,41 +305,43 @@ const Application = () => {
             )}
 
             {currentStep === 2 && (
-              <ApplicationStepUploads 
-                onNext={handleNext}
-                onBack={handleBack}
-                applicationData={applicationData}
-                setApplicationData={setApplicationData}
-              />
+              <div>
+                <ApplicationStepUploads 
+                  onNext={handleComplete}
+                  onBack={handleBack}
+                  applicationData={applicationData}
+                  setApplicationData={setApplicationData}
+                />
+                
+                <div className="flex justify-between mt-6 pt-4 border-t">
+                  <Button onClick={handleBack} variant="outline">
+                    Back
+                  </Button>
+                  <Button 
+                    onClick={handleComplete}
+                    disabled={isSubmitting}
+                    className="min-w-32"
+                  >
+                    {isSubmitting ? "Submitting..." : "Submit Application"}
+                  </Button>
+                </div>
+              </div>
             )}
+          </CardContent>
+        </Card>
 
-            {currentStep === 3 && jobDetails && (
-              <ApplicationStepAssessment
-                onBack={handleBack}
-                onComplete={handleComplete}
-                jobId={jobDetails.id}
-              />
-            )}
-          </>
-        )}
-
-        {isSubmitted ? (
-          <Alert className="mb-8">
-            <AlertTitle>Application Submitted</AlertTitle>
-            <AlertDescription>
-              Your application has been submitted and is being reviewed.
-              You'll be notified when there's an update on your application status.
-            </AlertDescription>
-          </Alert>
-        ) : showApplicationRequiredAlert ? (
-          <Alert className="mb-8" variant="destructive">
-            <AlertTitle>Application Required</AlertTitle>
-            <AlertDescription>
-              Please complete your application to begin the hiring process.
-              All fields are required.
-            </AlertDescription>
-          </Alert>
-        ) : null}
+        {/* Next Steps Preview */}
+        <Card className="mt-6 bg-blue-50 border-blue-200">
+          <CardContent className="p-4">
+            <h3 className="font-medium text-blue-900 mb-2">What happens next?</h3>
+            <div className="text-sm text-blue-700 space-y-1">
+              <p>1. HR team reviews your application</p>
+              <p>2. Complete assessment and training modules</p>
+              <p>3. Interview with hiring manager</p>
+              <p>4. Final decision and onboarding</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </MainLayout>
   );

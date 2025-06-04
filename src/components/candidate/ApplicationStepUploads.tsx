@@ -1,22 +1,19 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
-import { FileText, Upload, Video, X } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
 import { useAuth } from '@/contexts/auth';
 import { useSupabaseStorage } from '@/hooks/useSupabaseStorage';
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { Upload, FileText, Video, CheckCircle } from "lucide-react";
 
 interface ApplicationStepUploadsProps {
   onNext: () => void;
   onBack: () => void;
-  applicationData: {
-    resume: string | null;
-    aboutMeVideo: string | null;
-    salesPitchVideo: string | null;
-  };
+  applicationData: any;
   setApplicationData: (data: any) => void;
 }
 
@@ -26,419 +23,264 @@ const ApplicationStepUploads = ({
   applicationData, 
   setApplicationData 
 }: ApplicationStepUploadsProps) => {
-  const { toast } = useToast();
   const { user } = useAuth();
+  const resumeUpload = useSupabaseStorage('resumes');
+  const videoUpload = useSupabaseStorage('candidate-videos');
   
-  const { uploadFile: uploadResume, isUploading: uploadingResume } = useSupabaseStorage('resumes');
-  const { uploadFile: uploadVideo, isUploading: uploadingVideo } = useSupabaseStorage('candidate-videos');
-  
+  const [uploadingResume, setUploadingResume] = useState(false);
   const [uploadingAboutVideo, setUploadingAboutVideo] = useState(false);
   const [uploadingSalesVideo, setUploadingSalesVideo] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState({
-    resume: 0,
-    aboutMe: 0,
-    salesPitch: 0
-  });
-  
-  // Helper function to save URLs to the candidates table
-  const saveToCandidateProfile = async (fieldName: string, url: string) => {
-    if (!user) return false;
+
+  useEffect(() => {
+    const fetchExistingFiles = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from("candidates")
+          .select("resume, about_me_video, sales_pitch_video")
+          .eq("id", user.id)
+          .single();
+          
+        if (error) throw error;
+        
+        if (data) {
+          setApplicationData({
+            resume: data.resume,
+            aboutMeVideo: data.about_me_video,
+            salesPitchVideo: data.sales_pitch_video,
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching existing files:", error);
+      }
+    };
     
+    fetchExistingFiles();
+  }, [user?.id, setApplicationData]);
+
+  const handleResumeUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user?.id) return;
+
+    if (!file.type.includes('pdf') && !file.type.includes('document')) {
+      toast.error('Please upload a PDF or Word document');
+      return;
+    }
+
     try {
-      // Build the update object dynamically
-      const updateObj: {[key: string]: string} = {};
+      setUploadingResume(true);
+      const filePath = `resume-${Date.now()}.${file.name.split('.').pop()}`;
+      const publicUrl = await resumeUpload.uploadFile(file, filePath);
       
-      // Map the field names to database column names
-      const fieldNameMapping: {[key: string]: string} = {
-        'resume': 'resume',
-        'aboutMeVideo': 'about_me_video',
-        'salesPitchVideo': 'sales_pitch_video'
-      };
-      
-      updateObj[fieldNameMapping[fieldName]] = url;
-      
-      // Update the candidate record in the database
-      const { error } = await supabase
-        .from('candidates')
-        .update(updateObj)
-        .eq('id', user.id);
-      
-      if (error) {
-        console.error('Error saving to candidate profile:', error);
-        throw error;
+      if (publicUrl) {
+        await supabase
+          .from("candidates")
+          .update({ resume: publicUrl })
+          .eq("id", user.id);
+          
+        setApplicationData(prev => ({ ...prev, resume: publicUrl }));
+        toast.success('Resume uploaded successfully');
       }
-      
-      return true;
-    } catch (err) {
-      console.error('Failed to save to candidate profile:', err);
-      return false;
-    }
-  };
-  
-  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0 || !user) {
-      return;
-    }
-    const file = e.target.files[0];
-    const fileExtension = file.name.split('.').pop();
-    const filePath = `${user.id}/resume.${fileExtension}`;
-    
-    setUploadProgress(prev => ({ ...prev, resume: 10 }));
-    
-    const publicUrl = await uploadResume(file, filePath);
-    
-    if (publicUrl) {
-      // First update the local state
-      setApplicationData({
-        ...applicationData,
-        resume: publicUrl
-      });
-      
-      // Then save to the database
-      const saved = await saveToCandidateProfile('resume', publicUrl);
-      
-      setUploadProgress(prev => ({ ...prev, resume: 100 }));
-      
-      if (saved) {
-        toast({
-          title: "Resume uploaded",
-          description: "Your resume has been uploaded and saved successfully.",
-        });
-      } else {
-        toast({
-          title: "Partial success",
-          description: "Resume uploaded but there was an issue saving to your profile. Please try again or contact support.",
-          variant: "destructive"
-        });
-      }
-    } else {
-      setUploadProgress(prev => ({ ...prev, resume: 0 }));
-      e.target.value = '';
-      toast({
-        title: "Upload failed",
-        description: "There was an error uploading your resume. Please try again.",
-        variant: "destructive"
-      });
+    } catch (error) {
+      toast.error('Failed to upload resume');
+    } finally {
+      setUploadingResume(false);
     }
   };
 
-  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: "aboutMe" | "salesPitch") => {
-    if (!e.target.files || e.target.files.length === 0 || !user) {
-      return;
-    }
-    const file = e.target.files[0];
-    const fileExtension = file.name.split('.').pop();
-    const fieldName = type === "aboutMe" ? "aboutMeVideo" : "salesPitchVideo";
-    const filePath = `${user.id}/${fieldName}.${fileExtension}`;
-    const setUploading = type === "aboutMe" ? setUploadingAboutVideo : setUploadingSalesVideo;
-    
-    setUploading(true);
-    setUploadProgress(prev => ({ ...prev, [type]: 10 }));
-    
-    const publicUrl = await uploadVideo(file, filePath);
-    setUploading(false);
-    
-    if (publicUrl) {
-      // First update the local state
-      setApplicationData({
-        ...applicationData,
-        [fieldName]: publicUrl
-      });
-      
-      // Then save to the database
-      const saved = await saveToCandidateProfile(fieldName, publicUrl);
-      
-      setUploadProgress(prev => ({ ...prev, [type]: 100 }));
-      
-      if (saved) {
-        toast({
-          title: "Video uploaded",
-          description: `Your ${type === "aboutMe" ? "about me" : "sales pitch"} video has been uploaded and saved successfully.`,
-        });
-      } else {
-        toast({
-          title: "Partial success",
-          description: `Video uploaded but there was an issue saving to your profile. Please try again or contact support.`,
-          variant: "destructive"
-        });
-      }
-    } else {
-      setUploadProgress(prev => ({ ...prev, [type]: 0 }));
-      e.target.value = '';
-      toast({
-        title: "Upload failed",
-        description: `There was an error uploading your ${type === "aboutMe" ? "about me" : "sales pitch"} video. Please try again.`,
-        variant: "destructive"
-      });
-    }
-  };
+  const handleAboutVideoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user?.id) return;
 
-  const handleRemoveFile = async (type: "resume" | "aboutMeVideo" | "salesPitchVideo") => {
-    if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "Please log in to manage your files.",
-        variant: "destructive"
-      });
+    if (!file.type.includes('video')) {
+      toast.error('Please upload a video file');
       return;
     }
-    
+
     try {
-      // Map the field names to database column names
-      const fieldNameMapping: {[key: string]: string} = {
-        'resume': 'resume',
-        'aboutMeVideo': 'about_me_video',
-        'salesPitchVideo': 'sales_pitch_video'
-      };
+      setUploadingAboutVideo(true);
+      const filePath = `about-me-${Date.now()}.${file.name.split('.').pop()}`;
+      const publicUrl = await videoUpload.uploadFile(file, filePath);
       
-      // Update the database to remove the file reference
-      const updateObj: {[key: string]: null} = {};
-      updateObj[fieldNameMapping[type]] = null;
-      
-      const { error } = await supabase
-        .from('candidates')
-        .update(updateObj)
-        .eq('id', user.id);
-      
-      if (error) throw error;
-      
-      // Update local state
-      setApplicationData({
-        ...applicationData,
-        [type]: null
-      });
-      
-      setUploadProgress(prev => ({ 
-        ...prev, 
-        [type === "resume" ? "resume" : type === "aboutMeVideo" ? "aboutMe" : "salesPitch"]: 0 
-      }));
-      
-      toast({
-        title: "File removed",
-        description: `Your ${type === "resume" ? "resume" : type === "aboutMeVideo" ? "about me video" : "sales pitch video"} has been removed.`,
-      });
-    } catch (error: any) {
-      console.error("Error removing file:", error);
-      toast({
-        title: "Error",
-        description: `Failed to remove file: ${error.message}`,
-        variant: "destructive"
-      });
+      if (publicUrl) {
+        await supabase
+          .from("candidates")
+          .update({ about_me_video: publicUrl })
+          .eq("id", user.id);
+          
+        setApplicationData(prev => ({ ...prev, aboutMeVideo: publicUrl }));
+        toast.success('About me video uploaded successfully');
+      }
+    } catch (error) {
+      toast.error('Failed to upload video');
+    } finally {
+      setUploadingAboutVideo(false);
     }
-  };
-  
-  const validateBeforeNext = () => {
-    if (!applicationData.resume && !applicationData.aboutMeVideo && !applicationData.salesPitchVideo) {
-      toast({
-        description: "You haven't uploaded any files. You can still proceed, but we recommend uploading at least one file to support your application.",
-        duration: 5000,
-      });
-    }
-    onNext();
   };
 
-  const renderUploadProgress = (progress: number) => {
-    if (progress === 0) return null;
-    
-    return (
-      <div className="mt-2">
-        <Progress value={progress} className="w-full" />
-        <p className="text-xs text-gray-500 mt-1">
-          {progress < 100 ? "Uploading..." : "Upload complete"}
-        </p>
-      </div>
-    );
+  const handleSalesVideoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user?.id) return;
+
+    if (!file.type.includes('video')) {
+      toast.error('Please upload a video file');
+      return;
+    }
+
+    try {
+      setUploadingSalesVideo(true);
+      const filePath = `sales-pitch-${Date.now()}.${file.name.split('.').pop()}`;
+      const publicUrl = await videoUpload.uploadFile(file, filePath);
+      
+      if (publicUrl) {
+        await supabase
+          .from("candidates")
+          .update({ sales_pitch_video: publicUrl })
+          .eq("id", user.id);
+          
+        setApplicationData(prev => ({ ...prev, salesPitchVideo: publicUrl }));
+        toast.success('Sales pitch video uploaded successfully');
+      }
+    } catch (error) {
+      toast.error('Failed to upload video');
+    } finally {
+      setUploadingSalesVideo(false);
+    }
   };
+
+  const canProceed = applicationData.resume && applicationData.aboutMeVideo && applicationData.salesPitchVideo;
 
   return (
-    <div className="grid gap-8">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <FileText className="mr-2" />
-            Resume
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {applicationData.resume ? (
-            <div className="p-4 border rounded bg-muted relative">
-              <div className="flex items-center">
-                <FileText className="mr-2 text-blue-500" />
-                <div className="flex-1 truncate">
-                  <a href={applicationData.resume} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline truncate">
-                    {applicationData.resume.split('/').pop()}
-                  </a>
-                </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={() => handleRemoveFile("resume")}
-                  className="text-red-500 hover:bg-red-50 hover:text-red-600"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div>
-              <Label htmlFor="resumeUpload">Upload your Resume (Optional)</Label>
-              <div className="text-xs text-gray-600 mb-2">
-                Please upload your latest resume in PDF or DOCX format.
-              </div>
-              <div className="flex items-center justify-center w-full">
-                <label
-                  htmlFor="resumeUpload"
-                  className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
-                >
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <Upload className="w-8 h-8 mb-2 text-gray-500" />
-                    <p className="mb-2 text-sm text-gray-500">
-                      <span className="font-semibold">Click to upload</span> or drag and drop
-                    </p>
-                    <p className="text-xs text-gray-500">PDF, DOCX (MAX. 5MB)</p>
-                  </div>
-                  <input
-                    id="resumeUpload"
-                    type="file"
-                    className="hidden"
-                    onChange={handleResumeUpload}
-                    disabled={uploadingResume}
-                    accept=".pdf,.docx,.doc"
-                  />
-                </label>
-              </div>
-              {renderUploadProgress(uploadProgress.resume)}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Video className="mr-2" />
-            About Me Video
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {applicationData.aboutMeVideo ? (
-            <div className="p-4 border rounded bg-muted relative">
-              <div className="flex items-center">
-                <Video className="mr-2 text-blue-500" />
-                <div className="flex-1 truncate">
-                  <a href={applicationData.aboutMeVideo} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline truncate">
-                    {applicationData.aboutMeVideo.split('/').pop()}
-                  </a>
-                </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={() => handleRemoveFile("aboutMeVideo")}
-                  className="text-red-500 hover:bg-red-50 hover:text-red-600"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div>
-              <Label htmlFor="aboutMeUpload">Upload About Me Video (Optional)</Label>
-              <div className="text-xs text-gray-600 mb-2">
-                Briefly introduce yourself and your interests in this short (~1 minute) video.
-              </div>
-              <div className="flex items-center justify-center w-full">
-                <label
-                  htmlFor="aboutMeUpload"
-                  className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
-                >
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <Upload className="w-8 h-8 mb-2 text-gray-500" />
-                    <p className="mb-2 text-sm text-gray-500">
-                      <span className="font-semibold">Click to upload</span> or drag and drop
-                    </p>
-                    <p className="text-xs text-gray-500">MP4, MOV, WEBM (MAX. 100MB)</p>
-                  </div>
-                  <input
-                    id="aboutMeUpload"
-                    type="file"
-                    className="hidden"
-                    onChange={(e) => handleVideoUpload(e, "aboutMe")}
-                    disabled={uploadingAboutVideo}
-                    accept=".mp4,.mov,.webm"
-                  />
-                </label>
-              </div>
-              {renderUploadProgress(uploadProgress.aboutMe)}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Video className="mr-2" />
-            Sales Pitch Video
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {applicationData.salesPitchVideo ? (
-            <div className="p-4 border rounded bg-muted relative">
-              <div className="flex items-center">
-                <Video className="mr-2 text-blue-500" />
-                <div className="flex-1 truncate">
-                  <a href={applicationData.salesPitchVideo} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline truncate">
-                    {applicationData.salesPitchVideo.split('/').pop()}
-                  </a>
-                </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={() => handleRemoveFile("salesPitchVideo")}
-                  className="text-red-500 hover:bg-red-50 hover:text-red-600"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div>
-              <Label htmlFor="salesPitchUpload">Upload Sales Pitch Video (Optional)</Label>
-              <div className="text-xs text-gray-600 mb-2">
-                Record a short sales pitch (up to 2 minutes) demonstrating your selling skills, confidence and personality.
-              </div>
-              <div className="flex items-center justify-center w-full">
-                <label
-                  htmlFor="salesPitchUpload"
-                  className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
-                >
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <Upload className="w-8 h-8 mb-2 text-gray-500" />
-                    <p className="mb-2 text-sm text-gray-500">
-                      <span className="font-semibold">Click to upload</span> or drag and drop
-                    </p>
-                    <p className="text-xs text-gray-500">MP4, MOV, WEBM (MAX. 100MB)</p>
-                  </div>
-                  <input
-                    id="salesPitchUpload"
-                    type="file"
-                    className="hidden"
-                    onChange={(e) => handleVideoUpload(e, "salesPitch")}
-                    disabled={uploadingSalesVideo}
-                    accept=".mp4,.mov,.webm"
-                  />
-                </label>
-              </div>
-              {renderUploadProgress(uploadProgress.salesPitch)}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <div className="flex justify-between mt-4">
-        <Button type="button" variant="outline" onClick={onBack}>Back</Button>
-        <Button type="button" onClick={validateBeforeNext}>Next</Button>
+    <div>
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold mb-2">Upload Required Documents</h3>
+        <p className="text-gray-600 text-sm">Please upload your resume and introduction videos.</p>
       </div>
+
+      <div className="space-y-6">
+        {/* Resume Upload */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Resume (Required)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {applicationData.resume ? (
+              <div className="flex items-center gap-2 text-green-600">
+                <CheckCircle className="h-4 w-4" />
+                <span className="text-sm">Resume uploaded successfully</span>
+              </div>
+            ) : (
+              <div>
+                <Label htmlFor="resume" className="cursor-pointer">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors">
+                    <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                    <p className="text-sm text-gray-600">
+                      {uploadingResume ? 'Uploading...' : 'Click to upload your resume'}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">PDF or Word document</p>
+                  </div>
+                </Label>
+                <Input
+                  id="resume"
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  onChange={handleResumeUpload}
+                  disabled={uploadingResume}
+                  className="hidden"
+                />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* About Me Video */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Video className="h-4 w-4" />
+              About Me Video (Required)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {applicationData.aboutMeVideo ? (
+              <div className="flex items-center gap-2 text-green-600">
+                <CheckCircle className="h-4 w-4" />
+                <span className="text-sm">About me video uploaded successfully</span>
+              </div>
+            ) : (
+              <div>
+                <Label htmlFor="about-video" className="cursor-pointer">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors">
+                    <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                    <p className="text-sm text-gray-600">
+                      {uploadingAboutVideo ? 'Uploading...' : 'Upload your introduction video'}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">Tell us about yourself (2-3 minutes)</p>
+                  </div>
+                </Label>
+                <Input
+                  id="about-video"
+                  type="file"
+                  accept="video/*"
+                  onChange={handleAboutVideoUpload}
+                  disabled={uploadingAboutVideo}
+                  className="hidden"
+                />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Sales Pitch Video */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Video className="h-4 w-4" />
+              Sales Pitch Video (Required)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {applicationData.salesPitchVideo ? (
+              <div className="flex items-center gap-2 text-green-600">
+                <CheckCircle className="h-4 w-4" />
+                <span className="text-sm">Sales pitch video uploaded successfully</span>
+              </div>
+            ) : (
+              <div>
+                <Label htmlFor="sales-video" className="cursor-pointer">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors">
+                    <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                    <p className="text-sm text-gray-600">
+                      {uploadingSalesVideo ? 'Uploading...' : 'Upload your sales pitch video'}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">Demonstrate your sales skills (2-3 minutes)</p>
+                  </div>
+                </Label>
+                <Input
+                  id="sales-video"
+                  type="file"
+                  accept="video/*"
+                  onChange={handleSalesVideoUpload}
+                  disabled={uploadingSalesVideo}
+                  className="hidden"
+                />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {!canProceed && (
+        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-700">
+            Please upload all required documents to proceed with your application.
+          </p>
+        </div>
+      )}
     </div>
   );
 };
