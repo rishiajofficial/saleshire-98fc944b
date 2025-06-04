@@ -82,45 +82,35 @@ export const useCandidateDashboardState = (userId: string | undefined, jobId?: s
 
         // Determine current step based on application status and completion
         let currentStep = 1; // Default to application step
+        let canAccessTraining = false;
         
-        if (jobAppData) {
-          if (!applicationSubmitted) {
-            // Application started but not completed - stay on step 1
-            currentStep = 1;
-          } else {
-            // Application completed, determine next step based on status
-            switch (jobAppData.status) {
-              case 'applied':
-              case 'hr_review':
-                // Application complete but under review - move to assessment step
-                currentStep = 2;
-                break;
-              case 'hr_approved':
-              case 'training':
-                currentStep = 3;
-                break;
-              case 'manager_interview':
-                currentStep = 4;
-                break;
-              case 'paid_project':
-              case 'sales_task':
-                currentStep = 5;
-                break;
-              case 'hired':
-                currentStep = 6;
-                break;
-              default:
-                // Application complete but unknown status - move to assessment
-                currentStep = 2;
-            }
+        if (jobAppData && applicationSubmitted) {
+          // Application is complete, move to assessment step
+          currentStep = 2;
+          
+          // Check if candidate has completed assessment with good score
+          // This would be determined by assessment results (simplified logic here)
+          if (jobAppData.status === 'training' || 
+              jobAppData.status === 'manager_interview' ||
+              jobAppData.status === 'paid_project' ||
+              jobAppData.status === 'sales_task' ||
+              jobAppData.status === 'hired') {
+            currentStep = 3; // Move to training step
+            canAccessTraining = true;
           }
-        } else if (applicationSubmitted) {
-          // No job application record but candidate has completed profile - this shouldn't happen but handle gracefully
+          
+          // Further progression based on status
+          if (jobAppData.status === 'manager_interview') {
+            currentStep = 4;
+          } else if (jobAppData.status === 'paid_project' || jobAppData.status === 'sales_task') {
+            currentStep = 5;
+          } else if (jobAppData.status === 'hired') {
+            currentStep = 6;
+          }
+        } else if (applicationSubmitted && !jobAppData) {
+          // Application complete but no job application record - stay on step 2
           currentStep = 2;
         }
-
-        const canAccessTraining = applicationSubmitted && 
-          (jobAppData?.status === 'hr_approved' || jobAppData?.status === 'training');
 
         setState({
           loading: false,
@@ -149,7 +139,7 @@ export const useCandidateDashboardState = (userId: string | undefined, jobId?: s
     };
 
     fetchDashboardData();
-  }, [userId, jobId]); // Added jobId as dependency to refetch when it changes
+  }, [userId, jobId]);
 
   const refetch = () => {
     setState(prev => ({ ...prev, loading: true }));

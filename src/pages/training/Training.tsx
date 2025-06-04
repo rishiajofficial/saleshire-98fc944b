@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Loader2, Lock, BookOpen, GraduationCap } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
@@ -14,9 +13,11 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useSearchParams } from "react-router-dom";
 
 const Training = () => {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
   const [hasAssessmentAccess, setHasAssessmentAccess] = useState(false);
@@ -25,6 +26,10 @@ const Training = () => {
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
   
   const { modules: trainingModules, loading: isLoadingModules, error } = useTrainingModulesList();
+
+  // Get the tab from URL params, default to assessment for step 2
+  const tabFromUrl = searchParams.get('tab');
+  const defaultTab = tabFromUrl || 'assessment';
 
   useEffect(() => {
     if (!user) return;
@@ -55,9 +60,12 @@ const Training = () => {
         const assessmentAccess = step >= 2;
         setHasAssessmentAccess(assessmentAccess);
         
-        // Training access: available when HR approved or step 3+
-        const trainingAccess = candidateData.status === 'hr_approved' || 
-                              candidateData.status === 'training' ||
+        // Training access: available from step 3 onwards (after passing assessment)
+        const trainingAccess = candidateData.status === 'training' ||
+                              candidateData.status === 'manager_interview' ||
+                              candidateData.status === 'paid_project' ||
+                              candidateData.status === 'sales_task' ||
+                              candidateData.status === 'hired' ||
                               step >= 3;
         setHasTrainingAccess(trainingAccess);
         
@@ -156,7 +164,7 @@ const Training = () => {
       <div className="container mx-auto py-8">
         <TrainingHeader jobTitle={selectedJob?.title} />
         
-        <Tabs defaultValue={hasAssessmentAccess && currentStep === 2 ? "assessment" : "training"} className="w-full">
+        <Tabs defaultValue={defaultTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger 
               value="assessment" 

@@ -29,7 +29,7 @@ const steps = [
     description: "Complete your skills assessment",
     icon: GraduationCap,
     action: "Take Assessment",
-    route: "/training"
+    route: "/training?tab=assessment"
   },
   {
     id: 3,
@@ -37,7 +37,7 @@ const steps = [
     description: "Complete required training modules",
     icon: MessageSquare,
     action: "Start Training",
-    route: "/training"
+    route: "/training?tab=training"
   },
   {
     id: 4,
@@ -88,13 +88,14 @@ export const HiringWizard = ({
     
     // Special handling for specific steps
     if (step.id === 1 && !applicationSubmitted) {
+      // Step 1: Application - go to jobs page
       navigate(step.route);
     } else if (step.id === 2 && applicationSubmitted) {
-      // Assessment step - accessible immediately after application completion
-      navigate(step.route);
+      // Step 2: Assessment - go directly to assessment tab
+      navigate("/training?tab=assessment");
     } else if (step.id === 3 && canAccessTraining) {
-      // Training step - only accessible when training is unlocked (after 50% assessment score)
-      navigate(step.route);
+      // Step 3: Training - go to training tab
+      navigate("/training?tab=training");
     } else if (stepStatus === 'current') {
       navigate(step.route);
     }
@@ -108,10 +109,10 @@ export const HiringWizard = ({
     // Step 1: Actionable if not completed
     if (step.id === 1) return !applicationSubmitted;
     
-    // Step 2: Actionable if application is completed
+    // Step 2: Assessment - actionable if application is completed
     if (step.id === 2) return applicationSubmitted;
     
-    // Step 3: Actionable if training is unlocked (after passing assessment)
+    // Step 3: Training - actionable if training is unlocked (after passing assessment)
     if (step.id === 3) return canAccessTraining;
     
     // Other steps: actionable if current
@@ -215,7 +216,7 @@ export const HiringWizard = ({
             })}
           </div>
 
-          {candidateStatus && (
+          {candidateStatus && candidateStatus !== 'screening' && candidateStatus !== 'applied' && (
             <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <h4 className="font-medium text-blue-900 mb-1">Current Status</h4>
               <p className="text-sm text-blue-700 capitalize">
