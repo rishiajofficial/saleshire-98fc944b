@@ -42,10 +42,10 @@ const JobOpenings = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <CandidateNavbar />
-      <div className="container mx-auto py-8 px-4 max-w-4xl">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-4">Job Openings</h1>
-          <p className="text-gray-600 mb-6">
+      <div className="container mx-auto py-6 px-4 max-w-4xl">
+        <div className="mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-4">Job Openings</h1>
+          <p className="text-gray-600 mb-6 text-sm sm:text-base">
             Find your next opportunity and apply to positions that match your skills.
           </p>
           
@@ -71,7 +71,7 @@ const JobOpenings = () => {
             </AlertDescription>
           </Alert>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="space-y-4">
             {filteredJobs.map((job) => (
               <JobCard
                 key={job.id}
@@ -86,19 +86,21 @@ const JobOpenings = () => {
       </div>
 
       <AlertDialog open={!!jobToDelete} onOpenChange={() => setJobToDelete(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="mx-4 max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>Withdraw Application</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to withdraw your application? This action cannot be undone and will remove all your progress including training and assessment data.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel disabled={isDeleting} className="w-full sm:w-auto">
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteApplication}
               disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-red-600 hover:bg-red-700 w-full sm:w-auto"
             >
               {isDeleting ? "Withdrawing..." : "Withdraw Application"}
             </AlertDialogAction>

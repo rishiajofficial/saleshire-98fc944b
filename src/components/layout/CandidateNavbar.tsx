@@ -23,12 +23,12 @@ const CandidateNavbar: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-200">
-      <nav className="container px-4 sm:px-6 lg:px-8 mx-auto">
-        <div className="flex items-center justify-between h-16">
+      <nav className="container px-4 mx-auto max-w-full">
+        <div className="flex items-center justify-between h-14 sm:h-16">
           {/* Logo */}
           <Link to="/dashboard/candidate" className="flex items-center space-x-2">
-            <BarChart className="h-8 w-8 text-primary" />
-            <span className="text-xl font-semibold tracking-tight">
+            <BarChart className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+            <span className="text-lg sm:text-xl font-semibold tracking-tight">
               SalesHire
             </span>
           </Link>
@@ -38,10 +38,10 @@ const CandidateNavbar: React.FC = () => {
             variant="outline"
             size="sm"
             onClick={handleLogout}
-            className="flex items-center gap-2"
+            className="flex items-center gap-1 sm:gap-2 h-8 sm:h-9 px-2 sm:px-3 text-xs sm:text-sm"
           >
-            <LogOut className="h-4 w-4" />
-            <span className="hidden sm:inline">Logout</span>
+            <LogOut className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Logout</span>
           </Button>
         </div>
       </nav>

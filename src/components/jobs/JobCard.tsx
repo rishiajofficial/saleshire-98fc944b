@@ -33,7 +33,11 @@ export const JobCard: React.FC<JobCardProps> = ({
     if (!applicationStatus?.applied) {
       // No application exists
       return (
-        <Button onClick={() => onApply(job.id)} className="whitespace-nowrap">
+        <Button 
+          onClick={() => onApply(job.id)} 
+          className="w-full sm:w-auto text-sm px-3 py-2 h-8"
+          size="sm"
+        >
           Apply
         </Button>
       );
@@ -42,29 +46,36 @@ export const JobCard: React.FC<JobCardProps> = ({
     if (applicationStatus.applied && !applicationStatus.completed) {
       // Application started but not completed
       return (
-        <Button onClick={() => onApply(job.id)} className="whitespace-nowrap" variant="outline">
-          <PlayCircle className="h-4 w-4 mr-1" />
-          Continue Application
+        <Button 
+          onClick={() => onApply(job.id)} 
+          className="w-full sm:w-auto text-sm px-3 py-2 h-8" 
+          variant="outline"
+          size="sm"
+        >
+          <PlayCircle className="h-3 w-3 mr-1" />
+          <span className="text-xs sm:text-sm">Continue</span>
         </Button>
       );
     }
     
     // Application completed
     return (
-      <Badge className="bg-green-100 text-green-800 whitespace-nowrap">
-        <CheckCircle className="h-3 w-3 mr-1" /> Already Applied
+      <Badge className="bg-green-100 text-green-800 text-xs px-2 py-1 w-full sm:w-auto justify-center">
+        <CheckCircle className="h-3 w-3 mr-1" /> 
+        <span>Applied</span>
       </Badge>
     );
   };
 
   return (
-    <Card key={job.id} className="p-6 h-48 max-h-48">
-      <div className="flex justify-between items-start h-full">
-        <div className="flex-1 pr-4">
-          <div className="font-semibold text-lg mb-2 line-clamp-2">{job.title}</div>
-          <div className="text-gray-600 text-sm mb-3 line-clamp-3">
+    <Card className="p-4 sm:p-6">
+      <div className="space-y-3">
+        {/* Job Content */}
+        <div className="space-y-2">
+          <h3 className="font-semibold text-base sm:text-lg line-clamp-2">{job.title}</h3>
+          <p className="text-gray-600 text-sm line-clamp-3">
             {truncateText(job.description)}
-          </div>
+          </p>
           <div className="space-y-1">
             {job.location && (
               <div className="text-gray-500 text-xs">Location: {job.location}</div>
@@ -75,18 +86,19 @@ export const JobCard: React.FC<JobCardProps> = ({
           </div>
         </div>
         
-        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t">
           {getApplicationButton()}
           
           {applicationStatus?.applied && (
             <Button 
               variant="outline"
               size="sm"
-              className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 whitespace-nowrap"
+              className="w-full sm:w-auto text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 text-sm px-3 py-2 h-8"
               onClick={() => onWithdraw(job.id)}
             >
-              <Trash2 className="h-4 w-4 mr-1" />
-              Withdraw
+              <Trash2 className="h-3 w-3 mr-1" />
+              <span className="text-xs sm:text-sm">Withdraw</span>
             </Button>
           )}
         </div>

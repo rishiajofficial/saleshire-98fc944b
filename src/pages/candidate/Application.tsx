@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -5,12 +6,14 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from '@/contexts/auth';
 import { supabase } from "@/integrations/supabase/client";
-import MainLayout from "@/components/layout/MainLayout";
 import ApplicationStepProfile from "@/components/candidate/ApplicationStepProfile";
-import ApplicationStepUploads from "@/components/candidate/ApplicationStepUploads";
+import ApplicationStepUploadResume from "@/components/candidate/ApplicationStepUploadResume";
+import ApplicationStepUploadAboutVideo from "@/components/candidate/ApplicationStepUploadAboutVideo";
+import ApplicationStepUploadSalesVideo from "@/components/candidate/ApplicationStepUploadSalesVideo";
 import { AlertCircle, ArrowLeft, Check } from "lucide-react";
 import { updateApplicationStatus } from "@/hooks/useDatabaseQuery";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import CandidateNavbar from "@/components/layout/CandidateNavbar";
 
 const Application = () => {
   const [applicationData, setApplicationData] = useState({
@@ -44,9 +47,21 @@ const Application = () => {
     },
     { 
       id: 2, 
-      title: "Upload Documents", 
-      description: "Resume and introduction videos",
-      component: "uploads"
+      title: "Upload Resume", 
+      description: "Upload your resume",
+      component: "resume"
+    },
+    { 
+      id: 3, 
+      title: "Introduction Video", 
+      description: "Record an introduction video",
+      component: "about-video"
+    },
+    { 
+      id: 4, 
+      title: "Sales Pitch Video", 
+      description: "Demonstrate your sales skills",
+      component: "sales-video"
     }
   ];
 
@@ -220,7 +235,8 @@ const Application = () => {
 
   if (hasExistingApplication) {
     return (
-      <MainLayout>
+      <div className="min-h-screen bg-gray-50">
+        <CandidateNavbar />
         <div className="container mx-auto py-8 max-w-md px-4">
           <Alert className="bg-yellow-50 border-yellow-200">
             <AlertCircle className="h-4 w-4 text-yellow-600" />
@@ -238,132 +254,135 @@ const Application = () => {
             </div>
           </Alert>
         </div>
-      </MainLayout>
+      </div>
     );
   }
 
   const currentStepData = steps.find(step => step.id === currentStep);
 
   return (
-    <MainLayout>
-      <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <div className="bg-white border-b shadow-sm">
-          <div className="container mx-auto px-4 py-4 max-w-md">
-            <div className="flex items-center gap-3 mb-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate("/candidate/jobs")}
-                className="p-2 -ml-2"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-              <div className="flex-1">
-                <h1 className="text-lg font-semibold">Application</h1>
-                {jobDetails && (
-                  <p className="text-sm text-gray-600 truncate">
-                    {jobDetails.title}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs text-gray-600">
-                <span>Step {currentStep} of {totalSteps}</span>
-                <span>{Math.round(progressPercentage)}% Complete</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
-                  style={{ width: `${progressPercentage}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Step Indicators */}
-            <div className="flex justify-between mt-4">
-              {steps.map((step, index) => (
-                <div key={step.id} className="flex items-center">
-                  <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium border-2 ${
-                    step.id < currentStep 
-                      ? 'bg-green-600 border-green-600 text-white' 
-                      : step.id === currentStep
-                      ? 'bg-blue-600 border-blue-600 text-white'
-                      : 'bg-white border-gray-300 text-gray-500'
-                  }`}>
-                    {step.id < currentStep ? <Check className="h-4 w-4" /> : step.id}
-                  </div>
-                  {index < steps.length - 1 && (
-                    <div className={`w-12 h-0.5 mx-2 ${
-                      step.id < currentStep ? 'bg-green-600' : 'bg-gray-300'
-                    }`} />
-                  )}
-                </div>
-              ))}
+    <div className="min-h-screen bg-gray-50">
+      <CandidateNavbar />
+      
+      {/* Header */}
+      <div className="bg-white border-b shadow-sm">
+        <div className="container mx-auto px-4 py-4 max-w-md">
+          <div className="flex items-center gap-3 mb-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/candidate/jobs")}
+              className="p-2 -ml-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex-1">
+              <h1 className="text-lg font-semibold">Application</h1>
+              {jobDetails && (
+                <p className="text-sm text-gray-600 truncate">
+                  {jobDetails.title}
+                </p>
+              )}
             </div>
           </div>
-        </div>
 
-        {/* Step Content */}
-        <div className="container mx-auto px-4 py-6 max-w-md">
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-xl">{currentStepData?.title}</CardTitle>
-              <p className="text-gray-600 text-sm">{currentStepData?.description}</p>
-            </CardHeader>
-            <CardContent className="pt-0">
-              {currentStep === 1 && (
-                <ApplicationStepProfile 
-                  onNext={handleNext}
-                  profileData={profileData}
-                  setProfileData={setProfileData}
-                />
-              )}
+          {/* Progress Bar */}
+          <div className="space-y-2">
+            <div className="flex justify-between text-xs text-gray-600">
+              <span>Step {currentStep} of {totalSteps}</span>
+              <span>{Math.round(progressPercentage)}% Complete</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
+                style={{ width: `${progressPercentage}%` }}
+              />
+            </div>
+          </div>
 
-              {currentStep === 2 && (
-                <div className="space-y-6">
-                  <ApplicationStepUploads 
-                    onNext={handleComplete}
-                    onBack={handleBack}
-                    applicationData={applicationData}
-                    setApplicationData={setApplicationData}
-                  />
-                  
-                  <div className="flex justify-between pt-4 border-t">
-                    <Button onClick={handleBack} variant="outline" className="px-6">
-                      Back
-                    </Button>
-                    <Button 
-                      onClick={handleComplete}
-                      disabled={isSubmitting || !applicationData.resume || !applicationData.aboutMeVideo || !applicationData.salesPitchVideo}
-                      className="px-6"
-                    >
-                      {isSubmitting ? "Submitting..." : "Submit Application"}
-                    </Button>
-                  </div>
+          {/* Step Indicators */}
+          <div className="flex justify-between mt-4 overflow-x-auto">
+            {steps.map((step, index) => (
+              <div key={step.id} className="flex items-center min-w-0 flex-shrink-0">
+                <div className={`flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full text-xs sm:text-sm font-medium border-2 ${
+                  step.id < currentStep 
+                    ? 'bg-green-600 border-green-600 text-white' 
+                    : step.id === currentStep
+                    ? 'bg-blue-600 border-blue-600 text-white'
+                    : 'bg-white border-gray-300 text-gray-500'
+                }`}>
+                  {step.id < currentStep ? <Check className="h-3 w-3 sm:h-4 sm:w-4" /> : step.id}
                 </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* What's Next Card */}
-          <Card className="mt-6 bg-blue-50 border-blue-200">
-            <CardContent className="p-4">
-              <h3 className="font-medium text-blue-900 mb-2">What happens next?</h3>
-              <div className="text-sm text-blue-700 space-y-1">
-                <p>1. HR team reviews your application</p>
-                <p>2. Complete assessment and training modules</p>
-                <p>3. Interview with hiring manager</p>
-                <p>4. Final decision and onboarding</p>
+                {index < steps.length - 1 && (
+                  <div className={`w-8 sm:w-12 h-0.5 mx-1 sm:mx-2 ${
+                    step.id < currentStep ? 'bg-green-600' : 'bg-gray-300'
+                  }`} />
+                )}
               </div>
-            </CardContent>
-          </Card>
+            ))}
+          </div>
         </div>
       </div>
-    </MainLayout>
+
+      {/* Step Content */}
+      <div className="container mx-auto px-4 py-6 max-w-md">
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl">{currentStepData?.title}</CardTitle>
+            <p className="text-gray-600 text-sm">{currentStepData?.description}</p>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {currentStep === 1 && (
+              <ApplicationStepProfile 
+                onNext={handleNext}
+                profileData={profileData}
+                setProfileData={setProfileData}
+              />
+            )}
+
+            {currentStep === 2 && (
+              <ApplicationStepUploadResume 
+                onNext={handleNext}
+                onBack={handleBack}
+                applicationData={applicationData}
+                setApplicationData={setApplicationData}
+              />
+            )}
+
+            {currentStep === 3 && (
+              <ApplicationStepUploadAboutVideo 
+                onNext={handleNext}
+                onBack={handleBack}
+                applicationData={applicationData}
+                setApplicationData={setApplicationData}
+              />
+            )}
+
+            {currentStep === 4 && (
+              <ApplicationStepUploadSalesVideo 
+                onNext={handleComplete}
+                onBack={handleBack}
+                applicationData={applicationData}
+                setApplicationData={setApplicationData}
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        {/* What's Next Card */}
+        <Card className="mt-6 bg-blue-50 border-blue-200">
+          <CardContent className="p-4">
+            <h3 className="font-medium text-blue-900 mb-2">What happens next?</h3>
+            <div className="text-sm text-blue-700 space-y-1">
+              <p>1. HR team reviews your application</p>
+              <p>2. Complete assessment and training modules</p>
+              <p>3. Interview with hiring manager</p>
+              <p>4. Final decision and onboarding</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 };
 

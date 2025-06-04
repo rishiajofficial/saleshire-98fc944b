@@ -109,17 +109,22 @@ export const useJobOpenings = () => {
     try {
       setIsDeleting(true);
       
-      // Delete the job application first
-      const { error: deleteError } = await supabase
+      console.log("Starting application withdrawal for job:", jobToDelete, "user:", user.id);
+      
+      // 1. Delete the job application
+      const { error: deleteAppError } = await supabase
         .from('job_applications')
         .delete()
         .eq('candidate_id', user.id)
         .eq('job_id', jobToDelete);
         
-      if (deleteError) throw deleteError;
+      if (deleteAppError) {
+        console.error("Error deleting job application:", deleteAppError);
+        throw deleteAppError;
+      }
       
-      // Reset candidate data to allow fresh application
-      const { error: resetError } = await supabase
+      // 2. Clear candidate files and reset status
+      const { error: resetCandidateError } = await supabase
         .from('candidates')
         .update({ 
           current_step: 1,
@@ -130,33 +135,41 @@ export const useJobOpenings = () => {
         })
         .eq('id', user.id);
         
-      if (resetError) throw resetError;
+      if (resetCandidateError) {
+        console.error("Error resetting candidate:", resetCandidateError);
+        throw resetCandidateError;
+      }
       
-      // Get training modules associated with this job
+      // 3. Get training modules for this job and clear progress
       const { data: jobTrainingData, error: jobTrainingError } = await supabase
         .from('job_training')
         .select('training_module_id')
         .eq('job_id', jobToDelete);
         
-      if (jobTrainingError) throw jobTrainingError;
+      if (jobTrainingError) {
+        console.error("Error fetching job training:", jobTrainingError);
+        throw jobTrainingError;
+      }
       
-      // Clear training progress for modules associated with this job
+      // 4. Clear training progress and quiz results
       if (jobTrainingData && jobTrainingData.length > 0) {
         const moduleIds = jobTrainingData.map(jt => jt.training_module_id);
         
-        // Get videos for these modules
+        // Get modules data
         const { data: modulesData, error: modulesError } = await supabase
           .from('training_modules')
           .select('id, module')
           .in('id', moduleIds);
           
-        if (modulesError) throw modulesError;
+        if (modulesError) {
+          console.error("Error fetching modules:", modulesError);
+          throw modulesError;
+        }
         
         if (modulesData && modulesData.length > 0) {
-          // Get list of module categories
           const moduleCategories = modulesData.map(m => m.module);
           
-          // Delete training progress for these modules
+          // Delete training progress
           if (moduleCategories.length > 0) {
             const { error: progressError } = await supabase
               .from('training_progress')
@@ -164,23 +177,57 @@ export const useJobOpenings = () => {
               .eq('user_id', user.id)
               .in('module', moduleCategories);
               
-            if (progressError) throw progressError;
-          }
-          
-          // Delete quiz results for these modules
-          const { error: quizError } = await supabase
-            .from('quiz_results')
-            .delete()
-            .eq('user_id', user.id)
-            .in('module', moduleCategories);
+            if (progressError) {
+              console.error("Error deleting training progress:", progressError);
+            }
             
-          if (quizError) throw quizError;
+            // Delete quiz results
+            const { error: quizError } = await supabase
+              .from('quiz_results')
+              .delete()
+              .eq('user_id', user.id)
+              .in('module', moduleCategories);
+              
+            if (quizError) {
+              console.error("Error deleting quiz results:", quizError);
+            }
+          }
         }
       }
       
-      toast.success("Application successfully withdrawn");
+      // 5. Delete any assessment results for this application
+      const { error: assessmentError } = await supabase
+        .from('assessment_results')
+        .delete()
+        .eq('candidate_id', user.id);
+        
+      if (assessmentError) {
+        console.error("Error deleting assessment results:", assessmentError);
+      }
       
-      // Update local state to remove the application
+      // 6. Delete any interview records
+      const { error: interviewError } = await supabase
+        .from('interviews')
+        .delete()
+        .eq('candidate_id', user.id);
+        
+      if (interviewError) {
+        console.error("Error deleting interviews:", interviewError);
+      }
+      
+      // 7. Delete any sales tasks
+      const { error: salesTaskError } = await supabase
+        .from('sales_tasks')
+        .delete()
+        .eq('candidate_id', user.id);
+        
+      if (salesTaskError) {
+        console.error("Error deleting sales tasks:", salesTaskError);
+      }
+      
+      toast.success("Application successfully withdrawn. You can now apply again.");
+      
+      // Update local state immediately
       setUserApplications(prev => {
         const updated = {...prev};
         delete updated[jobToDelete];
@@ -189,13 +236,13 @@ export const useJobOpenings = () => {
       
       setJobToDelete(null);
 
-      // Refetch applications to ensure UI is updated
+      // Refetch data to ensure consistency
       await fetchUserApplications();
       refetchJobs();
       
     } catch (err: any) {
       console.error("Error deleting application:", err);
-      toast.error("Failed to withdraw application: " + err.message);
+      toast.error("Failed to withdraw application: " + (err.message || "Unknown error"));
     } finally {
       setIsDeleting(false);
     }
