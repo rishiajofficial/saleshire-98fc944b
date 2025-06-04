@@ -1,118 +1,134 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/auth';
-import { useCandidateDashboardData } from './useCandidateDashboardData';
-import { useTrainingModules } from './useTrainingModules';
-import { TrainingModuleProgress } from '@/types/training';
 
-export interface StepDetails {
-  id: number;
-  name: string;
-  description: string;
-  isCompleted: boolean;
-  isActive: boolean;
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+
+interface DashboardState {
+  loading: boolean;
+  error: string | null;
+  candidateData: any;
+  applicationSubmitted: boolean;
+  currentStep: number;
+  canAccessTraining: boolean;
 }
 
-export function useCandidateDashboardState(userId?: string, selectedJobId?: string) {
-  const { user } = useAuth();
-  const effectiveUserId = userId || user?.id;
-  
-  // Get dashboard data
-  const dashboardState = useCandidateDashboardData(effectiveUserId, selectedJobId);
-  
-  // Get training modules using the consistent useTrainingModules hook
-  const trainingState = useTrainingModules(selectedJobId);
-  
-  const isLoading = dashboardState.loading || trainingState.loading;
-  const error = dashboardState.error || null;
-  
-  // Map candidate status to current step (updated for 4-step process)
-  const getCurrentStep = () => {
-    const status = dashboardState.candidateData?.status;
-    
-    if (!dashboardState.applicationSubmitted) {
-      return 1; // Submit Application
-    }
-    
-    switch (status) {
-      case 'applied':
-      case 'hr_review':
-        return 2; // Complete Assessment (but may be under HR review)
-      case 'hr_approved':
-      case 'training':
-        return 3; // Training Modules
-      case 'manager_interview':
-        return 4; // Manager Interview
-      case 'hired':
-        return 5; // Completed (beyond the 4 steps)
-      default:
-        return dashboardState.applicationSubmitted ? 2 : 1;
-    }
+export const useCandidateDashboardState = (userId: string | undefined, jobId?: string) => {
+  const [state, setState] = useState<DashboardState>({
+    loading: true,
+    error: null,
+    candidateData: null,
+    applicationSubmitted: false,
+    currentStep: 0,
+    canAccessTraining: false,
+  });
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      if (!userId || !jobId) {
+        setState(prev => ({ ...prev, loading: false, error: "Missing user ID or job ID" }));
+        return;
+      }
+
+      try {
+        console.log("Dashboard: Fetching data for user:", userId, "job:", jobId);
+
+        // Fetch job application data
+        const { data: jobAppData, error: jobAppError } = await supabase
+          .from('job_applications')
+          .select('*')
+          .eq('candidate_id', userId)
+          .eq('job_id', jobId)
+          .single();
+
+        if (jobAppError && jobAppError.code !== 'PGRST116') {
+          throw new Error(`Job application fetch failed: ${jobAppError.message}`);
+        }
+
+        // Fetch candidate data
+        const { data: candidateData, error: candidateError } = await supabase
+          .from('candidates')
+          .select('*')
+          .eq('id', userId)
+          .single();
+
+        if (candidateError && candidateError.code !== 'PGRST116') {
+          throw new Error(`Candidate data fetch failed: ${candidateError.message}`);
+        }
+
+        // Check if application is complete
+        const applicationSubmitted = 
+          !!candidateData?.resume && 
+          !!candidateData?.about_me_video && 
+          !!candidateData?.sales_pitch_video &&
+          !!candidateData?.phone &&
+          !!candidateData?.location;
+
+        // Determine current step based on application status and completion
+        let currentStep = 0;
+        if (jobAppData) {
+          if (!applicationSubmitted) {
+            // Application started but not completed
+            currentStep = 1;
+          } else {
+            // Application completed, determine next step based on status
+            switch (jobAppData.status) {
+              case 'applied':
+              case 'hr_review':
+                currentStep = 2;
+                break;
+              case 'hr_approved':
+              case 'training':
+                currentStep = 3;
+                break;
+              case 'manager_interview':
+                currentStep = 4;
+                break;
+              case 'paid_project':
+              case 'sales_task':
+                currentStep = 5;
+                break;
+              case 'hired':
+                currentStep = 6;
+                break;
+              default:
+                currentStep = applicationSubmitted ? 2 : 1;
+            }
+          }
+        }
+
+        const canAccessTraining = applicationSubmitted && 
+          (jobAppData?.status === 'hr_approved' || jobAppData?.status === 'training');
+
+        setState({
+          loading: false,
+          error: null,
+          candidateData: {
+            ...candidateData,
+            status: jobAppData?.status || candidateData?.status,
+          },
+          applicationSubmitted,
+          currentStep,
+          canAccessTraining,
+        });
+
+      } catch (error: any) {
+        console.error("Error fetching dashboard data:", error);
+        setState(prev => ({ 
+          ...prev, 
+          loading: false, 
+          error: error.message || "Failed to load dashboard data." 
+        }));
+      }
+    };
+
+    fetchDashboardData();
+  }, [userId, jobId]);
+
+  const refetch = () => {
+    setState(prev => ({ ...prev, loading: true }));
   };
-
-  const currentStep = getCurrentStep();
-  
-  // Determine if user can access training/assessment
-  const canAccessTraining = 
-    (dashboardState.candidateData?.status === 'hr_approved' || 
-     dashboardState.candidateData?.status === 'training' ||
-     currentStep >= 3);
-
-  // Calculate detailed step information for a 4-step journey
-  const stepDetails: StepDetails[] = [
-    {
-      id: 1,
-      name: 'Application',
-      description: 'Submit profile and documents',
-      isCompleted: dashboardState.applicationSubmitted,
-      isActive: currentStep === 1
-    },
-    {
-      id: 2,
-      name: 'Assessment',
-      description: 'Complete initial assessment',
-      isCompleted: currentStep > 2,
-      isActive: currentStep === 2
-    },
-    {
-      id: 3,
-      name: 'Training',
-      description: 'Complete required modules',
-      isCompleted: currentStep > 3,
-      isActive: currentStep === 3
-    },
-    {
-      id: 4,
-      name: 'Interview',
-      description: 'Meet with hiring manager',
-      isCompleted: currentStep > 4,
-      isActive: currentStep === 4
-    }
-  ];
 
   return {
-    // Dashboard data
-    loading: isLoading,
-    error: error,
-    candidateData: dashboardState.candidateData,
-    notifications: dashboardState.notifications,
-    applicationSubmitted: dashboardState.applicationSubmitted,
-    currentStep,
-    
-    // Training data
-    trainingModules: trainingState.modules,
-    isLoadingTraining: trainingState.loading,
-    
-    // Step details
-    stepDetails,
-    
-    // Computed properties
-    showApplicationPrompt: 
-      !dashboardState.applicationSubmitted && 
-      (dashboardState.candidateData?.status?.toLowerCase() === 'applied' || 
-       dashboardState.candidateData?.status?.toLowerCase() === 'screening'),
-    canAccessTraining,
-    
-    // Actions
-    refetch: dashboardState.refetch,
+    ...state,
+    refetch
   };
-}
+};

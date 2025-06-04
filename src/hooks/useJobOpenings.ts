@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 export const useJobOpenings = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [userApplications, setUserApplications] = useState<Record<string, boolean>>({});
+  const [userApplications, setUserApplications] = useState<Record<string, { applied: boolean; completed: boolean }>>({});
   const [loadingApplications, setLoadingApplications] = useState(true);
   const [jobToDelete, setJobToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -35,24 +35,49 @@ export const useJobOpenings = () => {
     }
   });
 
-  // Fetch user applications
+  // Fetch user applications with completion status
   useEffect(() => {
     const fetchUserApplications = async () => {
       if (!user) return;
       
       try {
         setLoadingApplications(true);
-        const { data, error } = await supabase
+        
+        // Get job applications
+        const { data: jobAppData, error: jobAppError } = await supabase
           .from('job_applications')
           .select('job_id, status')
           .eq('candidate_id', user.id);
           
-        if (error) throw error;
+        if (jobAppError) throw jobAppError;
         
-        const applications: Record<string, boolean> = {};
-        if (data) {
-          data.forEach(app => {
-            applications[app.job_id] = true;
+        // Get candidate data to check if profile is complete
+        const { data: candidateData, error: candidateError } = await supabase
+          .from('candidates')
+          .select('resume, about_me_video, sales_pitch_video, phone, location')
+          .eq('id', user.id)
+          .single();
+          
+        if (candidateError && candidateError.code !== 'PGRST116') {
+          console.error("Candidate data fetch error:", candidateError);
+        }
+        
+        const applications: Record<string, { applied: boolean; completed: boolean }> = {};
+        
+        if (jobAppData) {
+          jobAppData.forEach(app => {
+            // Check if application is complete (has all required documents)
+            const isComplete = candidateData && 
+              candidateData.resume && 
+              candidateData.about_me_video && 
+              candidateData.sales_pitch_video &&
+              candidateData.phone &&
+              candidateData.location;
+              
+            applications[app.job_id] = {
+              applied: true,
+              completed: !!isComplete
+            };
           });
         }
         
@@ -101,6 +126,17 @@ export const useJobOpenings = () => {
         
       if (deleteError) throw deleteError;
       
+      // Reset candidate data to allow fresh application
+      const { error: resetError } = await supabase
+        .from('candidates')
+        .update({ 
+          current_step: 0,
+          status: 'profile_created'
+        })
+        .eq('id', user.id);
+        
+      if (resetError) throw resetError;
+      
       // Clear training progress for modules associated with this job
       if (jobTrainingData && jobTrainingData.length > 0) {
         const moduleIds = jobTrainingData.map(jt => jt.training_module_id);
@@ -141,7 +177,7 @@ export const useJobOpenings = () => {
       
       toast.success("Application successfully withdrawn");
       
-      // Update local state
+      // Update local state to remove the application
       setUserApplications(prev => {
         const updated = {...prev};
         delete updated[jobToDelete];
