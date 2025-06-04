@@ -101,7 +101,7 @@ const ApplicationStepUploadAboutVideo = ({
               <CheckCircle className="h-5 w-5" />
               <div>
                 <p className="font-medium">Introduction video uploaded successfully!</p>
-                <p className="text-sm text-green-700">You can continue to the next step or upload a new video.</p>
+                <p className="text-sm text-green-700">You can complete your application or upload a new video.</p>
               </div>
             </div>
           ) : (
@@ -165,7 +165,7 @@ const ApplicationStepUploadAboutVideo = ({
           <div>
             <p className="font-medium text-amber-800">Introduction Video Required</p>
             <p className="text-sm text-amber-700 mt-1">
-              Please upload your introduction video to continue with your application.
+              Please upload your introduction video to complete your application.
             </p>
           </div>
         </div>
@@ -179,7 +179,7 @@ const ApplicationStepUploadAboutVideo = ({
           onClick={onNext}
           disabled={!canProceed || uploading}
         >
-          {uploading ? "Uploading..." : "Next: Sales Pitch"}
+          {uploading ? "Uploading..." : "Complete Application"}
         </Button>
       </div>
     </div>

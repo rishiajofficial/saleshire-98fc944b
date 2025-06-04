@@ -9,7 +9,6 @@ import { supabase } from "@/integrations/supabase/client";
 import ApplicationStepProfile from "@/components/candidate/ApplicationStepProfile";
 import ApplicationStepUploadResume from "@/components/candidate/ApplicationStepUploadResume";
 import ApplicationStepUploadAboutVideo from "@/components/candidate/ApplicationStepUploadAboutVideo";
-import ApplicationStepUploadSalesVideo from "@/components/candidate/ApplicationStepUploadSalesVideo";
 import { AlertCircle, ArrowLeft, Check } from "lucide-react";
 import { updateApplicationStatus } from "@/hooks/useDatabaseQuery";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +18,6 @@ const Application = () => {
   const [applicationData, setApplicationData] = useState({
     resume: null,
     aboutMeVideo: null,
-    salesPitchVideo: null,
   });
   const [profileData, setProfileData] = useState({
     name: "",
@@ -56,12 +54,6 @@ const Application = () => {
       title: "Introduction Video", 
       description: "Record an introduction video",
       component: "about-video"
-    },
-    { 
-      id: 4, 
-      title: "Sales Pitch Video", 
-      description: "Demonstrate your sales skills",
-      component: "sales-video"
     }
   ];
 
@@ -127,7 +119,7 @@ const Application = () => {
         // Fetch candidate data for pre-filling and completion check
         const { data: candidateData, error: candidateError } = await supabase
           .from("candidates")
-          .select("resume, about_me_video, sales_pitch_video, phone, location")
+          .select("resume, about_me_video, phone, location")
           .eq("id", user.id)
           .single();
 
@@ -140,7 +132,6 @@ const Application = () => {
         const isComplete = candidateData && 
           candidateData.resume && 
           candidateData.about_me_video && 
-          candidateData.sales_pitch_video &&
           candidateData.phone &&
           candidateData.location;
 
@@ -160,7 +151,6 @@ const Application = () => {
           setApplicationData({
             resume: candidateData.resume,
             aboutMeVideo: candidateData.about_me_video,
-            salesPitchVideo: candidateData.sales_pitch_video,
           });
 
           const locationParts = candidateData.location?.split(', ') || ["", ""];
@@ -179,11 +169,9 @@ const Application = () => {
             setCurrentStep(2); // Need to upload resume
           } else if (!candidateData.about_me_video) {
             setCurrentStep(3); // Need intro video
-          } else if (!candidateData.sales_pitch_video) {
-            setCurrentStep(4); // Need sales pitch video
           } else {
             // All data exists but no complete application - should not happen but handle gracefully
-            setCurrentStep(4);
+            setCurrentStep(3);
           }
         }
       } catch (error) {
@@ -375,15 +363,6 @@ const Application = () => {
 
             {currentStep === 3 && (
               <ApplicationStepUploadAboutVideo 
-                onNext={handleNext}
-                onBack={handleBack}
-                applicationData={applicationData}
-                setApplicationData={setApplicationData}
-              />
-            )}
-
-            {currentStep === 4 && (
-              <ApplicationStepUploadSalesVideo 
                 onNext={handleComplete}
                 onBack={handleBack}
                 applicationData={applicationData}

@@ -53,7 +53,7 @@ export const useJobOpenings = () => {
       // Get candidate data to check if profile is complete
       const { data: candidateData, error: candidateError } = await supabase
         .from('candidates')
-        .select('resume, about_me_video, sales_pitch_video, phone, location')
+        .select('resume, about_me_video, phone, location')
         .eq('id', user.id)
         .single();
         
@@ -65,11 +65,10 @@ export const useJobOpenings = () => {
       
       if (jobAppData) {
         jobAppData.forEach(app => {
-          // Check if application is complete (has all required documents)
+          // Check if application is complete (has all required documents - removed sales_pitch_video)
           const isComplete = candidateData && 
             candidateData.resume && 
             candidateData.about_me_video && 
-            candidateData.sales_pitch_video &&
             candidateData.phone &&
             candidateData.location;
             
@@ -130,8 +129,7 @@ export const useJobOpenings = () => {
           current_step: 1,
           status: 'profile_created',
           resume: null,
-          about_me_video: null,
-          sales_pitch_video: null
+          about_me_video: null
         })
         .eq('id', user.id);
         
