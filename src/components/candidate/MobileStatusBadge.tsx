@@ -29,20 +29,26 @@ export const MobileStatusBadge = ({ currentStep, candidateStatus, compact = fals
     } else {
       switch (currentStep) {
         case 1: 
-          statusText = "Profile Setup"; 
+          statusText = "Submit Application"; 
           badgeClass = "bg-blue-100 text-blue-800"; 
           description = "Complete your application to proceed";
           statusIcon = <AlertCircle className="mr-1 h-3 w-3" />;
           break;
         case 2: 
-          statusText = "Under Review"; 
-          badgeClass = "bg-yellow-100 text-yellow-800"; 
-          description = "HR team is reviewing your application";
+          if (candidateStatus === 'hr_review') {
+            statusText = "Under Review"; 
+            badgeClass = "bg-yellow-100 text-yellow-800"; 
+            description = "Application under review, assessment will be available soon";
+          } else {
+            statusText = "Complete Assessment"; 
+            badgeClass = "bg-purple-100 text-purple-800"; 
+            description = "Take your assessment test";
+          }
           break;
         case 3: 
           statusText = "Training Phase"; 
           badgeClass = "bg-purple-100 text-purple-800"; 
-          description = "Complete training modules to advance";
+          description = "Complete training modules";
           break;
         case 4: 
           statusText = "Interview Phase"; 

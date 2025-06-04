@@ -41,8 +41,8 @@ export const HiringWizard = ({
   const steps: WizardStep[] = [
     {
       id: 1,
-      title: 'Complete Your Profile',
-      description: 'Fill in your basic information and upload required documents',
+      title: 'Submit Application',
+      description: 'Complete your profile, upload documents, and submit your application',
       status: getStepStatus(1),
       action: applicationSubmitted ? undefined : 'Complete Application',
       actionPath: '/application',
@@ -50,17 +50,19 @@ export const HiringWizard = ({
     },
     {
       id: 2,
-      title: 'HR Review',
-      description: 'Our HR team will review your application and profile',
+      title: 'Complete Assessment',
+      description: 'Take the required assessment test to demonstrate your skills',
       status: getStepStatus(2),
-      estimatedTime: '1-2 business days'
+      action: canAccessTraining && currentStep === 2 ? 'Take Assessment' : undefined,
+      actionPath: '/training',
+      estimatedTime: '30-45 minutes'
     },
     {
       id: 3,
       title: 'Training Modules',
-      description: 'Complete required training modules and assessments',
+      description: 'Complete required training modules and knowledge assessments',
       status: getStepStatus(3),
-      action: canAccessTraining ? 'Start Training' : undefined,
+      action: canAccessTraining && currentStep === 3 ? 'Start Training' : undefined,
       actionPath: '/training',
       estimatedTime: '2-3 hours'
     },
@@ -77,12 +79,6 @@ export const HiringWizard = ({
       description: 'Complete any final assessments or practical tasks',
       status: getStepStatus(5),
       estimatedTime: 'Varies'
-    },
-    {
-      id: 6,
-      title: 'Decision',
-      description: 'Receive final hiring decision and next steps',
-      status: candidateStatus === 'hired' ? 'completed' : getStepStatus(6)
     }
   ];
 
@@ -121,6 +117,9 @@ export const HiringWizard = ({
       case 'completed':
         return '✅ Step completed successfully';
       case 'current':
+        if (step.id === 2 && candidateStatus === 'hr_review') {
+          return '⏳ Your application is under review. Assessment will be available once approved.';
+        }
         return '👉 This is your current step. Complete the required actions to proceed.';
       case 'pending':
         return '⏳ Complete the previous step to unlock this stage.';
@@ -142,10 +141,10 @@ export const HiringWizard = ({
             <div className="flex-1 max-w-xs bg-gray-200 rounded-full h-2">
               <div 
                 className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${(currentStep / 6) * 100}%` }}
+                style={{ width: `${(currentStep / 5) * 100}%` }}
               />
             </div>
-            <div className="text-sm font-medium text-gray-700">{currentStep}/6</div>
+            <div className="text-sm font-medium text-gray-700">{currentStep}/5</div>
           </div>
         </div>
       </div>
@@ -189,7 +188,7 @@ export const HiringWizard = ({
               </p>
             </div>
             
-            {step.action && step.actionPath && step.status === 'current' && (
+            {step.action && step.actionPath && step.status === 'current' && candidateStatus !== 'hr_review' && (
               <Button 
                 onClick={() => navigate(step.actionPath!)}
                 className="w-full flex items-center justify-center gap-2"
