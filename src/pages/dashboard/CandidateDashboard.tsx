@@ -6,10 +6,7 @@ import { useAuth } from '@/contexts/auth';
 import ErrorMessage from '@/components/ui/error-message';
 import { StatusCard } from '@/components/dashboard/StatusCard';
 import { NotificationsCard } from '@/components/dashboard/NotificationsCard';
-import { HiringJourneyCard } from '@/components/dashboard/HiringJourneyCard';
-import { TrainingCard } from '@/components/dashboard/TrainingCard';
-import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import { HiringWizard } from '@/components/candidate/HiringWizard';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useCandidateDashboardState } from '@/hooks/useCandidateDashboardState';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -99,61 +96,64 @@ const CandidateDashboard = () => {
     );
   }
 
-  // Main content components
-  const mainContent = (
-    <>
-      {userJobs.length > 0 && (
-        <Card className="mb-6">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Select Job Application</CardTitle>
-            <Select value={selectedJobId} onValueChange={setSelectedJobId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a job application" />
-              </SelectTrigger>
-              <SelectContent>
-                {userJobs.map(job => (
-                  <SelectItem key={job.id} value={job.id}>
-                    {job.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </CardHeader>
-        </Card>
-      )}
-      <HiringJourneyCard 
-        currentStep={currentStep}
-        applicationSubmitted={applicationSubmitted}
-      />
-      <TrainingCard 
-        canAccessTraining={canAccessTraining}
-        trainingModules={trainingModules}
-        isLoadingTraining={isLoadingTraining}
-      />
-    </>
-  );
-
-  // Sidebar content components
-  const sideContent = (
-    <>
-      <StatusCard 
-        currentStep={currentStep}
-        candidateStatus={candidateData?.status}
-      />
-      <NotificationsCard 
-        notifications={notifications}
-      />
-    </>
-  );
-
   return (
     <MainLayout>
       <TooltipProvider>
-        <div className="container mx-auto px-4 py-8 space-y-8">
-          <DashboardHeader userName={profile?.name} userRole={profile?.role} />
-          <DashboardLayout sideContent={sideContent}>
-            {mainContent}
-          </DashboardLayout>
+        <div className="container mx-auto px-4 py-6 max-w-4xl">
+          {/* Header */}
+          <div className="text-center mb-6">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Welcome back, {profile?.name}!
+            </h1>
+            <p className="text-gray-600">
+              Track your progress through our hiring process
+            </p>
+          </div>
+
+          {/* Job Selection */}
+          {userJobs.length > 0 && (
+            <Card className="mb-6">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Current Application</CardTitle>
+                <Select value={selectedJobId} onValueChange={setSelectedJobId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a job application" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {userJobs.map(job => (
+                      <SelectItem key={job.id} value={job.id}>
+                        {job.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </CardHeader>
+            </Card>
+          )}
+
+          {/* Main Content - Mobile First Layout */}
+          <div className="space-y-6">
+            {/* Hiring Wizard - Primary Content */}
+            <div className="order-1">
+              <HiringWizard 
+                currentStep={currentStep}
+                applicationSubmitted={applicationSubmitted}
+                canAccessTraining={canAccessTraining}
+                candidateStatus={candidateData?.status}
+              />
+            </div>
+
+            {/* Secondary Information - Stacked on Mobile */}
+            <div className="order-2 grid gap-4 md:grid-cols-2">
+              <StatusCard 
+                currentStep={currentStep}
+                candidateStatus={candidateData?.status}
+              />
+              <NotificationsCard 
+                notifications={notifications}
+              />
+            </div>
+          </div>
         </div>
       </TooltipProvider>
     </MainLayout>
