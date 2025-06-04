@@ -24,12 +24,31 @@ export const useCandidateDashboardState = (userId: string | undefined, jobId?: s
   useEffect(() => {
     const fetchDashboardData = async () => {
       if (!userId || !jobId) {
-        setState(prev => ({ ...prev, loading: false, error: "Missing user ID or job ID" }));
+        setState(prev => ({ 
+          ...prev, 
+          loading: false, 
+          error: "Missing user ID or job ID",
+          candidateData: null,
+          applicationSubmitted: false,
+          currentStep: 0,
+          canAccessTraining: false,
+        }));
         return;
       }
 
       try {
         console.log("Dashboard: Fetching data for user:", userId, "job:", jobId);
+        
+        // Reset state to loading when starting new fetch
+        setState(prev => ({ 
+          ...prev, 
+          loading: true, 
+          error: null,
+          candidateData: null,
+          applicationSubmitted: false,
+          currentStep: 0,
+          canAccessTraining: false,
+        }));
 
         // Fetch job application data
         const { data: jobAppData, error: jobAppError } = await supabase
@@ -120,13 +139,17 @@ export const useCandidateDashboardState = (userId: string | undefined, jobId?: s
         setState(prev => ({ 
           ...prev, 
           loading: false, 
-          error: error.message || "Failed to load dashboard data." 
+          error: error.message || "Failed to load dashboard data.",
+          candidateData: null,
+          applicationSubmitted: false,
+          currentStep: 0,
+          canAccessTraining: false,
         }));
       }
     };
 
     fetchDashboardData();
-  }, [userId, jobId]);
+  }, [userId, jobId]); // Added jobId as dependency to refetch when it changes
 
   const refetch = () => {
     setState(prev => ({ ...prev, loading: true }));

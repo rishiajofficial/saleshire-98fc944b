@@ -73,7 +73,13 @@ const CandidateDashboard = () => {
     fetchUserJobs();
   }, [user?.id]);
 
-  if (loading || loadingJobs) {
+  // Handle job selection change
+  const handleJobSelectionChange = (jobId: string) => {
+    console.log("Job selection changed to:", jobId);
+    setSelectedJobId(jobId);
+  };
+
+  if (loadingJobs) {
     return (
       <div className="min-h-screen bg-gray-50">
         <CandidateNavbar />
@@ -152,7 +158,7 @@ const CandidateDashboard = () => {
                 <label className="text-sm font-medium text-gray-700 mb-2 block">
                   Select Application to View Progress
                 </label>
-                <Select value={selectedJobId} onValueChange={setSelectedJobId}>
+                <Select value={selectedJobId} onValueChange={handleJobSelectionChange}>
                   <SelectTrigger>
                     <SelectValue placeholder="Choose an application" />
                   </SelectTrigger>
@@ -180,8 +186,15 @@ const CandidateDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Hiring Wizard */}
-          {selectedJobId && (
+          {/* Show loading state while fetching data for selected job */}
+          {loading && selectedJobId && (
+            <div className="flex justify-center items-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          )}
+
+          {/* Hiring Wizard - only show when not loading and has selected job */}
+          {!loading && selectedJobId && (
             <HiringWizard 
               currentStep={currentStep}
               applicationSubmitted={applicationSubmitted}
