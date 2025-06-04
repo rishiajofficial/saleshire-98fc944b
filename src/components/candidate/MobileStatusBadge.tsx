@@ -55,11 +55,6 @@ export const MobileStatusBadge = ({ currentStep, candidateStatus, compact = fals
           badgeClass = "bg-green-100 text-green-800"; 
           description = "Schedule your interview";
           break;
-        case 5: 
-          statusText = "Final Assessment"; 
-          badgeClass = "bg-orange-100 text-orange-800"; 
-          description = "Complete final evaluation";
-          break;
         default: 
           statusText = "Applied"; 
           badgeClass = "bg-gray-100 text-gray-800";

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { useCandidateDashboardData } from './useCandidateDashboardData';
@@ -26,7 +25,7 @@ export function useCandidateDashboardState(userId?: string, selectedJobId?: stri
   const isLoading = dashboardState.loading || trainingState.loading;
   const error = dashboardState.error || null;
   
-  // Map candidate status to current step
+  // Map candidate status to current step (updated for 4-step process)
   const getCurrentStep = () => {
     const status = dashboardState.candidateData?.status;
     
@@ -43,11 +42,8 @@ export function useCandidateDashboardState(userId?: string, selectedJobId?: stri
         return 3; // Training Modules
       case 'manager_interview':
         return 4; // Manager Interview
-      case 'paid_project':
-      case 'sales_task':
-        return 5; // Final Assessment
       case 'hired':
-        return 6; // Completed
+        return 5; // Completed (beyond the 4 steps)
       default:
         return dashboardState.applicationSubmitted ? 2 : 1;
     }
@@ -61,7 +57,7 @@ export function useCandidateDashboardState(userId?: string, selectedJobId?: stri
      dashboardState.candidateData?.status === 'training' ||
      currentStep >= 3);
 
-  // Calculate detailed step information for a more granular journey display
+  // Calculate detailed step information for a 4-step journey
   const stepDetails: StepDetails[] = [
     {
       id: 1,
@@ -90,13 +86,6 @@ export function useCandidateDashboardState(userId?: string, selectedJobId?: stri
       description: 'Meet with hiring manager',
       isCompleted: currentStep > 4,
       isActive: currentStep === 4
-    },
-    {
-      id: 5,
-      name: 'Final Assessment',
-      description: 'Complete final evaluation',
-      isCompleted: currentStep > 5,
-      isActive: currentStep === 5
     }
   ];
 

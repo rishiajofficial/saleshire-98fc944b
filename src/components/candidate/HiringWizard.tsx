@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { Check, Clock, Lock, ArrowRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { Check, Clock, Lock, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +30,7 @@ export const HiringWizard = ({
   candidateStatus 
 }: HiringWizardProps) => {
   const navigate = useNavigate();
+  const [showAllSteps, setShowAllSteps] = useState(false);
 
   const getStepStatus = (stepId: number): 'completed' | 'current' | 'pending' | 'locked' => {
     if (stepId < currentStep) return 'completed';
@@ -72,13 +73,6 @@ export const HiringWizard = ({
       description: 'Schedule and attend your interview with the hiring manager',
       status: getStepStatus(4),
       estimatedTime: '30-45 minutes'
-    },
-    {
-      id: 5,
-      title: 'Final Assessment',
-      description: 'Complete any final assessments or practical tasks',
-      status: getStepStatus(5),
-      estimatedTime: 'Varies'
     }
   ];
 
@@ -130,6 +124,9 @@ export const HiringWizard = ({
     }
   };
 
+  const currentActiveStep = steps.find(step => step.status === 'current');
+  const stepsToShow = showAllSteps ? steps : (currentActiveStep ? [currentActiveStep] : steps);
+
   return (
     <div className="space-y-4">
       <div className="text-center mb-6">
@@ -141,16 +138,43 @@ export const HiringWizard = ({
             <div className="flex-1 max-w-xs bg-gray-200 rounded-full h-2">
               <div 
                 className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${(currentStep / 5) * 100}%` }}
+                style={{ width: `${(currentStep / 4) * 100}%` }}
               />
             </div>
-            <div className="text-sm font-medium text-gray-700">{currentStep}/5</div>
+            <div className="text-sm font-medium text-gray-700">{currentStep}/4</div>
           </div>
         </div>
       </div>
 
-      {steps.map((step, index) => (
-        <Card key={step.id} className={`${getStatusColor(step.status)} transition-all duration-200`}>
+      {/* Toggle button for viewing all steps */}
+      <div className="flex justify-center mb-4">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowAllSteps(!showAllSteps)}
+          className="flex items-center gap-2"
+        >
+          {showAllSteps ? (
+            <>
+              <ChevronUp className="h-4 w-4" />
+              Show Current Step Only
+            </>
+          ) : (
+            <>
+              <ChevronDown className="h-4 w-4" />
+              View All Steps
+            </>
+          )}
+        </Button>
+      </div>
+
+      {stepsToShow.map((step, index) => (
+        <Card 
+          key={step.id} 
+          className={`${getStatusColor(step.status)} transition-all duration-200 ${
+            showAllSteps && step.status === 'locked' ? 'opacity-50' : ''
+          }`}
+        >
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between">
               <div className="flex items-start space-x-3">
@@ -206,7 +230,7 @@ export const HiringWizard = ({
               </div>
             )}
             
-            {step.status === 'locked' && (
+            {step.status === 'locked' && showAllSteps && (
               <div className="text-center py-2">
                 <p className="text-sm text-gray-400">
                   This step will unlock automatically
