@@ -52,7 +52,7 @@ export const JobCard: React.FC<JobCardProps> = ({
     // Application completed
     return (
       <Badge className="bg-green-100 text-green-800 whitespace-nowrap">
-        <CheckCircle className="h-3 w-3 mr-1" /> Applied
+        <CheckCircle className="h-3 w-3 mr-1" /> Already Applied
       </Badge>
     );
   };

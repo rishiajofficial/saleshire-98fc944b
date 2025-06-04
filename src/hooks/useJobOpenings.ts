@@ -36,59 +36,59 @@ export const useJobOpenings = () => {
   });
 
   // Fetch user applications with completion status
-  useEffect(() => {
-    const fetchUserApplications = async () => {
-      if (!user) return;
-      
-      try {
-        setLoadingApplications(true);
-        
-        // Get job applications
-        const { data: jobAppData, error: jobAppError } = await supabase
-          .from('job_applications')
-          .select('job_id, status')
-          .eq('candidate_id', user.id);
-          
-        if (jobAppError) throw jobAppError;
-        
-        // Get candidate data to check if profile is complete
-        const { data: candidateData, error: candidateError } = await supabase
-          .from('candidates')
-          .select('resume, about_me_video, sales_pitch_video, phone, location')
-          .eq('id', user.id)
-          .single();
-          
-        if (candidateError && candidateError.code !== 'PGRST116') {
-          console.error("Candidate data fetch error:", candidateError);
-        }
-        
-        const applications: Record<string, { applied: boolean; completed: boolean }> = {};
-        
-        if (jobAppData) {
-          jobAppData.forEach(app => {
-            // Check if application is complete (has all required documents)
-            const isComplete = candidateData && 
-              candidateData.resume && 
-              candidateData.about_me_video && 
-              candidateData.sales_pitch_video &&
-              candidateData.phone &&
-              candidateData.location;
-              
-            applications[app.job_id] = {
-              applied: true,
-              completed: !!isComplete
-            };
-          });
-        }
-        
-        setUserApplications(applications);
-      } catch (err) {
-        console.error("Error fetching user applications:", err);
-      } finally {
-        setLoadingApplications(false);
-      }
-    };
+  const fetchUserApplications = async () => {
+    if (!user) return;
     
+    try {
+      setLoadingApplications(true);
+      
+      // Get job applications
+      const { data: jobAppData, error: jobAppError } = await supabase
+        .from('job_applications')
+        .select('job_id, status')
+        .eq('candidate_id', user.id);
+        
+      if (jobAppError) throw jobAppError;
+      
+      // Get candidate data to check if profile is complete
+      const { data: candidateData, error: candidateError } = await supabase
+        .from('candidates')
+        .select('resume, about_me_video, sales_pitch_video, phone, location')
+        .eq('id', user.id)
+        .single();
+        
+      if (candidateError && candidateError.code !== 'PGRST116') {
+        console.error("Candidate data fetch error:", candidateError);
+      }
+      
+      const applications: Record<string, { applied: boolean; completed: boolean }> = {};
+      
+      if (jobAppData) {
+        jobAppData.forEach(app => {
+          // Check if application is complete (has all required documents)
+          const isComplete = candidateData && 
+            candidateData.resume && 
+            candidateData.about_me_video && 
+            candidateData.sales_pitch_video &&
+            candidateData.phone &&
+            candidateData.location;
+            
+          applications[app.job_id] = {
+            applied: true,
+            completed: !!isComplete
+          };
+        });
+      }
+      
+      setUserApplications(applications);
+    } catch (err) {
+      console.error("Error fetching user applications:", err);
+    } finally {
+      setLoadingApplications(false);
+    }
+  };
+
+  useEffect(() => {
     fetchUserApplications();
   }, [user]);
 
@@ -109,15 +109,7 @@ export const useJobOpenings = () => {
     try {
       setIsDeleting(true);
       
-      // First, get the training modules associated with this job
-      const { data: jobTrainingData, error: jobTrainingError } = await supabase
-        .from('job_training')
-        .select('training_module_id')
-        .eq('job_id', jobToDelete);
-        
-      if (jobTrainingError) throw jobTrainingError;
-      
-      // Delete the job application
+      // Delete the job application first
       const { error: deleteError } = await supabase
         .from('job_applications')
         .delete()
@@ -130,12 +122,23 @@ export const useJobOpenings = () => {
       const { error: resetError } = await supabase
         .from('candidates')
         .update({ 
-          current_step: 0,
-          status: 'profile_created'
+          current_step: 1,
+          status: 'profile_created',
+          resume: null,
+          about_me_video: null,
+          sales_pitch_video: null
         })
         .eq('id', user.id);
         
       if (resetError) throw resetError;
+      
+      // Get training modules associated with this job
+      const { data: jobTrainingData, error: jobTrainingError } = await supabase
+        .from('job_training')
+        .select('training_module_id')
+        .eq('job_id', jobToDelete);
+        
+      if (jobTrainingError) throw jobTrainingError;
       
       // Clear training progress for modules associated with this job
       if (jobTrainingData && jobTrainingData.length > 0) {
@@ -186,7 +189,8 @@ export const useJobOpenings = () => {
       
       setJobToDelete(null);
 
-      // Important: Refetch jobs to update the UI
+      // Refetch applications to ensure UI is updated
+      await fetchUserApplications();
       refetchJobs();
       
     } catch (err: any) {

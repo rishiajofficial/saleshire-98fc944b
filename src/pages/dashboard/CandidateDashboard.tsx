@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { Loader2, Plus } from 'lucide-react';
-import MainLayout from '@/components/layout/MainLayout';
 import { useAuth } from '@/contexts/auth';
 import ErrorMessage from '@/components/ui/error-message';
 import { HiringWizard } from '@/components/candidate/HiringWizard';
@@ -12,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import CandidateNavbar from '@/components/layout/CandidateNavbar';
 
 const CandidateDashboard = () => {
   const { profile, user } = useAuth();
@@ -75,29 +75,32 @@ const CandidateDashboard = () => {
 
   if (loading || loadingJobs) {
     return (
-      <MainLayout>
+      <div className="min-h-screen bg-gray-50">
+        <CandidateNavbar />
         <div className="flex justify-center items-center h-screen">
           <Loader2 className="h-16 w-16 animate-spin text-primary" />
         </div>
-      </MainLayout>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <MainLayout>
+      <div className="min-h-screen bg-gray-50">
+        <CandidateNavbar />
         <ErrorMessage 
           title="Error Loading Dashboard" 
           message={error} 
         />
-      </MainLayout>
+      </div>
     );
   }
 
   // If no applications, show apply to job prompt
   if (userJobs.length === 0) {
     return (
-      <MainLayout>
+      <div className="min-h-screen bg-gray-50">
+        <CandidateNavbar />
         <div className="container mx-auto px-4 py-8 max-w-2xl">
           <div className="text-center space-y-6">
             <div>
@@ -129,13 +132,14 @@ const CandidateDashboard = () => {
             </Card>
           </div>
         </div>
-      </MainLayout>
+      </div>
     );
   }
 
   // If has applications, show application selector and wizard
   return (
-    <MainLayout>
+    <div className="min-h-screen bg-gray-50">
+      <CandidateNavbar />
       <TooltipProvider>
         <div className="container mx-auto px-4 py-6 max-w-4xl">
           {/* Application Selector */}
@@ -187,7 +191,7 @@ const CandidateDashboard = () => {
           )}
         </div>
       </TooltipProvider>
-    </MainLayout>
+    </div>
   );
 };
 

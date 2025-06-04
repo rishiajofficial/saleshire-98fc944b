@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useJobOpenings } from "@/hooks/useJobOpenings";
 import { JobCard } from "@/components/jobs/JobCard";
-import MainLayout from "@/components/layout/MainLayout";
+import CandidateNavbar from "@/components/layout/CandidateNavbar";
 
 const JobOpenings = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -23,13 +23,14 @@ const JobOpenings = () => {
 
   if (isLoading) {
     return (
-      <MainLayout>
+      <div className="min-h-screen bg-gray-50">
+        <CandidateNavbar />
         <div className="container mx-auto py-8 px-4">
           <div className="flex justify-center items-center h-64">
             <div className="text-lg">Loading job openings...</div>
           </div>
         </div>
-      </MainLayout>
+      </div>
     );
   }
 
@@ -39,7 +40,8 @@ const JobOpenings = () => {
   ) || [];
 
   return (
-    <MainLayout>
+    <div className="min-h-screen bg-gray-50">
+      <CandidateNavbar />
       <div className="container mx-auto py-8 px-4 max-w-4xl">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-4">Job Openings</h1>
@@ -103,7 +105,7 @@ const JobOpenings = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </MainLayout>
+    </div>
   );
 };
 
