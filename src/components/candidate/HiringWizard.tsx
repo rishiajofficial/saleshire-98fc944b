@@ -1,27 +1,60 @@
 
-import React, { useState } from 'react';
-import { Check, Clock, Lock, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { useNavigate } from 'react-router-dom';
-
-interface WizardStep {
-  id: number;
-  title: string;
-  description: string;
-  status: 'completed' | 'current' | 'pending' | 'locked';
-  action?: string;
-  actionPath?: string;
-  estimatedTime?: string;
-}
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Check, FileText, GraduationCap, MessageSquare, Briefcase, Trophy, ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface HiringWizardProps {
   currentStep: number;
   applicationSubmitted: boolean;
   canAccessTraining: boolean;
-  candidateStatus?: string;
+  candidateStatus?: string | null;
 }
+
+const steps = [
+  {
+    id: 1,
+    title: "Complete Application",
+    description: "Submit your profile and documents",
+    icon: FileText,
+    action: "Apply",
+    route: "/candidate/jobs"
+  },
+  {
+    id: 2,
+    title: "Assessment",
+    description: "Complete your skills assessment",
+    icon: GraduationCap,
+    action: "Take Assessment",
+    route: "/training"
+  },
+  {
+    id: 3,
+    title: "Training",
+    description: "Complete required training modules",
+    icon: MessageSquare,
+    action: "Start Training",
+    route: "/training"
+  },
+  {
+    id: 4,
+    title: "Interview",
+    description: "Interview with hiring manager",
+    icon: Briefcase,
+    action: "Schedule",
+    route: "/dashboard/candidate"
+  },
+  {
+    id: 5,
+    title: "Paid Project",
+    description: "Complete a paid sample project",
+    icon: Trophy,
+    action: "View Project",
+    route: "/dashboard/candidate"
+  }
+];
 
 export const HiringWizard = ({ 
   currentStep, 
@@ -30,245 +63,134 @@ export const HiringWizard = ({
   candidateStatus 
 }: HiringWizardProps) => {
   const navigate = useNavigate();
-  const [showAllSteps, setShowAllSteps] = useState(false);
 
-  const getStepStatus = (stepId: number): 'completed' | 'current' | 'pending' | 'locked' => {
+  const getStepStatus = (stepId: number) => {
     if (stepId < currentStep) return 'completed';
     if (stepId === currentStep) return 'current';
-    if (stepId === currentStep + 1) return 'pending';
-    return 'locked';
+    return 'upcoming';
   };
 
-  const steps: WizardStep[] = [
-    {
-      id: 1,
-      title: 'Submit Application',
-      description: 'Complete your profile, upload documents, and submit your application',
-      status: getStepStatus(1),
-      action: applicationSubmitted ? undefined : 'Complete Application',
-      actionPath: '/application',
-      estimatedTime: '10-15 minutes'
-    },
-    {
-      id: 2,
-      title: 'Complete Assessment',
-      description: 'Take the required assessment test to demonstrate your skills',
-      status: getStepStatus(2),
-      action: canAccessTraining && currentStep === 2 ? 'Take Assessment' : undefined,
-      actionPath: '/training',
-      estimatedTime: '30-45 minutes'
-    },
-    {
-      id: 3,
-      title: 'Training Modules',
-      description: 'Complete required training modules and knowledge assessments',
-      status: getStepStatus(3),
-      action: canAccessTraining && currentStep === 3 ? 'Start Training' : undefined,
-      actionPath: '/training',
-      estimatedTime: '2-3 hours'
-    },
-    {
-      id: 4,
-      title: 'Manager Interview',
-      description: 'Schedule and attend your interview with the hiring manager',
-      status: getStepStatus(4),
-      estimatedTime: '30-45 minutes'
-    }
-  ];
-
-  const getStatusIcon = (status: string) => {
+  const getStepBadgeText = (stepId: number) => {
+    const status = getStepStatus(stepId);
     switch (status) {
-      case 'completed':
-        return <Check className="h-5 w-5 text-green-600" />;
-      case 'current':
-        return <Clock className="h-5 w-5 text-blue-600" />;
-      case 'pending':
-        return <Clock className="h-5 w-5 text-orange-500" />;
-      case 'locked':
-        return <Lock className="h-5 w-5 text-gray-400" />;
-      default:
-        return <Clock className="h-5 w-5 text-gray-400" />;
+      case 'completed': return 'Completed';
+      case 'current': return 'Current';
+      default: return 'Upcoming';
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'bg-green-100 border-green-200';
-      case 'current':
-        return 'bg-blue-100 border-blue-200';
-      case 'pending':
-        return 'bg-orange-50 border-orange-200';
-      case 'locked':
-        return 'bg-gray-50 border-gray-200';
-      default:
-        return 'bg-gray-50 border-gray-200';
+  const handleStepAction = (step: any) => {
+    const stepStatus = getStepStatus(step.id);
+    
+    // Only allow action on current step or completed steps
+    if (stepStatus === 'upcoming') return;
+    
+    // Special handling for specific steps
+    if (step.id === 1 && !applicationSubmitted) {
+      navigate(step.route);
+    } else if (step.id === 2 && stepStatus === 'current') {
+      navigate(step.route);
+    } else if (step.id === 3 && canAccessTraining) {
+      navigate(step.route);
+    } else if (stepStatus === 'current') {
+      navigate(step.route);
     }
   };
-
-  const getInstructions = (step: WizardStep) => {
-    switch (step.status) {
-      case 'completed':
-        return '✅ Step completed successfully';
-      case 'current':
-        if (step.id === 2 && candidateStatus === 'hr_review') {
-          return '⏳ Your application is under review. Assessment will be available once approved.';
-        }
-        return '👉 This is your current step. Complete the required actions to proceed.';
-      case 'pending':
-        return '⏳ Complete the previous step to unlock this stage.';
-      case 'locked':
-        return '🔒 This step will be available after completing previous stages.';
-      default:
-        return '';
-    }
-  };
-
-  const currentActiveStep = steps.find(step => step.status === 'current');
-  const stepsToShow = showAllSteps ? steps : (currentActiveStep ? [currentActiveStep] : steps);
 
   return (
-    <div className="space-y-4">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Your Hiring Journey</h2>
-        <p className="text-gray-600">Follow these steps to complete your application process</p>
-        <div className="mt-4">
-          <div className="flex items-center justify-center space-x-2">
-            <div className="text-sm text-gray-500">Progress:</div>
-            <div className="flex-1 max-w-xs bg-gray-200 rounded-full h-2">
-              <div 
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${(currentStep / 4) * 100}%` }}
-              />
-            </div>
-            <div className="text-sm font-medium text-gray-700">{currentStep}/4</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Toggle button for viewing all steps */}
-      <div className="flex justify-center mb-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowAllSteps(!showAllSteps)}
-          className="flex items-center gap-2"
-        >
-          {showAllSteps ? (
-            <>
-              <ChevronUp className="h-4 w-4" />
-              Show Current Step Only
-            </>
-          ) : (
-            <>
-              <ChevronDown className="h-4 w-4" />
-              View All Steps
-            </>
-          )}
-        </Button>
-      </div>
-
-      {stepsToShow.map((step, index) => (
-        <Card 
-          key={step.id} 
-          className={`${getStatusColor(step.status)} transition-all duration-200 ${
-            showAllSteps && step.status === 'locked' ? 'opacity-50' : ''
-          }`}
-        >
-          <CardHeader className="pb-3">
-            <div className="flex items-start justify-between">
-              <div className="flex items-start space-x-3">
-                <div className="flex-shrink-0 mt-1">
-                  {getStatusIcon(step.status)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                    Step {step.id}: {step.title}
-                    {step.status === 'completed' && (
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                        Complete
-                      </Badge>
-                    )}
-                    {step.status === 'current' && (
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                        Active
-                      </Badge>
-                    )}
-                  </CardTitle>
-                  <p className="text-gray-600 mt-1">{step.description}</p>
-                  {step.estimatedTime && (
-                    <p className="text-sm text-gray-500 mt-1">
-                      ⏱️ Estimated time: {step.estimatedTime}
-                    </p>
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-xl">Your Hiring Journey</CardTitle>
+        <p className="text-gray-600 text-sm">
+          Follow these steps to complete your application process
+        </p>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {steps.map((step, index) => {
+            const status = getStepStatus(step.id);
+            const Icon = step.icon;
+            const isActionable = status === 'current' || (status === 'completed' && step.id <= 3);
+            
+            return (
+              <div
+                key={step.id}
+                className={`flex items-center p-4 rounded-lg border transition-all ${
+                  status === 'current' 
+                    ? 'border-blue-200 bg-blue-50' 
+                    : status === 'completed'
+                    ? 'border-green-200 bg-green-50'
+                    : 'border-gray-200 bg-gray-50'
+                }`}
+              >
+                <div className={`flex items-center justify-center w-10 h-10 rounded-full mr-4 ${
+                  status === 'completed' 
+                    ? 'bg-green-500 text-white' 
+                    : status === 'current'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-300 text-gray-600'
+                }`}>
+                  {status === 'completed' ? (
+                    <Check className="h-5 w-5" />
+                  ) : (
+                    <Icon className="h-5 w-5" />
                   )}
                 </div>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className={`font-medium ${
+                      status === 'current' ? 'text-blue-900' : 
+                      status === 'completed' ? 'text-green-900' : 'text-gray-900'
+                    }`}>
+                      {step.title}
+                    </h3>
+                    <Badge 
+                      variant={
+                        status === 'completed' ? 'default' : 
+                        status === 'current' ? 'secondary' : 'outline'
+                      }
+                      className={`text-xs ${
+                        status === 'completed' ? 'bg-green-100 text-green-800' :
+                        status === 'current' ? 'bg-blue-100 text-blue-800' : ''
+                      }`}
+                    >
+                      {getStepBadgeText(step.id)}
+                    </Badge>
+                  </div>
+                  <p className={`text-sm ${
+                    status === 'current' ? 'text-blue-700' : 
+                    status === 'completed' ? 'text-green-700' : 'text-gray-600'
+                  }`}>
+                    {step.description}
+                  </p>
+                </div>
+                
+                {isActionable && (
+                  <Button
+                    onClick={() => handleStepAction(step)}
+                    size="sm"
+                    variant={status === 'current' ? 'default' : 'outline'}
+                    className="ml-4"
+                  >
+                    {status === 'current' ? step.action : 'Review'}
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                )}
               </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="bg-white/60 rounded-lg p-3 mb-4">
-              <p className="text-sm text-gray-700 font-medium">
-                {getInstructions(step)}
-              </p>
-            </div>
-            
-            {step.action && step.actionPath && step.status === 'current' && candidateStatus !== 'hr_review' && (
-              <Button 
-                onClick={() => navigate(step.actionPath!)}
-                className="w-full flex items-center justify-center gap-2"
-              >
-                {step.action}
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            )}
-            
-            {step.status === 'pending' && !step.action && (
-              <div className="text-center py-2">
-                <p className="text-sm text-gray-500">
-                  Complete the previous step to proceed
-                </p>
-              </div>
-            )}
-            
-            {step.status === 'locked' && showAllSteps && (
-              <div className="text-center py-2">
-                <p className="text-sm text-gray-400">
-                  This step will unlock automatically
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      ))}
+            );
+          })}
+        </div>
 
-      {candidateStatus === 'hired' && (
-        <Card className="bg-green-50 border-green-200">
-          <CardContent className="text-center py-6">
-            <div className="text-green-600 mb-2">
-              <Check className="h-12 w-12 mx-auto" />
-            </div>
-            <h3 className="text-xl font-bold text-green-800 mb-2">
-              Congratulations! 🎉
-            </h3>
-            <p className="text-green-700">
-              You have successfully completed the hiring process. Welcome to the team!
+        {candidateStatus && (
+          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <h4 className="font-medium text-blue-900 mb-1">Current Status</h4>
+            <p className="text-sm text-blue-700 capitalize">
+              {candidateStatus.replace('_', ' ')}
             </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {candidateStatus === 'rejected' && (
-        <Card className="bg-red-50 border-red-200">
-          <CardContent className="text-center py-6">
-            <h3 className="text-xl font-bold text-red-800 mb-2">
-              Application Status Update
-            </h3>
-            <p className="text-red-700">
-              Thank you for your interest. Unfortunately, we won't be moving forward with your application at this time.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };

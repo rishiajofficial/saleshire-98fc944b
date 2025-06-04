@@ -54,25 +54,26 @@ export const useCandidateDashboardState = (userId: string | undefined, jobId?: s
           throw new Error(`Candidate data fetch failed: ${candidateError.message}`);
         }
 
-        // Check if application is complete
+        // Check if application is complete (all required documents uploaded)
         const applicationSubmitted = 
           !!candidateData?.resume && 
           !!candidateData?.about_me_video && 
-          !!candidateData?.sales_pitch_video &&
           !!candidateData?.phone &&
           !!candidateData?.location;
 
         // Determine current step based on application status and completion
-        let currentStep = 0;
+        let currentStep = 1; // Default to application step
+        
         if (jobAppData) {
           if (!applicationSubmitted) {
-            // Application started but not completed
+            // Application started but not completed - stay on step 1
             currentStep = 1;
           } else {
             // Application completed, determine next step based on status
             switch (jobAppData.status) {
               case 'applied':
               case 'hr_review':
+                // Application complete but under review - move to assessment step
                 currentStep = 2;
                 break;
               case 'hr_approved':
@@ -90,9 +91,13 @@ export const useCandidateDashboardState = (userId: string | undefined, jobId?: s
                 currentStep = 6;
                 break;
               default:
-                currentStep = applicationSubmitted ? 2 : 1;
+                // Application complete but unknown status - move to assessment
+                currentStep = 2;
             }
           }
+        } else if (applicationSubmitted) {
+          // No job application record but candidate has completed profile - this shouldn't happen but handle gracefully
+          currentStep = 2;
         }
 
         const canAccessTraining = applicationSubmitted && 
