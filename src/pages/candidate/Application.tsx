@@ -36,7 +36,7 @@ const Application = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [jobDetails, setJobDetails] = useState<{ id: string, title: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [hasExistingApplication, setHasExistingApplication] = useState(false);
+  const [isCompletedApplication, setIsCompletedApplication] = useState(false);
 
   const steps = [
     { 
@@ -123,43 +123,67 @@ const Application = () => {
           .eq("candidate_id", user.id)
           .eq("job_id", jobDetails.id)
           .single();
-            
-        if (!applicationError && applicationData) {
-          setHasExistingApplication(true);
-          return;
-        }
 
-        // Fetch candidate data for pre-filling
-        const { data, error } = await supabase
+        // Fetch candidate data for pre-filling and completion check
+        const { data: candidateData, error: candidateError } = await supabase
           .from("candidates")
           .select("resume, about_me_video, sales_pitch_video, phone, location")
           .eq("id", user.id)
           .single();
 
-        if (error) {
-          console.error("Error fetching application data:", error);
+        if (candidateError && candidateError.code !== 'PGRST116') {
+          console.error("Error fetching candidate data:", candidateError);
           return;
         }
 
-        if (data) {
+        // Check if application is complete (has all required documents)
+        const isComplete = candidateData && 
+          candidateData.resume && 
+          candidateData.about_me_video && 
+          candidateData.sales_pitch_video &&
+          candidateData.phone &&
+          candidateData.location;
+
+        // Only show "Already Applied" if:
+        // 1. Application exists AND
+        // 2. Application is complete (has all required data) AND  
+        // 3. Application status indicates it's been submitted for review
+        if (!applicationError && applicationData && isComplete) {
+          console.log("Complete application found with status:", applicationData.status);
+          setIsCompletedApplication(true);
+          return;
+        }
+
+        // If we reach here, either no application exists or it's incomplete
+        // Pre-fill form with existing data if available
+        if (candidateData) {
           setApplicationData({
-            resume: data.resume,
-            aboutMeVideo: data.about_me_video,
-            salesPitchVideo: data.sales_pitch_video,
+            resume: candidateData.resume,
+            aboutMeVideo: candidateData.about_me_video,
+            salesPitchVideo: candidateData.sales_pitch_video,
           });
 
-          const locationParts = data.location?.split(', ') || ["", ""];
+          const locationParts = candidateData.location?.split(', ') || ["", ""];
           setProfileData({
             name: user?.email?.split('@')[0] || "",
             email: user?.email || "",
-            phone: data.phone || "",
+            phone: candidateData.phone || "",
             city: locationParts[0] || "",
             state: locationParts[1] || "",
           });
 
-          // Check if profile is complete
-          if (data.phone && data.location) {
-            setCurrentStep(2);
+          // Determine current step based on completed data
+          if (!candidateData.phone || !candidateData.location) {
+            setCurrentStep(1); // Need to complete profile
+          } else if (!candidateData.resume) {
+            setCurrentStep(2); // Need to upload resume
+          } else if (!candidateData.about_me_video) {
+            setCurrentStep(3); // Need intro video
+          } else if (!candidateData.sales_pitch_video) {
+            setCurrentStep(4); // Need sales pitch video
+          } else {
+            // All data exists but no complete application - should not happen but handle gracefully
+            setCurrentStep(4);
           }
         }
       } catch (error) {
@@ -233,7 +257,7 @@ const Application = () => {
     }
   };
 
-  if (hasExistingApplication) {
+  if (isCompletedApplication) {
     return (
       <div className="min-h-screen bg-gray-50">
         <CandidateNavbar />
@@ -242,7 +266,7 @@ const Application = () => {
             <AlertCircle className="h-4 w-4 text-yellow-600" />
             <AlertTitle>Already Applied</AlertTitle>
             <AlertDescription>
-              You have already applied for this position. You can view your application status in your dashboard.
+              You have already submitted a complete application for this position. You can view your application status in your dashboard.
             </AlertDescription>
             <div className="mt-3 space-y-2">
               <Button size="sm" onClick={() => navigate("/dashboard/candidate")} className="w-full">

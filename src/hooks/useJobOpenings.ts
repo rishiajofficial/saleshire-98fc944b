@@ -111,7 +111,7 @@ export const useJobOpenings = () => {
       
       console.log("Starting application withdrawal for job:", jobToDelete, "user:", user.id);
       
-      // 1. Delete the job application
+      // 1. Delete the job application record completely
       const { error: deleteAppError } = await supabase
         .from('job_applications')
         .delete()
@@ -123,7 +123,7 @@ export const useJobOpenings = () => {
         throw deleteAppError;
       }
       
-      // 2. Clear candidate files and reset status
+      // 2. Clear candidate files and reset status to allow fresh start
       const { error: resetCandidateError } = await supabase
         .from('candidates')
         .update({ 
@@ -195,7 +195,7 @@ export const useJobOpenings = () => {
         }
       }
       
-      // 5. Delete any assessment results for this application
+      // 5. Delete any assessment results for this candidate
       const { error: assessmentError } = await supabase
         .from('assessment_results')
         .delete()
