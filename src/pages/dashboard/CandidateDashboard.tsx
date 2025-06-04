@@ -121,7 +121,7 @@ const CandidateDashboard = () => {
                 <Button 
                   size="lg" 
                   className="mt-4"
-                  onClick={() => navigate('/careers')}
+                  onClick={() => navigate('/candidate/jobs')}
                 >
                   View Open Positions
                 </Button>
@@ -166,7 +166,7 @@ const CandidateDashboard = () => {
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => navigate('/careers')}
+                  onClick={() => navigate('/candidate/jobs')}
                   className="flex items-center gap-2"
                 >
                   <Plus className="h-4 w-4" />
