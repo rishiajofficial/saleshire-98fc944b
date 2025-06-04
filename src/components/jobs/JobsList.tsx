@@ -5,7 +5,7 @@ import Loading from "@/components/ui/loading";
 
 interface JobsListProps {
   jobs: any[];
-  userApplications: Record<string, boolean>;
+  userApplications: Record<string, { applied: boolean; completed: boolean }>;
   isLoading: boolean;
   onApply: (jobId: string) => void;
   onWithdraw: (jobId: string) => void;
@@ -36,7 +36,7 @@ export const JobsList: React.FC<JobsListProps> = ({
         <JobCard
           key={job.id}
           job={job}
-          hasApplied={!!userApplications[job.id]}
+          applicationStatus={userApplications[job.id]}
           onApply={onApply}
           onWithdraw={onWithdraw}
         />
