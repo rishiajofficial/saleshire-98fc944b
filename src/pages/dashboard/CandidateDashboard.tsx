@@ -10,12 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import CandidateNavbar from '@/components/layout/CandidateNavbar';
 
 const CandidateDashboard = () => {
   const { profile, user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedJobId, setSelectedJobId] = useState<string | undefined>(undefined);
   const [userJobs, setUserJobs] = useState<{id: string, title: string}[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(true);
@@ -28,6 +29,21 @@ const CandidateDashboard = () => {
     currentStep,
     canAccessTraining,
   } = useCandidateDashboardState(user?.id, selectedJobId);
+
+  // Handle URL parameters for job selection and step navigation
+  useEffect(() => {
+    const jobFromUrl = searchParams.get('job');
+    const stepFromUrl = searchParams.get('step');
+    
+    if (jobFromUrl && !selectedJobId) {
+      setSelectedJobId(jobFromUrl);
+    }
+    
+    // If step is assessment, navigate to training page with assessment tab
+    if (stepFromUrl === 'assessment' && jobFromUrl) {
+      navigate('/training?tab=assessment');
+    }
+  }, [searchParams, selectedJobId, navigate]);
 
   // Fetch user's job applications
   useEffect(() => {
@@ -60,7 +76,9 @@ const CandidateDashboard = () => {
         
         // Set default selected job if we have jobs and none is selected
         if (jobs.length > 0 && !selectedJobId) {
-          setSelectedJobId(jobs[0].id);
+          const jobFromUrl = searchParams.get('job');
+          const defaultJobId = jobFromUrl || jobs[0].id;
+          setSelectedJobId(defaultJobId);
         }
         
       } catch (err) {
@@ -71,12 +89,14 @@ const CandidateDashboard = () => {
     };
     
     fetchUserJobs();
-  }, [user?.id]);
+  }, [user?.id, searchParams]);
 
   // Handle job selection change
   const handleJobSelectionChange = (jobId: string) => {
     console.log("Job selection changed to:", jobId);
     setSelectedJobId(jobId);
+    // Clear URL params when manually selecting a different job
+    setSearchParams({});
   };
 
   if (loadingJobs) {

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -65,7 +64,7 @@ export const useJobOpenings = () => {
       
       if (jobAppData) {
         jobAppData.forEach(app => {
-          // Check if application is complete (has all required documents - removed sales_pitch_video)
+          // Check if application is complete (has all required documents)
           const isComplete = candidateData && 
             candidateData.resume && 
             candidateData.about_me_video && 
@@ -108,48 +107,32 @@ export const useJobOpenings = () => {
     try {
       setIsDeleting(true);
       
-      console.log("Starting application withdrawal for job:", jobToDelete, "user:", user.id);
+      console.log("Starting application withdrawal for specific job:", jobToDelete, "user:", user.id);
       
-      // 1. Delete the job application record completely
+      // 1. Delete the specific job application record
       const { error: deleteAppError } = await supabase
         .from('job_applications')
         .delete()
         .eq('candidate_id', user.id)
-        .eq('job_id', jobToDelete);
+        .eq('job_id', jobToDelete); // Only delete for this specific job
         
       if (deleteAppError) {
         console.error("Error deleting job application:", deleteAppError);
         throw deleteAppError;
       }
       
-      // 2. Clear candidate files and reset status to allow fresh start
-      const { error: resetCandidateError } = await supabase
-        .from('candidates')
-        .update({ 
-          current_step: 1,
-          status: 'profile_created',
-          resume: null,
-          about_me_video: null
-        })
-        .eq('id', user.id);
-        
-      if (resetCandidateError) {
-        console.error("Error resetting candidate:", resetCandidateError);
-        throw resetCandidateError;
-      }
-      
-      // 3. Get training modules for this job and clear progress
+      // 2. Get training modules for THIS SPECIFIC JOB and clear progress
       const { data: jobTrainingData, error: jobTrainingError } = await supabase
         .from('job_training')
         .select('training_module_id')
-        .eq('job_id', jobToDelete);
+        .eq('job_id', jobToDelete); // Only for this job
         
       if (jobTrainingError) {
         console.error("Error fetching job training:", jobTrainingError);
         throw jobTrainingError;
       }
       
-      // 4. Clear training progress and quiz results
+      // 3. Clear training progress and quiz results ONLY for this job's modules
       if (jobTrainingData && jobTrainingData.length > 0) {
         const moduleIds = jobTrainingData.map(jt => jt.training_module_id);
         
@@ -167,7 +150,7 @@ export const useJobOpenings = () => {
         if (modulesData && modulesData.length > 0) {
           const moduleCategories = modulesData.map(m => m.module);
           
-          // Delete training progress
+          // Delete training progress ONLY for this job's modules
           if (moduleCategories.length > 0) {
             const { error: progressError } = await supabase
               .from('training_progress')
@@ -179,7 +162,7 @@ export const useJobOpenings = () => {
               console.error("Error deleting training progress:", progressError);
             }
             
-            // Delete quiz results
+            // Delete quiz results ONLY for this job's modules
             const { error: quizError } = await supabase
               .from('quiz_results')
               .delete()
@@ -193,7 +176,9 @@ export const useJobOpenings = () => {
         }
       }
       
-      // 5. Delete any assessment results for this candidate
+      // 4. Delete assessment results that might be job-specific
+      // Note: We're keeping this general for now, but ideally assessment_results 
+      // should have a job_id field to be more specific
       const { error: assessmentError } = await supabase
         .from('assessment_results')
         .delete()
@@ -203,7 +188,7 @@ export const useJobOpenings = () => {
         console.error("Error deleting assessment results:", assessmentError);
       }
       
-      // 6. Delete any interview records
+      // 5. Delete interviews for this specific job
       const { error: interviewError } = await supabase
         .from('interviews')
         .delete()
@@ -213,7 +198,7 @@ export const useJobOpenings = () => {
         console.error("Error deleting interviews:", interviewError);
       }
       
-      // 7. Delete any sales tasks
+      // 6. Delete sales tasks for this candidate
       const { error: salesTaskError } = await supabase
         .from('sales_tasks')
         .delete()
@@ -225,7 +210,7 @@ export const useJobOpenings = () => {
       
       toast.success("Application successfully withdrawn. You can now apply again.");
       
-      // Update local state immediately
+      // Update local state immediately - remove only the specific job
       setUserApplications(prev => {
         const updated = {...prev};
         delete updated[jobToDelete];

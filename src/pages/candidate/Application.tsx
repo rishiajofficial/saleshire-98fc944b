@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -207,31 +206,36 @@ const Application = () => {
     try {
       setIsSubmitting(true);
 
-      // Update candidate status
+      // Update candidate status and current step
       const jobTitle = jobDetails.title || "Unknown Position";
       await updateApplicationStatus(user.id, {
         status: 'applied',
-        job_title: jobTitle
+        job_title: jobTitle,
+        current_step: 2 // Move to assessment step
       });
       
-      // Create application record
+      // Create or update application record with proper status
       const { error: applicationError } = await supabase
         .from("job_applications")
-        .insert({
+        .upsert({
           candidate_id: user.id,
           job_id: jobDetails.id,
-          status: 'hr_review'
+          status: 'applied' // Application submitted, ready for assessment
+        }, {
+          onConflict: 'candidate_id,job_id'
         });
         
       if (applicationError) throw applicationError;
 
       toast({
         title: "Application submitted successfully!",
-        description: "Your application is now under review. You can track your progress in the dashboard.",
+        description: "Your application has been completed. You can now take the assessment.",
       });
 
       localStorage.removeItem("selectedJob");
-      navigate("/dashboard/candidate");
+      
+      // Redirect to dashboard with specific job selected for assessment
+      navigate(`/dashboard/candidate?job=${jobDetails.id}&step=assessment`);
       
     } catch (error: any) {
       console.error("Error submitting application:", error);
