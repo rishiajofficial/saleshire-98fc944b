@@ -206,12 +206,11 @@ const Application = () => {
     try {
       setIsSubmitting(true);
 
-      // Update candidate status and current step
+      // Update candidate status without current_step
       const jobTitle = jobDetails.title || "Unknown Position";
       await updateApplicationStatus(user.id, {
         status: 'applied',
-        job_title: jobTitle,
-        current_step: 2 // Move to assessment step
+        job_title: jobTitle
       });
       
       // Create or update application record with proper status
