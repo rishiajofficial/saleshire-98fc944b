@@ -13,11 +13,16 @@ import AdminDashboard from './pages/dashboard/AdminDashboard';
 import ManagerDashboard from './pages/dashboard/ManagerDashboard';
 import CandidateDashboard from './pages/dashboard/CandidateDashboard';
 import DirectorDashboard from './pages/dashboard/DirectorDashboard';
+import HRDashboard from './pages/dashboard/HRDashboard';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Application from './pages/candidate/Application';
 import { Toaster } from 'sonner';
 import CandidateJobOpenings from "@/pages/candidate/CandidateJobOpenings";
 import Training from './pages/training/Training';
+import JobManagement from './pages/hr/JobManagement';
+import Applications from './pages/manager/Applications';
+import Candidates from './pages/manager/Candidates';
+import Assessments from './pages/manager/Assessments';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -88,6 +93,16 @@ function App() {
               }
             />
 
+            {/* Protected HR routes */}
+            <Route
+              path="/dashboard/hr"
+              element={
+                <ProtectedRoute allowedRoles={['hr']}>
+                  <HRDashboard />
+                </ProtectedRoute>
+              }
+            />
+
             {/* Protected manager routes */}
             <Route
               path="/dashboard/manager"
@@ -104,6 +119,40 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['director']}>
                   <DirectorDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Shared HR/Manager routes */}
+            <Route
+              path="/jobs"
+              element={
+                <ProtectedRoute allowedRoles={['hr', 'manager', 'admin']}>
+                  <JobManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/applications"
+              element={
+                <ProtectedRoute allowedRoles={['hr', 'manager', 'admin']}>
+                  <Applications />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/candidates"
+              element={
+                <ProtectedRoute allowedRoles={['hr', 'manager', 'admin']}>
+                  <Candidates />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/assessments"
+              element={
+                <ProtectedRoute allowedRoles={['hr', 'manager', 'admin']}>
+                  <Assessments />
                 </ProtectedRoute>
               }
             />
