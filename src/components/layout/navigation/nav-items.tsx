@@ -62,7 +62,7 @@ export const getNavItems = (role?: string): NavItem[] => [
   },
   {
     label: "Job Management",
-    href: "/hr/job-management",
+    href: "/jobs",
     icon: <Briefcase className="h-5 w-5" />,
     role: ["hr", "director"],
   },
@@ -92,7 +92,7 @@ export const getNavItems = (role?: string): NavItem[] => [
   },
   {
     label: "Job Openings",
-    href: "/job-openings",
+    href: "/candidate/jobs",
     icon: <FileText className="h-5 w-5" />,
     role: ["candidate"],
   },

@@ -26,6 +26,9 @@ import Assessments from './pages/manager/Assessments';
 import TrainingManagement from './pages/admin/TrainingManagement';
 import AssessmentDetails from './pages/admin/AssessmentDetails';
 import QuestionDetails from './pages/admin/QuestionDetails';
+import Analytics from './pages/manager/Analytics';
+import Interviews from './pages/manager/Interviews';
+import Profile from './pages/common/Profile';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -156,6 +159,30 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['hr', 'manager', 'admin']}>
                   <Assessments />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/analytics"
+              element={
+                <ProtectedRoute allowedRoles={['hr', 'manager', 'admin']}>
+                  <Analytics />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/interviews"
+              element={
+                <ProtectedRoute allowedRoles={['hr', 'manager', 'admin']}>
+                  <Interviews />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute allowedRoles={['hr', 'manager', 'admin', 'candidate']}>
+                  <Profile />
                 </ProtectedRoute>
               }
             />
