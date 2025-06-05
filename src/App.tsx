@@ -23,6 +23,9 @@ import JobManagement from './pages/hr/JobManagement';
 import Applications from './pages/manager/Applications';
 import Candidates from './pages/manager/Candidates';
 import Assessments from './pages/manager/Assessments';
+import TrainingManagement from './pages/admin/TrainingManagement';
+import AssessmentDetails from './pages/admin/AssessmentDetails';
+import QuestionDetails from './pages/admin/QuestionDetails';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -123,7 +126,7 @@ function App() {
               }
             />
 
-            {/* Shared HR/Manager routes */}
+            {/* Shared HR/Manager/Admin routes */}
             <Route
               path="/jobs"
               element={
@@ -153,6 +156,56 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['hr', 'manager', 'admin']}>
                   <Assessments />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Training and Assessment Management Routes */}
+            <Route
+              path="/training-management"
+              element={
+                <ProtectedRoute allowedRoles={['hr', 'admin']}>
+                  <TrainingManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/assessments/:assessmentId"
+              element={
+                <ProtectedRoute allowedRoles={['hr', 'admin']}>
+                  <AssessmentDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/assessments/:assessmentId/edit"
+              element={
+                <ProtectedRoute allowedRoles={['hr', 'admin']}>
+                  <AssessmentDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/assessments/create"
+              element={
+                <ProtectedRoute allowedRoles={['hr', 'admin']}>
+                  <AssessmentDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/questions/:questionId"
+              element={
+                <ProtectedRoute allowedRoles={['hr', 'admin']}>
+                  <QuestionDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/questions/create"
+              element={
+                <ProtectedRoute allowedRoles={['hr', 'admin']}>
+                  <QuestionDetails />
                 </ProtectedRoute>
               }
             />

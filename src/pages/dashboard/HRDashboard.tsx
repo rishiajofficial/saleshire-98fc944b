@@ -7,7 +7,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, Briefcase, ClipboardList, UserCheck, TrendingUp, Calendar } from "lucide-react";
+import { Users, Briefcase, ClipboardList, UserCheck, TrendingUp, Calendar, BookOpen, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const HRDashboard = () => {
@@ -166,9 +166,6 @@ const HRDashboard = () => {
               <Button asChild className="w-full">
                 <Link to="/jobs">Manage Jobs</Link>
               </Button>
-              <Button variant="outline" asChild className="w-full">
-                <Link to="/jobs/create">Create New Job</Link>
-              </Button>
             </CardContent>
           </Card>
 
@@ -187,7 +184,64 @@ const HRDashboard = () => {
                 <Link to="/assessments">View Assessments</Link>
               </Button>
               <Button variant="outline" asChild className="w-full">
-                <Link to="/assessments/results">Assessment Results</Link>
+                <Link to="/assessments/create">Create Assessment</Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5" />
+                Training Management
+              </CardTitle>
+              <CardDescription>
+                Manage training modules and videos
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button asChild className="w-full">
+                <Link to="/training-management">Manage Training</Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                Analytics & Reports
+              </CardTitle>
+              <CardDescription>
+                View hiring analytics and performance metrics
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button asChild className="w-full">
+                <Link to="/assessments">Assessment Results</Link>
+              </Button>
+              <Button variant="outline" asChild className="w-full">
+                <Link to="/candidates">Candidate Analytics</Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Interview Scheduling
+              </CardTitle>
+              <CardDescription>
+                Schedule and manage candidate interviews
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button asChild className="w-full">
+                <Link to="/candidates">Schedule Interviews</Link>
+              </Button>
+              <Button variant="outline" asChild className="w-full">
+                <Link to="/applications">Interview Pipeline</Link>
               </Button>
             </CardContent>
           </Card>
